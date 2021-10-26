@@ -1,5 +1,5 @@
 {
-  "name": "guzi",
+  "name": "guzi-money",
   "version": "0.1.0",
   "description": "The javascript implementation of Guzi cryptography",
   "main": "index.js",

@@ -1,7 +1,7 @@
 const { describe, it } = require('mocha')
 const Blockchain = require('../lib/index')
 const secp = require('ethereum-cryptography/secp256k1')
-const assert = require('assert')
+const assert = require('chai').assert
 
 const privateKey1 = 'ed945716dddb7af2c9774939e9946f1fee31f5ec0a3c6ec96059f119c396912f'
 const privateKey2 = 'e68955130b2c4adc6165b0bae6e6b8f4bcce1879dbf0c6f91b3acc69479ef272'
@@ -70,11 +70,11 @@ describe('blockchain', () => {
         t: 0
       }
 
-      const expected = 'ff44d337f401ae1d4398e55f468809f7b14de2995f7d6b20aef2316a576ec19c'
+      const expected = Blockchain.hexToBytes('ff44d337f401ae1d4398e55f468809f7b14de2995f7d6b20aef2316a576ec19c')
 
       const result = Blockchain.hashblock(block)
 
-      assert.equal(result, expected)
+      assert.deepEqual(result, expected)
     })
 
     it('Should ignore existing hash', () => {
@@ -89,11 +89,11 @@ describe('blockchain', () => {
         h: 12
       }
 
-      const expected = 'ff44d337f401ae1d4398e55f468809f7b14de2995f7d6b20aef2316a576ec19c'
+      const expected = Blockchain.hexToBytes('ff44d337f401ae1d4398e55f468809f7b14de2995f7d6b20aef2316a576ec19c')
 
       const result = Blockchain.hashblock(block)
 
-      assert.equal(result, expected)
+      assert.deepEqual(result, expected)
     })
   })
 
@@ -107,11 +107,11 @@ describe('blockchain', () => {
         a: 1
       }
 
-      const expected = 'c5a203d4341ed5e55457208b325db896a8d258811491a2e98b2544852b43dc14'
+      const expected = Blockchain.hexToBytes('c5a203d4341ed5e55457208b325db896a8d258811491a2e98b2544852b43dc14')
 
       const result = Blockchain.hashtx(tx)
 
-      assert.equal(result, expected)
+      assert.deepEqual(result, expected)
     })
 
     it('Should ignore existing hash', () => {
@@ -124,11 +124,11 @@ describe('blockchain', () => {
         h: 12
       }
 
-      const expected = 'c5a203d4341ed5e55457208b325db896a8d258811491a2e98b2544852b43dc14'
+      const expected = Blockchain.hexToBytes('c5a203d4341ed5e55457208b325db896a8d258811491a2e98b2544852b43dc14')
 
       const result = Blockchain.hashtx(tx)
 
-      assert.equal(result, expected)
+      assert.deepEqual(result, expected)
     })
   })
 
@@ -152,8 +152,7 @@ describe('blockchain', () => {
         g: 0,
         b: 0,
         t: 0,
-        // h: 'cd46dbbf4deef70d7519f3e5dc825311bd0935c958571f87e399a860d1aac5cd',
-        h: '3045022100fa8fa6d39457649ba21cca129ec6c3b41bb2dbb4247dd47a5491cb3567fad5d30220434ef707b7a044e05646a564445a279e4ffab7b00a9649e8a2d7fce165c3a8ad'
+        h: 'MEUCIQD6j6bTlFdkm6IcyhKexsO0G7LbtCR91HpUkcs1Z/rV0wIgQ073B7egROBWRqVkRFonnk/6t7AKlknootf84WXDqK0='
       }
 
       const signedBlock = Blockchain.signblock(block, privateKey1)
@@ -171,7 +170,7 @@ describe('blockchain', () => {
   })
 
   describe('validateAccount', () => {
-    it('Should return a 2 blocks long Blockchain', async () => {
+    it('Should return a 2 blocks long Blockchain', () => {
       const result = Blockchain.validateAccount(validBirthBlock(), privateKey2)
 
       assert.equal(result.length, 2)
@@ -184,10 +183,11 @@ describe('blockchain', () => {
       assert.equal(result[1], bb)
     })
 
-    it('Should return a valid initialization block', async () => {
+    it('Should return a valid initialization block', () => {
       const result = Blockchain.validateAccount(validBirthBlock(), privateKey2)
 
-      assert.ok(secp.verify(Blockchain.hashblock(result[0]), result[0].h, secp.getPublicKey(privateKey2, true)))
+      const pubkey = secp.getPublicKey(privateKey2, true)
+      assert.ok(Blockchain.verifyBlock(result[0], pubkey))
 
       delete result[0].h
 
@@ -212,6 +212,7 @@ describe('blockchain', () => {
 
       assert.equal(result, 0)
     })
+
     it('Should return 2 for t=1 to 3', () => {
       const bc = new Blockchain(validBlockchain())
       bc.blocks[0].t = 1
@@ -239,56 +240,55 @@ describe('blockchain', () => {
       assert.equal(result, 16)
     })
 
-    it('Should return percent if as_percent is true', async () => {
+    it('Should return percent if as_percent is true', () => {
       const bc = new Blockchain(validBlockchain())
       bc.blocks[0].t = 11
 
       const result = bc.getGuzisBeforeNextLevel(true)
 
-      // TODO
       assert.equal(result, 15)
     })
   })
 
-  describe('getGuzis', () => {
+  describe('getAvailableGuziAmount', () => {
     it('Should return 0 for empty blockchain', () => {
       const bc = new Blockchain()
-      const result = bc.getGuzis()
+      const result = bc.getAvailableGuziAmount()
 
       assert.equal(result, 0)
     })
 
     it('Should return 0 for created blockchain', () => {
       const bc = new Blockchain([])
-      const result = bc.getGuzis()
+      const result = bc.getAvailableGuziAmount()
 
       assert.equal(result, 0)
     })
 
     it('Should return 0 for validation waiting blockchain', () => {
       const bc = new Blockchain([validBirthBlock()])
-      const result = bc.getGuzis()
+      const result = bc.getAvailableGuziAmount()
 
       assert.equal(result, 0)
     })
 
-    it('Should return last block g for valid blockchain', async () => {
+    it('Should return last block g for valid blockchain', () => {
       const bc = new Blockchain([validInitBlock(), validBirthBlock()])
       bc.blocks[0].t = 27
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, '2021-09-26'))
-      const result = bc.getGuzis()
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-26'))
+      const result = bc.getAvailableGuziAmount()
 
       assert.equal(result, 8)
     })
   })
 
   describe('isEmpty', () => {
-    it('Should return false for empty array', () => {
+    it('Should return true for empty array', () => {
       const bc = new Blockchain([])
       const result = bc.isEmpty()
 
-      assert.false(result)
+      assert.ok(result)
     })
 
     it('Should return true for empty blockchain', () => {
@@ -306,56 +306,33 @@ describe('blockchain', () => {
     })
   })
 
-  describe('isCreated', () => {
-    it('Should return false for null blockchain', () => {
-      const bc = new Blockchain()
-      const result = bc.isCreated()
-
-      assert.false(result)
-    })
-
-    it('Should return false for blockchain waiting for validation', () => {
-      const bc = new Blockchain([validBirthBlock()])
-      const result = bc.isCreated()
-
-      assert.false(result)
-    })
-
-    it('Should return true for valid blockchain', () => {
-      const bc = new Blockchain([])
-      const result = bc.isCreated()
-
-      assert.ok(result)
-    })
-  })
-
   describe('isWaitingValidation', () => {
     it('Should return false for empty blockchain', () => {
       const bc = new Blockchain()
       const result = bc.isWaitingValidation()
 
-      assert.false(result)
+      assert.isNotOk(result)
     })
 
     it('Should return false for only created blockchain', () => {
       const bc = new Blockchain([])
       const result = bc.isWaitingValidation()
 
-      assert.false(result)
+      assert.isNotOk(result)
     })
 
     it('Should return false totally valid blockchain', () => {
       const bc = new Blockchain([validBirthBlock(), validBirthBlock()])
       const result = bc.isWaitingValidation()
 
-      assert.false(result)
+      assert.isNotOk(result)
     })
 
     it('Should return false if the block is not a birth one', () => {
       const bc = new Blockchain([validInitBlock()])
       const result = bc.isWaitingValidation()
 
-      assert.false(result)
+      assert.isNotOk(result)
     })
 
     it('Should return true for blockchain effectively waiting for validation', () => {
@@ -371,21 +348,21 @@ describe('blockchain', () => {
       const bc = new Blockchain()
       const result = bc.isValidated()
 
-      assert.false(result)
+      assert.isNotOk(result)
     })
 
     it('Should return false for only created blockchain', () => {
       const bc = new Blockchain([])
       const result = bc.isValidated()
 
-      assert.false(result)
+      assert.isNotOk(result)
     })
 
     it('Should return false if the first block is not a birth one', () => {
       const bc = new Blockchain([validInitBlock(), validInitBlock()])
       const result = bc.isValidated()
 
-      assert.false(result)
+      assert.isNotOk(result)
     })
 
     it('Should return true totally valid blockchain', () => {
@@ -396,21 +373,20 @@ describe('blockchain', () => {
     })
   })
 
-  describe('createDailyGuzis', () => {
-    it('Should return null if Guzis have already been created today.', async () => {
+  describe('createDailyGuzisTx', () => {
+    it('Should throw error if Guzis have already been created today.', () => {
       const bc = new Blockchain(validBlockchain())
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1))
-      const result = await bc.createDailyGuzisTx(privateKey1)
+      bc.addTx(bc.createDailyGuzisTx(privateKey1))
 
-      assert.notOk(result)
+      assert.throws(() => { bc.createDailyGuzisTx(privateKey1) }, 'Guzis already created today')
     })
 
-    it('Should return blockchain in OK case.', async () => {
+    it('Should return blockchain in OK case.', () => {
       const bc = new Blockchain(validBlockchain())
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1))
       const result = bc.blocks[0].tx[0]
 
-      assert.ok(secp.verify(Blockchain.hashtx(result), result.h, secp.getPublicKey(privateKey1)))
+      assert.ok(Blockchain.verifyTx(result, secp.getPublicKey(privateKey1)))
       delete result.h
 
       const d = new Date().toISOString().slice(0, 10)
@@ -428,13 +404,13 @@ describe('blockchain', () => {
       assert.deepEqual(result, expected)
     })
 
-    it('Should create 1+Total^(1/3) Guzis.', async () => {
+    it('Should create 1+Total^(1/3) Guzis.', () => {
       const bc = new Blockchain(validBlockchain())
       bc.blocks[0].t = 27 // => 3 +1 Guzi/day
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1))
       const result = bc.blocks[0].tx[0]
 
-      assert.ok(secp.verify(Blockchain.hashtx(result), result.h, secp.getPublicKey(privateKey1)))
+      assert.ok(Blockchain.verifyTx(result, secp.getPublicKey(privateKey1)))
       delete result.h
 
       const d = new Date().toISOString().slice(0, 10)
@@ -454,7 +430,7 @@ describe('blockchain', () => {
   })
 
   describe('getAvailableGuzis', () => {
-    it('Should return {} for new Blockchain.', async () => {
+    it('Should return {} for new Blockchain.', () => {
       const bc = new Blockchain(validBlockchain())
       const result = bc.getAvailableGuzis()
 
@@ -463,10 +439,10 @@ describe('blockchain', () => {
       assert.deepEqual(result, expected)
     })
 
-    it('Should return each index.', async () => {
+    it('Should return each index.', () => {
       const bc = new Blockchain(validBlockchain())
       bc.blocks[0].t = 27
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
       const result = bc.getAvailableGuzis()
 
       const expected = { '2021-09-25': [0, 1, 2, 3] }
@@ -474,15 +450,15 @@ describe('blockchain', () => {
       assert.deepEqual(result, expected)
     })
 
-    it('Should return each date.', async () => {
+    it('Should return each date.', () => {
       const bc = new Blockchain(validBlockchain())
       bc.blocks[0].t = 27
       const d1 = '2021-09-23'
       const d2 = '2021-09-24'
       const d3 = '2021-09-25'
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d1))
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d2))
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d3))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d1))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d2))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d3))
       const result = bc.getAvailableGuzis()
 
       const expected = {}
@@ -493,11 +469,11 @@ describe('blockchain', () => {
       assert.deepEqual(result, expected)
     })
 
-    it('Should return only given amount if given.', async () => {
+    it('Should return only given amount if given.', () => {
       const bc = new Blockchain(validBlockchain())
       bc.blocks[0].t = 27
       const d = '2021-09-25'
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d))
       const result = bc.getAvailableGuzis(2)
 
       const expected = {}
@@ -506,15 +482,15 @@ describe('blockchain', () => {
       assert.deepEqual(result, expected)
     })
 
-    it('Should return only given amount for complexe cases.', async () => {
+    it('Should return only given amount for complexe cases.', () => {
       const bc = new Blockchain(validBlockchain())
       bc.blocks[0].t = 27
       const d1 = '2021-09-23'
       const d2 = '2021-09-24'
       const d3 = '2021-09-25'
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d1))
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d2))
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d3))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d1))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d2))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d3))
       const result = bc.getAvailableGuzis(7)
 
       const expected = {}
@@ -524,17 +500,17 @@ describe('blockchain', () => {
       assert.deepEqual(result, expected)
     })
 
-    it('Should return only unspent Guzis.', async () => {
+    it('Should return only unspent Guzis.', () => {
       const bc = new Blockchain(validBlockchain())
       bc.blocks[0].t = 27
       const d1 = '2021-09-23'
       const d2 = '2021-09-24'
       const d3 = '2021-09-25'
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d1))
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d2))
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d3))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d1))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d2))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d3))
       const contacts = [{ id: 0, key: secp.getPublicKey(privateKey1, true) }]
-      await bc.addTx(await bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 7), contacts)
+      bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 7), contacts)
       const result = bc.getAvailableGuzis()
 
       const expected = {}
@@ -546,15 +522,15 @@ describe('blockchain', () => {
   })
 
   describe('createPaymentTx', () => {
-    it('Should make valid transaction.', async () => {
+    it('Should make valid transaction.', () => {
       const bc = new Blockchain(validBlockchain())
       bc.blocks[0].t = 27
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
       const contacts = [{ id: 0, key: secp.getPublicKey(privateKey1, true) }]
-      await bc.addTx(await bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 3, '2021-09-25'), contacts)
+      bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 3, '2021-09-25'), contacts)
       const result = bc.blocks[0].tx[0]
 
-      assert.ok(secp.verify(Blockchain.hashtx(result), result.h, secp.getPublicKey(privateKey1)))
+      assert.ok(Blockchain.verifyTx(result, secp.getPublicKey(privateKey1)))
       delete result.h
 
       const expected = {
@@ -572,11 +548,11 @@ describe('blockchain', () => {
   })
 
   describe('addTx', () => {
-    it('Should increase g of the block for tx of type guzi creation.', async () => {
+    it('Should increase g of the block for tx of type guzi creation.', () => {
       const bc = new Blockchain(validBlockchain())
       bc.blocks[0].t = 27
       const d = '2021-09-25'
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d))
       const result = bc.blocks[0].g
       const expected = {}
       expected[d] = [0, 1, 2, 3]
@@ -584,17 +560,17 @@ describe('blockchain', () => {
       assert.deepEqual(result, expected)
     })
 
-    it('Should decrease g of the block for tx of type payment.', async () => {
+    it('Should decrease g of the block for tx of type payment.', () => {
       const bc = new Blockchain(validBlockchain())
       bc.blocks[0].t = 27
       const d1 = '2021-09-23'
       const d2 = '2021-09-24'
       const d3 = '2021-09-25'
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d1))
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d2))
-      await bc.addTx(await bc.createDailyGuzisTx(privateKey1, d3))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d1))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d2))
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, d3))
       const contacts = [{ id: 0, key: secp.getPublicKey(privateKey1, true) }]
-      await bc.addTx(await bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 7), contacts)
+      bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 7), contacts)
       const result = bc.blocks[0].g
       const expected = {}
       expected[d2] = [3]

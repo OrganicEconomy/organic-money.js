@@ -34,6 +34,10 @@ class Blockchain {
     }
   }
 
+  static randomPrivateKey () {
+    return utils.randomPrivateKey()
+  }
+
   constructor (blocks = []) {
     if (blocks === null) {
       blocks = []

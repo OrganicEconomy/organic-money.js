@@ -1,4 +1,5 @@
 const { sha256 } = require('ethereum-cryptography/sha256')
+const { Base64 } = require('js-base64')
 const secp = require('ethereum-cryptography/secp256k1')
 const msgpack = require('msgpack-lite')
 
@@ -37,11 +38,21 @@ class Blockchain {
     if (blocks === null) {
       blocks = []
     }
-    this.bks = blocks
+    this.load(blocks)
   }
 
+  /**
+   * Load the given blocks into the Blockchain
+   * blocks can be Array of blocks (JSON in fact)
+   * or the base64 encoded array of blocks
+   */
   load (blocks) {
-    this.bks = blocks
+    if (typeof blocks === 'object') {
+      this.bks = blocks
+    } else {
+      const binary = Base64.toUint8Array(blocks)
+      this.bks = msgpack.decode(binary)
+    }
   }
 
   isValid () {
@@ -272,40 +283,34 @@ class Blockchain {
     return null
   }
 
-  static toHexString (byteArray) {
-    return Array.from(byteArray, function (byte) {
-      return ('0' + (byte & 0xFF).toString(16)).slice(-2)
-    }).join('')
+  /**
+   * Return the blocks of the Blockchain as an Uint8Array
+   */
+  asBinary () {
+    return new Uint8Array(msgpack.encode(this.bks))
   }
 
-  static hexToBytes (hex) {
-    const bytes = []
-    for (let c = 0; c < hex.length; c += 2) { bytes.push(parseInt(hex.substr(c, 2), 16)) }
-    return Uint8Array.from(bytes)
-  }
-
-  static hexToJson (hex) {
-    const bytes = Blockchain.hexToBytes(hex)
-    return msgpack.decode(bytes)
-  }
-
-  static b64toUint8Array (b64) {
-    return new Uint8Array(atob(b64).split('').map((c) => c.charCodeAt(0)))
+  /**
+   * Return the blocks of the Blockchain as a b64 string
+   */
+  asB64 () {
+    return Base64.fromUint8Array(this.asBinary())
   }
 
   /**
    * Return the birthblock based on given informations
    */
-  static makeBirthBlock (birthdate, publicHexKey) {
-    return {
+  static makeBirthBlock (birthdate, privKey) {
+    const block = {
       v: Blockchain.VERSION, // Version
       d: birthdate, // User birth date
       ph: Blockchain.REF_HASH, // Previous hash : here 'random'
-      s: publicHexKey, // Compressed Signer public key, here the new one created
+      s: secp.getPublicKey(privKey, true), // Compressed Signer public key, here the new one created
       g: {},
       b: 0,
       t: 0 // 0 guzis, 0 boxes, 0 total
     }
+    return this.signblock(block, privKey)
   }
 
   /**
@@ -349,7 +354,7 @@ class Blockchain {
     const hash = Blockchain.hashblock(block)
     const bytes = secp.signSync(hash, privateKey)
     // console.log(Blockchain.toHexString(bytes))
-    block.h = btoa(String.fromCharCode.apply(null, bytes))
+    block.h = bytes
     return block
   }
 
@@ -359,7 +364,7 @@ class Blockchain {
   static signtx (tx, privateKey) {
     const hash = Blockchain.hashtx(tx)
     const bytes = secp.signSync(hash, privateKey)
-    tx.h = btoa(String.fromCharCode.apply(null, bytes))
+    tx.h = bytes
     return tx
   }
 
@@ -368,7 +373,7 @@ class Blockchain {
    */
   static verifyBlock (block, pubkey) {
     const hash = this.hashblock(block)
-    const hashInBlock = this.b64toUint8Array(block.h)
+    const hashInBlock = block.h
 
     return secp.verify(
       hashInBlock,
@@ -382,7 +387,7 @@ class Blockchain {
    */
   static verifyTx (tx, pubkey) {
     const hash = this.hashtx(tx)
-    const hashInTx = this.b64toUint8Array(tx.h)
+    const hashInTx = tx.h
 
     return secp.verify(
       hashInTx,

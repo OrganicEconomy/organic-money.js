@@ -1,5 +1,5 @@
 const { describe, it } = require('mocha')
-const Blockchain = require('../lib/index')
+const Blockchain = require('../index')
 const secp = require('ethereum-cryptography/secp256k1')
 const assert = require('chai').assert
 
@@ -36,25 +36,83 @@ const validBlockchain = () => {
   return [validInitBlock(), validBirthBlock()]
 }
 
+function hexToBytes (hex) {
+  const bytes = []
+  for (let c = 0; c < hex.length; c += 2) { bytes.push(parseInt(hex.substr(c, 2), 16)) }
+  return Uint8Array.from(bytes)
+}
+
 describe('blockchain', () => {
+
+  describe('asBinary', () => {
+    it('Should return binary blockchain... Yes !', () => {
+      const bc = new Blockchain(validBlockchain())
+
+      const expected = new Uint8Array([146, 136, 161, 98, 0, 161, 100, 170, 50, 49, 47, 48, 57, 47, 50, 48, 50, 49, 161, 103, 128, 161, 104, 217, 142, 51, 48, 52, 53, 48, 50, 50, 48, 50, 52, 50, 50, 101, 55, 98, 97, 49, 54, 55, 99, 98, 101, 55, 50, 56, 57, 48, 53, 49, 56, 56, 54, 102, 100, 55, 101, 57, 97, 54, 57, 53, 55, 54, 55, 54, 99, 100, 101, 55, 97, 98, 98, 97, 51, 52, 101, 51, 102, 52, 99, 99, 102, 97, 49, 99, 55, 100, 55, 54, 52, 51, 55, 48, 50, 50, 49, 48, 48, 98, 100, 56, 50, 52, 53, 52, 55, 101, 52, 54, 54, 51, 56, 97, 54, 100, 55, 48, 99, 98, 98, 98, 97, 102, 49, 102, 50, 55, 54, 100, 54, 51, 57, 98, 98, 98, 52, 51, 53, 52, 99, 97, 50, 52, 54, 49, 99, 101, 102, 49, 99, 55, 52, 100, 98, 51, 52, 53, 52, 50, 99, 49, 50, 162, 112, 104, 217, 144, 51, 48, 52, 54, 48, 50, 50, 49, 48, 48, 97, 55, 57, 53, 52, 49, 98, 97, 54, 50, 54, 49, 55, 57, 48, 100, 49, 51, 98, 102, 97, 102, 50, 100, 52, 49, 55, 55, 97, 48, 97, 54, 52, 53, 97, 51, 98, 97, 97, 100, 101, 54, 53, 50, 98, 98, 99, 51, 49, 100, 97, 102, 48, 101, 50, 98, 54, 56, 48, 49, 51, 48, 48, 99, 48, 50, 50, 49, 48, 48, 100, 101, 56, 102, 57, 97, 100, 49, 56, 52, 50, 101, 53, 54, 51, 52, 100, 100, 56, 48, 50, 55, 99, 49, 101, 52, 99, 57, 48, 48, 50, 54, 51, 48, 51, 102, 50, 48, 49, 97, 48, 48, 51, 50, 50, 100, 102, 52, 97, 55, 54, 101, 54, 51, 51, 48, 57, 52, 51, 55, 48, 50, 98, 98, 161, 115, 217, 66, 48, 50, 99, 56, 53, 101, 52, 101, 52, 52, 56, 100, 54, 55, 97, 56, 100, 99, 55, 50, 52, 99, 54, 50, 48, 102, 51, 102, 101, 55, 100, 50, 97, 51, 97, 51, 99, 99, 101, 57, 102, 101, 57, 48, 53, 98, 57, 49, 56, 102, 55, 49, 50, 51, 57, 54, 98, 52, 102, 56, 101, 102, 102, 99, 98, 51, 161, 116, 0, 161, 118, 1, 136, 161, 98, 0, 161, 100, 170, 50, 56, 47, 49, 49, 47, 49, 57, 56, 57, 161, 103, 128, 161, 104, 217, 144, 51, 48, 52, 54, 48, 50, 50, 49, 48, 48, 97, 55, 57, 53, 52, 49, 98, 97, 54, 50, 54, 49, 55, 57, 48, 100, 49, 51, 98, 102, 97, 102, 50, 100, 52, 49, 55, 55, 97, 48, 97, 54, 52, 53, 97, 51, 98, 97, 97, 100, 101, 54, 53, 50, 98, 98, 99, 51, 49, 100, 97, 102, 48, 101, 50, 98, 54, 56, 48, 49, 51, 48, 48, 99, 48, 50, 50, 49, 48, 48, 100, 101, 56, 102, 57, 97, 100, 49, 56, 52, 50, 101, 53, 54, 51, 52, 100, 100, 56, 48, 50, 55, 99, 49, 101, 52, 99, 57, 48, 48, 50, 54, 51, 48, 51, 102, 50, 48, 49, 97, 48, 48, 51, 50, 50, 100, 102, 52, 97, 55, 54, 101, 54, 51, 51, 48, 57, 52, 51, 55, 48, 50, 98, 98, 162, 112, 104, 217, 64, 99, 49, 97, 53, 53, 49, 99, 97, 49, 99, 48, 100, 101, 101, 97, 53, 101, 102, 101, 97, 53, 49, 98, 49, 101, 49, 100, 101, 97, 49, 49, 50, 101, 100, 49, 100, 101, 97, 48, 97, 53, 49, 53, 48, 102, 53, 101, 49, 49, 97, 98, 49, 101, 53, 48, 99, 49, 97, 49, 53, 101, 101, 100, 53, 161, 115, 217, 66, 48, 50, 99, 56, 53, 101, 52, 101, 52, 52, 56, 100, 54, 55, 97, 56, 100, 99, 55, 50, 52, 99, 54, 50, 48, 102, 51, 102, 101, 55, 100, 50, 97, 51, 97, 51, 99, 99, 101, 57, 102, 101, 57, 48, 53, 98, 57, 49, 56, 102, 55, 49, 50, 51, 57, 54, 98, 52, 102, 56, 101, 102, 102, 99, 98, 51, 161, 116, 0, 161, 118, 1])
+      const result = bc.asBinary()
+
+      assert.deepEqual(result, expected)
+    })
+  })
+
+  describe('asB64', () => {
+    it('Should return b64 encoded blockchain...', () => {
+      const bc = new Blockchain(validBlockchain())
+
+      const expected = 'koihYgChZKoyMS8wOS8yMDIxoWeAoWjZjjMwNDUwMjIwMjQyMmU3YmExNjdjYmU3Mjg5MDUxODg2ZmQ3ZTlhNjk1NzY3NmNkZTdhYmJhMzRlM2Y0Y2NmYTFjN2Q3NjQzNzAyMjEwMGJkODI0NTQ3ZTQ2NjM4YTZkNzBjYmJiYWYxZjI3NmQ2MzliYmI0MzU0Y2EyNDYxY2VmMWM3NGRiMzQ1NDJjMTKicGjZkDMwNDYwMjIxMDBhNzk1NDFiYTYyNjE3OTBkMTNiZmFmMmQ0MTc3YTBhNjQ1YTNiYWFkZTY1MmJiYzMxZGFmMGUyYjY4MDEzMDBjMDIyMTAwZGU4ZjlhZDE4NDJlNTYzNGRkODAyN2MxZTRjOTAwMjYzMDNmMjAxYTAwMzIyZGY0YTc2ZTYzMzA5NDM3MDJiYqFz2UIwMmM4NWU0ZTQ0OGQ2N2E4ZGM3MjRjNjIwZjNmZTdkMmEzYTNjY2U5ZmU5MDViOTE4ZjcxMjM5NmI0ZjhlZmZjYjOhdAChdgGIoWIAoWSqMjgvMTEvMTk4OaFngKFo2ZAzMDQ2MDIyMTAwYTc5NTQxYmE2MjYxNzkwZDEzYmZhZjJkNDE3N2EwYTY0NWEzYmFhZGU2NTJiYmMzMWRhZjBlMmI2ODAxMzAwYzAyMjEwMGRlOGY5YWQxODQyZTU2MzRkZDgwMjdjMWU0YzkwMDI2MzAzZjIwMWEwMDMyMmRmNGE3NmU2MzMwOTQzNzAyYmKicGjZQGMxYTU1MWNhMWMwZGVlYTVlZmVhNTFiMWUxZGVhMTEyZWQxZGVhMGE1MTUwZjVlMTFhYjFlNTBjMWExNWVlZDWhc9lCMDJjODVlNGU0NDhkNjdhOGRjNzI0YzYyMGYzZmU3ZDJhM2EzY2NlOWZlOTA1YjkxOGY3MTIzOTZiNGY4ZWZmY2IzoXQAoXYB'
+      const result = bc.asB64()
+
+      assert.deepEqual(result, expected)
+    })
+  })
+
+  describe('load', () => {
+    it('Should load directly from object', () => {
+      const bc = new Blockchain()
+      const blocks = validBlockchain()
+
+      bc.load(blocks)
+
+      assert.deepEqual(bc.blocks, blocks)
+    })
+
+    it('Should load correctly from b64', () => {
+      const bc = new Blockchain(validBlockchain())
+      const bc2 = new Blockchain()
+      const b64 = bc.asB64()
+
+      bc2.load(b64)
+
+      assert.deepEqual(bc2.blocks, bc.blocks)
+    })
+  })
+
   describe('makeBirthBlock', () => {
     it('Should return corectly filled block', () => {
       const birthdate = '12/12/2002'
-      const publicHexKey = '000000000000000000000000000000000000000000000000000000000000000000'
 
-      const block = Blockchain.makeBirthBlock(birthdate, publicHexKey)
+      const block = Blockchain.makeBirthBlock(birthdate, privateKey1)
+      delete block.h
 
       const expected = {
         v: 1,
         d: birthdate,
         ph: Blockchain.REF_HASH,
-        s: publicHexKey,
+        s: secp.getPublicKey(privateKey1, true),
         g: {},
         b: 0,
         t: 0
       }
 
       assert.deepEqual(block, expected)
+    })
+
+    it('Should return a signed block', () => {
+      const block = Blockchain.makeBirthBlock('12/12/2002', privateKey1)
+
+      const signature = Blockchain.verifyBlock(block, secp.getPublicKey(privateKey1, true))
+
+      assert.ok(signature)
     })
   })
 
@@ -70,7 +128,7 @@ describe('blockchain', () => {
         t: 0
       }
 
-      const expected = Blockchain.hexToBytes('ff44d337f401ae1d4398e55f468809f7b14de2995f7d6b20aef2316a576ec19c')
+      const expected = hexToBytes('ff44d337f401ae1d4398e55f468809f7b14de2995f7d6b20aef2316a576ec19c')
 
       const result = Blockchain.hashblock(block)
 
@@ -89,7 +147,7 @@ describe('blockchain', () => {
         h: 12
       }
 
-      const expected = Blockchain.hexToBytes('ff44d337f401ae1d4398e55f468809f7b14de2995f7d6b20aef2316a576ec19c')
+      const expected = hexToBytes('ff44d337f401ae1d4398e55f468809f7b14de2995f7d6b20aef2316a576ec19c')
 
       const result = Blockchain.hashblock(block)
 
@@ -107,7 +165,7 @@ describe('blockchain', () => {
         a: 1
       }
 
-      const expected = Blockchain.hexToBytes('c5a203d4341ed5e55457208b325db896a8d258811491a2e98b2544852b43dc14')
+      const expected = hexToBytes('c5a203d4341ed5e55457208b325db896a8d258811491a2e98b2544852b43dc14')
 
       const result = Blockchain.hashtx(tx)
 
@@ -124,7 +182,7 @@ describe('blockchain', () => {
         h: 12
       }
 
-      const expected = Blockchain.hexToBytes('c5a203d4341ed5e55457208b325db896a8d258811491a2e98b2544852b43dc14')
+      const expected = hexToBytes('c5a203d4341ed5e55457208b325db896a8d258811491a2e98b2544852b43dc14')
 
       const result = Blockchain.hashtx(tx)
 
@@ -152,7 +210,7 @@ describe('blockchain', () => {
         g: 0,
         b: 0,
         t: 0,
-        h: 'MEUCIQD6j6bTlFdkm6IcyhKexsO0G7LbtCR91HpUkcs1Z/rV0wIgQ073B7egROBWRqVkRFonnk/6t7AKlknootf84WXDqK0='
+        h: new Uint8Array([48,69,2,33,0,250,143,166,211,148,87,100,155,162,28,202,18,158,198,195,180,27,178,219,180,36,125,212,122,84,145,203,53,103,250,213,211,2,32,67,78,247,7,183,160,68,224,86,70,165,100,68,90,39,158,79,250,183,176,10,150,73,232,162,215,252,225,101,195,168,173])
       }
 
       const signedBlock = Blockchain.signblock(block, privateKey1)

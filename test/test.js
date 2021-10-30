@@ -76,6 +76,16 @@ describe('blockchain', () => {
       assert.deepEqual(bc.blocks, blocks)
     })
 
+    it('Should load correctly from binary', () => {
+      const bc = new Blockchain(validBlockchain())
+      const bc2 = new Blockchain()
+      const bin = bc.asBinary()
+
+      bc2.load(bin)
+
+      assert.deepEqual(bc2.blocks, bc.blocks)
+    })
+
     it('Should load correctly from b64', () => {
       const bc = new Blockchain(validBlockchain())
       const bc2 = new Blockchain()

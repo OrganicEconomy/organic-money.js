@@ -1,5 +1,5 @@
-const { Base64 } = require('js-base64')
 const { sha256 } = require('ethereum-cryptography/sha256')
+const { Base64 } = require('js-base64')
 const secp = require('ethereum-cryptography/secp256k1')
 const msgpack = require('msgpack-lite')
 
@@ -51,15 +51,22 @@ class Blockchain {
 
   /**
    * Load the given blocks into the Blockchain
-   * blocks can be Array of blocks (JSON in fact)
-   * or the base64 encoded array of blocks
+   * blocks can be Array of blocks
+   * or the binary encoded array of blocks
    */
   load (blocks) {
-    if (typeof blocks === 'object') {
+    if (Object.prototype.toString.call(blocks) == '[object Array]') {
+      // Here it's directly an Array
       this.bks = blocks
     } else {
-      const binary = Base64.toUint8Array(blocks)
-      this.bks = msgpack.decode(binary)
+      try {
+        // Here it's binary
+        this.bks = msgpack.decode(blocks)
+      } catch (e) {
+        // Here it's binary encoded as B64 (for sending)
+        const binary = Base64.toUint8Array(blocks)
+        this.bks = msgpack.decode(binary)
+      }
     }
   }
 
@@ -243,11 +250,11 @@ class Blockchain {
       this.bks[0].g = Object.assign(this.bks[0].g, tx.gp)
     }
     if (tx.t === Blockchain.TXTYPE.PAYMENT) {
-      const myPublicKey = this.bks[this.bks.length-1].s
-      if (tx.s === myPublicKey) {
+      const myPrivateKey = this.bks[this.bks.length-1].s
+      if (tx.s === myPrivateKey) {
         this.bks[0].g = this.removeGuzisFromAvailable(tx.gp)
       }
-      if (tx.tu === myPublicKey) {
+      if (tx.tu === myPrivateKey) {
         let toadd = 0
         Object.keys(tx.gp).forEach(key => {
           toadd += tx.gp[key].length

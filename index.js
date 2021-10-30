@@ -1,5 +1,5 @@
-const { sha256 } = require('ethereum-cryptography/sha256')
 const { Base64 } = require('js-base64')
+const { sha256 } = require('ethereum-cryptography/sha256')
 const secp = require('ethereum-cryptography/secp256k1')
 const msgpack = require('msgpack-lite')
 
@@ -35,7 +35,11 @@ class Blockchain {
   }
 
   static randomPrivateKey () {
-    return utils.randomPrivateKey()
+    return secp.utils.randomPrivateKey()
+  }
+
+  static publicFromPrivate (privateKey) {
+    return secp.getPublicKey(privateKey, true)
   }
 
   constructor (blocks = []) {
@@ -231,7 +235,7 @@ class Blockchain {
    * Add given transaction to the Blockchain
    * and update Blockchain data depending on it
    */
-  addTx (tx, contacts) {
+  addTx (tx) {
     if (this.bks[0].s !== undefined) {
       this.newBlock()
     }
@@ -239,11 +243,11 @@ class Blockchain {
       this.bks[0].g = Object.assign(this.bks[0].g, tx.gp)
     }
     if (tx.t === Blockchain.TXTYPE.PAYMENT) {
-      const me = contacts.find(c => c.id === 0)
-      if (tx.s === me.key) {
+      const myPublicKey = this.bks[this.bks.length-1].s
+      if (tx.s === myPublicKey) {
         this.bks[0].g = this.removeGuzisFromAvailable(tx.gp)
       }
-      if (tx.tu === me.key) {
+      if (tx.tu === myPublicKey) {
         let toadd = 0
         Object.keys(tx.gp).forEach(key => {
           toadd += tx.gp[key].length

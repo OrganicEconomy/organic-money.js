@@ -567,8 +567,7 @@ describe('blockchain', () => {
       bc.addTx(bc.createDailyGuzisTx(privateKey1, d1))
       bc.addTx(bc.createDailyGuzisTx(privateKey1, d2))
       bc.addTx(bc.createDailyGuzisTx(privateKey1, d3))
-      const contacts = [{ id: 0, key: secp.getPublicKey(privateKey1, true) }]
-      bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 7), contacts)
+      bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 7))
       const result = bc.getAvailableGuzis()
 
       const expected = {}
@@ -584,8 +583,7 @@ describe('blockchain', () => {
       const bc = new Blockchain(validBlockchain())
       bc.blocks[0].t = 27
       bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
-      const contacts = [{ id: 0, key: secp.getPublicKey(privateKey1, true) }]
-      bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 3, '2021-09-25'), contacts)
+      bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 3, '2021-09-25'))
       const result = bc.blocks[0].tx[0]
 
       assert.ok(Blockchain.verifyTx(result, secp.getPublicKey(privateKey1)))
@@ -627,8 +625,7 @@ describe('blockchain', () => {
       bc.addTx(bc.createDailyGuzisTx(privateKey1, d1))
       bc.addTx(bc.createDailyGuzisTx(privateKey1, d2))
       bc.addTx(bc.createDailyGuzisTx(privateKey1, d3))
-      const contacts = [{ id: 0, key: secp.getPublicKey(privateKey1, true) }]
-      bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 7), contacts)
+      bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 7))
       const result = bc.blocks[0].g
       const expected = {}
       expected[d2] = [3]

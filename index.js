@@ -75,6 +75,13 @@ class Blockchain {
   }
 
   /**
+   * Return the lastly added Transaction
+   */
+  getLastTx () {
+    return this.bks[0].tx[0]
+  }
+
+  /**
    * Return true if given blockchain is a valid one :
    * - signatures are ok
    * - created Guzis are ok

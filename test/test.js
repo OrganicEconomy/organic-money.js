@@ -66,6 +66,19 @@ describe('blockchain', () => {
     })
   })
 
+  describe('getLastTx', () => {
+    it('Should return the lastly added Transaction', () => {
+      const bc = new Blockchain(validBlockchain())
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
+      const lastTx = bc.createDailyGuzisTx(privateKey1, '2021-09-26')
+      bc.addTx(lastTx)
+
+      const result = bc.getLastTx()
+
+      assert.deepEqual(result, lastTx)
+    })
+  })
+
   describe('load', () => {
     it('Should load directly from object', () => {
       const bc = new Blockchain()

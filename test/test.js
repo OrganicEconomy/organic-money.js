@@ -254,23 +254,23 @@ describe('blockchain', () => {
     it('Should return a 2 blocks long Blockchain', () => {
       const result = Blockchain.validateAccount(validBirthBlock(), privateKey2)
 
-      assert.equal(result.length, 2)
+      assert.equal(result.blocks.length, 2)
     })
 
     it('Should return unmodified birth block', () => {
       const bb = validBirthBlock()
       const result = Blockchain.validateAccount(bb, privateKey2)
 
-      assert.equal(result[1], bb)
+      assert.equal(result.blocks[1], bb)
     })
 
     it('Should return a valid initialization block', () => {
       const result = Blockchain.validateAccount(validBirthBlock(), privateKey2)
 
       const pubkey = secp.getPublicKey(privateKey2, true)
-      assert.ok(Blockchain.verifyBlock(result[0], pubkey))
+      assert.ok(Blockchain.verifyBlock(result.blocks[0], pubkey))
 
-      delete result[0].h
+      delete result.blocks[0].h
 
       const expectedInitializationBlock = {
         b: 0,
@@ -282,7 +282,7 @@ describe('blockchain', () => {
         v: 1
       }
 
-      assert.deepEqual(result[0], expectedInitializationBlock)
+      assert.deepEqual(result.blocks[0], expectedInitializationBlock)
     })
   })
 

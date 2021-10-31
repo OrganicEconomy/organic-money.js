@@ -463,7 +463,7 @@ class Blockchain {
       v: Blockchain.VERSION
     }
     initializationBlock = Blockchain.signblock(initializationBlock, key)
-    return [initializationBlock, birthblock]
+    return new Blockchain([initializationBlock, birthblock])
   }
 
   get blocks () {

@@ -78,6 +78,9 @@ class Blockchain {
    * Return the lastly added Transaction
    */
   getLastTx () {
+    if (this.getHistory().length === 0) {
+      return null
+    }
     return this.bks[0].tx[0]
   }
 
@@ -306,6 +309,20 @@ class Blockchain {
   }
 
   /**
+   * Return true if the last Transaction added made the Blockchain
+   * level up
+   */
+  hasLevelUpOnLastTx () {
+    if (this.getLastTx() === null) {
+      return null
+    }
+    if (this.getLastTx().t != Blockchain.TXTYPE.PAYMENT) {
+      return false
+    }
+    return Math.floor(Math.cbrt(this.bks[0].t - this.getLastTx().a)) + 1 < this.getLevel()
+  }
+
+  /**
    * Return the blocks of the Blockchain as an Uint8Array
    */
   asBinary () {
@@ -442,7 +459,7 @@ class Blockchain {
     this.bks.forEach(block => {
       if (block.tx) {
         block.tx.forEach(tx => {
-          result.append(tx)
+          result.push(tx)
         })
       }
     })

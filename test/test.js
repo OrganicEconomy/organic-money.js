@@ -67,6 +67,14 @@ describe('blockchain', () => {
   })
 
   describe('getLastTx', () => {
+    it('Should return null if no transaction exists.', () => {
+      const bc = new Blockchain(validBlockchain())
+
+      const result = bc.getLastTx()
+
+      assert.isNull(result)
+    })
+
     it('Should return the lastly added Transaction', () => {
       const bc = new Blockchain(validBlockchain())
       bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
@@ -655,6 +663,36 @@ describe('blockchain', () => {
       expected[d3] = [0, 1, 2, 3]
 
       assert.deepEqual(result, expected)
+    })
+  })
+
+  describe.only('hasLevelUpOnLastTx', () => {
+    it('Should return false if there is no transaction.', () => {
+      const bc = new Blockchain(validBlockchain())
+
+      const result = bc.hasLevelUpOnLastTx()
+
+      assert.isNotOk(result)
+    })
+
+    it('Should return false if last Transaction did not change level.', () => {
+      const bc = new Blockchain(validBlockchain())
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-23'))
+
+      const result = bc.hasLevelUpOnLastTx()
+
+      assert.isNotOk(result)
+    })
+
+    it('Should return true after passed from 26 to 27 Total.', () => {
+      const bc = new Blockchain(validBlockchain())
+      bc.blocks[0].t = 26
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-23'))
+      bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey1, true), 1))
+
+      const result = bc.hasLevelUpOnLastTx()
+
+      assert.ok(result)
     })
   })
 })

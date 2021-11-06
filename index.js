@@ -1,9 +1,14 @@
-const { sha256 } = require('ethereum-cryptography/sha256')
 const { Base64 } = require('js-base64')
+const { sha256 } = require('ethereum-cryptography/sha256')
+const { scryptSync } = require("ethereum-cryptography/scrypt");
+const { utf8ToBytes } = require("ethereum-cryptography/utils");
 const secp = require('ethereum-cryptography/secp256k1')
+const { encrypt, decrypt } = require("ethereum-cryptography/aes");
+const { getRandomBytesSync } = require("ethereum-cryptography/random");
 const msgpack = require('msgpack-lite')
 
 class Blockchain {
+  static get IV () { return utf8ToBytes('thisisnounique') }
   static get REF_HASH () { return 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5' }
   static get VERSION () { return 1 }
   static get MSG () {
@@ -36,6 +41,21 @@ class Blockchain {
 
   static randomPrivateKey () {
     return secp.utils.randomPrivateKey()
+  }
+
+  static async aesEncrypt (msg, pwd) {
+    const key = scryptSync(utf8ToBytes(pwd), utf8ToBytes("salt"), 2048, 8, 1, 16)
+    const iv = getRandomBytesSync(16)
+    msg = await encrypt(msg, key, iv)
+    return { msg, iv, sha: sha256(utf8ToBytes(pwd)) }
+  }
+
+  static async aesDecrypt (encrypted, pwd) {
+    if (JSON.stringify(sha256(utf8ToBytes(pwd))) !== JSON.stringify(encrypted.sha)) {
+      throw new Error('Invalid password')
+    }
+    const key = scryptSync(utf8ToBytes(pwd), utf8ToBytes("salt"), 2048, 8, 1, 16)
+    return await decrypt(encrypted.msg, key, encrypted.iv)
   }
 
   static publicFromPrivate (privateKey) {

@@ -666,7 +666,7 @@ describe('blockchain', () => {
     })
   })
 
-  describe.only('hasLevelUpOnLastTx', () => {
+  describe('hasLevelUpOnLastTx', () => {
     it('Should return false if there is no transaction.', () => {
       const bc = new Blockchain(validBlockchain())
 
@@ -693,6 +693,41 @@ describe('blockchain', () => {
       const result = bc.hasLevelUpOnLastTx()
 
       assert.ok(result)
+    })
+  })
+
+  describe('aesEncrypt', () => {
+    it('Should encrypt data correctly.', async () => {
+      const msg = Blockchain.randomPrivateKey()
+      const result = await Blockchain.aesEncrypt(msg, 'test_pwd')
+
+      assert.property(result, 'msg')
+      assert.property(result, 'iv')
+      assert.property(result, 'sha')
+    })
+  })
+
+  describe('aesDecrypt', () => {
+    it('Should decrypt data correctly.', async () => {
+      const msg = Blockchain.randomPrivateKey()
+      const encrypted = await Blockchain.aesEncrypt(msg, 'test_pwd')
+      const result = await Blockchain.aesDecrypt(encrypted, 'test_pwd')
+
+      assert.deepEqual(result, msg)
+    })
+
+    it('Should throw error for invalid password.', async () => {
+      const msg = Blockchain.randomPrivateKey()
+      const encrypted = await Blockchain.aesEncrypt(msg, 'test_pwd')
+
+      let error = null
+      try {
+        await Blockchain.aesDecrypt(encrypted, 'wrong_password')
+      } catch (err) {
+        error = err
+      }
+      assert.typeOf(error, 'Error')
+      assert.equal(error.message, 'Invalid password')
     })
   })
 })

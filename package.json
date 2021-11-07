@@ -1,6 +1,6 @@
 {
   "name": "guzi-money",
-  "version": "0.1.7",
+  "version": "0.1.9",
   "description": "The javascript implementation of Guzi cryptography",
   "main": "index.js",
   "scripts": {

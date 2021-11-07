@@ -1,7 +1,7 @@
 const { Base64 } = require('js-base64')
 const { sha256 } = require('ethereum-cryptography/sha256')
 const { scryptSync } = require("ethereum-cryptography/scrypt");
-const { utf8ToBytes } = require("ethereum-cryptography/utils");
+const { utf8ToBytes, toHex } = require("ethereum-cryptography/utils");
 const secp = require('ethereum-cryptography/secp256k1')
 const { encrypt, decrypt } = require("ethereum-cryptography/aes");
 const { getRandomBytesSync } = require("ethereum-cryptography/random");
@@ -281,10 +281,10 @@ class Blockchain {
     }
     if (tx.t === Blockchain.TXTYPE.PAYMENT) {
       const myPrivateKey = this.bks[this.bks.length-1].s
-      if (tx.s === myPrivateKey) {
+      if (toHex(tx.s) === toHex(myPrivateKey)) {
         this.bks[0].g = this.removeGuzisFromAvailable(tx.gp)
       }
-      if (tx.tu === myPrivateKey) {
+      if (toHex(tx.tu) === toHex(myPrivateKey)) {
         let toadd = 0
         Object.keys(tx.gp).forEach(key => {
           toadd += tx.gp[key].length
@@ -412,7 +412,6 @@ class Blockchain {
   static signblock (block, privateKey) {
     const hash = Blockchain.hashblock(block)
     const bytes = secp.signSync(hash, privateKey)
-    // console.log(Blockchain.toHexString(bytes))
     block.h = bytes
     return block
   }
@@ -456,15 +455,30 @@ class Blockchain {
   }
 
   /**
-   * Return true if given Block is a valid Initialisation one
+   * Return true if given Block is a valid Birth one
+   */
+  static isValidBirthBlock (block) {
+    const signature = block.h
+    const messageHash = Blockchain.hashblock(block)
+    const publicKey = block.s
+
+    return block.ph === Blockchain.REF_HASH &&
+      block.v === Blockchain.VERSION &&
+      JSON.stringify(block.g) === JSON.stringify({}) &&
+      block.b === 0 &&
+      block.t === 0 &&
+      secp.verify(signature, messageHash, publicKey)
+  }
+
+  /**
+   * Return true if given Block is a valid Birth one
    */
   static isValidInitializationBlock (block) {
     const signature = block.h
     const messageHash = Blockchain.hashblock(block)
     const publicKey = block.s
 
-    return block.ph === Blockchain.REF_HASH &&
-      block.v === 1 &&
+    return block.v === Blockchain.VERSION &&
       JSON.stringify(block.g) === JSON.stringify({}) &&
       block.b === 0 &&
       block.t === 0 &&

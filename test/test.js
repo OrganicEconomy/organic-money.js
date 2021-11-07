@@ -1,19 +1,20 @@
 const { describe, it } = require('mocha')
 const Blockchain = require('../index')
 const secp = require('ethereum-cryptography/secp256k1')
+const { hexToBytes, toHex } = require("ethereum-cryptography/utils");
 const assert = require('chai').assert
 
-const privateKey1 = 'ed945716dddb7af2c9774939e9946f1fee31f5ec0a3c6ec96059f119c396912f'
-const privateKey2 = 'e68955130b2c4adc6165b0bae6e6b8f4bcce1879dbf0c6f91b3acc69479ef272'
+const privateKey1 = hexToBytes('ed945716dddb7af2c9774939e9946f1fee31f5ec0a3c6ec96059f119c396912f')
+const privateKey2 = hexToBytes('e68955130b2c4adc6165b0bae6e6b8f4bcce1879dbf0c6f91b3acc69479ef272')
 
 const validBirthBlock = () => {
   return {
     b: 0,
     d: '28/11/1989',
     g: {},
-    h: '3046022100a79541ba6261790d13bfaf2d4177a0a645a3baade652bbc31daf0e2b6801300c022100de8f9ad1842e5634dd8027c1e4c90026303f201a00322df4a76e6330943702bb',
+    h: hexToBytes('3045022100f5f0e37b8db1c72e42442a795cb69379d9671bbad25e6013fcea9c7be8a445540220485365844c4416533541b27d0a284bb5b7eaee139f8f919f55723c29c04e6f17'),
     ph: Blockchain.REF_HASH,
-    s: '02c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3',
+    s: hexToBytes('02c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3'),
     t: 0,
     v: 1
   }
@@ -24,31 +25,26 @@ const validInitBlock = () => {
     b: 0,
     d: '21/09/2021',
     g: {},
-    h: '304502202422e7ba167cbe7289051886fd7e9a6957676cde7abba34e3f4ccfa1c7d76437022100bd824547e46638a6d70cbbbaf1f276d639bbb4354ca2461cef1c74db34542c12',
-    ph: '3046022100a79541ba6261790d13bfaf2d4177a0a645a3baade652bbc31daf0e2b6801300c022100de8f9ad1842e5634dd8027c1e4c90026303f201a00322df4a76e6330943702bb',
-    s: '02c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3',
+    h: hexToBytes('3044022062d8fcad8687b5b7d3d2a00e342ad6b39b4d54b3eb699a66243f38594afafabb022047a70fb55cac435b1a7ea91931dbe1ec9fdce1a6aa50b09899fa9cc86f939926'),
+    ph: hexToBytes('3045022100f5f0e37b8db1c72e42442a795cb69379d9671bbad25e6013fcea9c7be8a445540220485365844c4416533541b27d0a284bb5b7eaee139f8f919f55723c29c04e6f17'),
+    s: hexToBytes('02c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3'),
     t: 0,
     v: 1
   }
 }
 
 const validBlockchain = () => {
-  return [validInitBlock(), validBirthBlock()]
-}
-
-function hexToBytes (hex) {
-  const bytes = []
-  for (let c = 0; c < hex.length; c += 2) { bytes.push(parseInt(hex.substr(c, 2), 16)) }
-  return Uint8Array.from(bytes)
+  return new Blockchain([validInitBlock(), validBirthBlock()])
 }
 
 describe('blockchain', () => {
 
   describe('asBinary', () => {
     it('Should return binary blockchain... Yes !', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
 
-      const expected = new Uint8Array([146, 136, 161, 98, 0, 161, 100, 170, 50, 49, 47, 48, 57, 47, 50, 48, 50, 49, 161, 103, 128, 161, 104, 217, 142, 51, 48, 52, 53, 48, 50, 50, 48, 50, 52, 50, 50, 101, 55, 98, 97, 49, 54, 55, 99, 98, 101, 55, 50, 56, 57, 48, 53, 49, 56, 56, 54, 102, 100, 55, 101, 57, 97, 54, 57, 53, 55, 54, 55, 54, 99, 100, 101, 55, 97, 98, 98, 97, 51, 52, 101, 51, 102, 52, 99, 99, 102, 97, 49, 99, 55, 100, 55, 54, 52, 51, 55, 48, 50, 50, 49, 48, 48, 98, 100, 56, 50, 52, 53, 52, 55, 101, 52, 54, 54, 51, 56, 97, 54, 100, 55, 48, 99, 98, 98, 98, 97, 102, 49, 102, 50, 55, 54, 100, 54, 51, 57, 98, 98, 98, 52, 51, 53, 52, 99, 97, 50, 52, 54, 49, 99, 101, 102, 49, 99, 55, 52, 100, 98, 51, 52, 53, 52, 50, 99, 49, 50, 162, 112, 104, 217, 144, 51, 48, 52, 54, 48, 50, 50, 49, 48, 48, 97, 55, 57, 53, 52, 49, 98, 97, 54, 50, 54, 49, 55, 57, 48, 100, 49, 51, 98, 102, 97, 102, 50, 100, 52, 49, 55, 55, 97, 48, 97, 54, 52, 53, 97, 51, 98, 97, 97, 100, 101, 54, 53, 50, 98, 98, 99, 51, 49, 100, 97, 102, 48, 101, 50, 98, 54, 56, 48, 49, 51, 48, 48, 99, 48, 50, 50, 49, 48, 48, 100, 101, 56, 102, 57, 97, 100, 49, 56, 52, 50, 101, 53, 54, 51, 52, 100, 100, 56, 48, 50, 55, 99, 49, 101, 52, 99, 57, 48, 48, 50, 54, 51, 48, 51, 102, 50, 48, 49, 97, 48, 48, 51, 50, 50, 100, 102, 52, 97, 55, 54, 101, 54, 51, 51, 48, 57, 52, 51, 55, 48, 50, 98, 98, 161, 115, 217, 66, 48, 50, 99, 56, 53, 101, 52, 101, 52, 52, 56, 100, 54, 55, 97, 56, 100, 99, 55, 50, 52, 99, 54, 50, 48, 102, 51, 102, 101, 55, 100, 50, 97, 51, 97, 51, 99, 99, 101, 57, 102, 101, 57, 48, 53, 98, 57, 49, 56, 102, 55, 49, 50, 51, 57, 54, 98, 52, 102, 56, 101, 102, 102, 99, 98, 51, 161, 116, 0, 161, 118, 1, 136, 161, 98, 0, 161, 100, 170, 50, 56, 47, 49, 49, 47, 49, 57, 56, 57, 161, 103, 128, 161, 104, 217, 144, 51, 48, 52, 54, 48, 50, 50, 49, 48, 48, 97, 55, 57, 53, 52, 49, 98, 97, 54, 50, 54, 49, 55, 57, 48, 100, 49, 51, 98, 102, 97, 102, 50, 100, 52, 49, 55, 55, 97, 48, 97, 54, 52, 53, 97, 51, 98, 97, 97, 100, 101, 54, 53, 50, 98, 98, 99, 51, 49, 100, 97, 102, 48, 101, 50, 98, 54, 56, 48, 49, 51, 48, 48, 99, 48, 50, 50, 49, 48, 48, 100, 101, 56, 102, 57, 97, 100, 49, 56, 52, 50, 101, 53, 54, 51, 52, 100, 100, 56, 48, 50, 55, 99, 49, 101, 52, 99, 57, 48, 48, 50, 54, 51, 48, 51, 102, 50, 48, 49, 97, 48, 48, 51, 50, 50, 100, 102, 52, 97, 55, 54, 101, 54, 51, 51, 48, 57, 52, 51, 55, 48, 50, 98, 98, 162, 112, 104, 217, 64, 99, 49, 97, 53, 53, 49, 99, 97, 49, 99, 48, 100, 101, 101, 97, 53, 101, 102, 101, 97, 53, 49, 98, 49, 101, 49, 100, 101, 97, 49, 49, 50, 101, 100, 49, 100, 101, 97, 48, 97, 53, 49, 53, 48, 102, 53, 101, 49, 49, 97, 98, 49, 101, 53, 48, 99, 49, 97, 49, 53, 101, 101, 100, 53, 161, 115, 217, 66, 48, 50, 99, 56, 53, 101, 52, 101, 52, 52, 56, 100, 54, 55, 97, 56, 100, 99, 55, 50, 52, 99, 54, 50, 48, 102, 51, 102, 101, 55, 100, 50, 97, 51, 97, 51, 99, 99, 101, 57, 102, 101, 57, 48, 53, 98, 57, 49, 56, 102, 55, 49, 50, 51, 57, 54, 98, 52, 102, 56, 101, 102, 102, 99, 98, 51, 161, 116, 0, 161, 118, 1])
+      const expected = hexToBytes('9288a16200a164aa32312f30392f32303231a16780a168c746123044022062d8fcad8687b5b7d3d2a00e342ad6b39b4d54b3eb699a66243f38594afafabb022047a70fb55cac435b1a7ea91931dbe1ec9fdce1a6aa50b09899fa9cc86f939926a27068c747123045022100f5f0e37b8db1c72e42442a795cb69379d9671bbad25e6013fcea9c7be8a445540220485365844c4416533541b27d0a284bb5b7eaee139f8f919f55723c29c04e6f17a173c7211202c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3a17400a1760188a16200a164aa32382f31312f31393839a16780a168c747123045022100f5f0e37b8db1c72e42442a795cb69379d9671bbad25e6013fcea9c7be8a445540220485365844c4416533541b27d0a284bb5b7eaee139f8f919f55723c29c04e6f17a27068d94063316135353163613163306465656135656665613531623165316465613131326564316465613061353135306635653131616231653530633161313565656435a173c7211202c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3a17400a17601')
+
       const result = bc.asBinary()
 
       assert.deepEqual(result, expected)
@@ -57,9 +53,9 @@ describe('blockchain', () => {
 
   describe('asB64', () => {
     it('Should return b64 encoded blockchain...', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
 
-      const expected = 'koihYgChZKoyMS8wOS8yMDIxoWeAoWjZjjMwNDUwMjIwMjQyMmU3YmExNjdjYmU3Mjg5MDUxODg2ZmQ3ZTlhNjk1NzY3NmNkZTdhYmJhMzRlM2Y0Y2NmYTFjN2Q3NjQzNzAyMjEwMGJkODI0NTQ3ZTQ2NjM4YTZkNzBjYmJiYWYxZjI3NmQ2MzliYmI0MzU0Y2EyNDYxY2VmMWM3NGRiMzQ1NDJjMTKicGjZkDMwNDYwMjIxMDBhNzk1NDFiYTYyNjE3OTBkMTNiZmFmMmQ0MTc3YTBhNjQ1YTNiYWFkZTY1MmJiYzMxZGFmMGUyYjY4MDEzMDBjMDIyMTAwZGU4ZjlhZDE4NDJlNTYzNGRkODAyN2MxZTRjOTAwMjYzMDNmMjAxYTAwMzIyZGY0YTc2ZTYzMzA5NDM3MDJiYqFz2UIwMmM4NWU0ZTQ0OGQ2N2E4ZGM3MjRjNjIwZjNmZTdkMmEzYTNjY2U5ZmU5MDViOTE4ZjcxMjM5NmI0ZjhlZmZjYjOhdAChdgGIoWIAoWSqMjgvMTEvMTk4OaFngKFo2ZAzMDQ2MDIyMTAwYTc5NTQxYmE2MjYxNzkwZDEzYmZhZjJkNDE3N2EwYTY0NWEzYmFhZGU2NTJiYmMzMWRhZjBlMmI2ODAxMzAwYzAyMjEwMGRlOGY5YWQxODQyZTU2MzRkZDgwMjdjMWU0YzkwMDI2MzAzZjIwMWEwMDMyMmRmNGE3NmU2MzMwOTQzNzAyYmKicGjZQGMxYTU1MWNhMWMwZGVlYTVlZmVhNTFiMWUxZGVhMTEyZWQxZGVhMGE1MTUwZjVlMTFhYjFlNTBjMWExNWVlZDWhc9lCMDJjODVlNGU0NDhkNjdhOGRjNzI0YzYyMGYzZmU3ZDJhM2EzY2NlOWZlOTA1YjkxOGY3MTIzOTZiNGY4ZWZmY2IzoXQAoXYB'
+      const expected = 'koihYgChZKoyMS8wOS8yMDIxoWeAoWjHRhIwRAIgYtj8rYaHtbfT0qAONCrWs5tNVLPraZpmJD84WUr6+rsCIEenD7VcrENbGn6pGTHb4eyf3OGmqlCwmJn6nMhvk5kmonBox0cSMEUCIQD18ON7jbHHLkJEKnlctpN52WcbutJeYBP86px76KRFVAIgSFNlhExEFlM1QbJ9CihLtbfq7hOfj5GfVXI8KcBObxehc8chEgLIXk5EjWeo3HJMYg8/59Kjo8zp/pBbkY9xI5a0+O/8s6F0AKF2AYihYgChZKoyOC8xMS8xOTg5oWeAoWjHRxIwRQIhAPXw43uNsccuQkQqeVy2k3nZZxu60l5gE/zqnHvopEVUAiBIU2WETEQWUzVBsn0KKEu1t+ruE5+PkZ9VcjwpwE5vF6JwaNlAYzFhNTUxY2ExYzBkZWVhNWVmZWE1MWIxZTFkZWExMTJlZDFkZWEwYTUxNTBmNWUxMWFiMWU1MGMxYTE1ZWVkNaFzxyESAsheTkSNZ6jcckxiDz/n0qOjzOn+kFuRj3EjlrT47/yzoXQAoXYB'
       const result = bc.asB64()
 
       assert.deepEqual(result, expected)
@@ -68,7 +64,7 @@ describe('blockchain', () => {
 
   describe('getLastTx', () => {
     it('Should return null if no transaction exists.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
 
       const result = bc.getLastTx()
 
@@ -76,7 +72,7 @@ describe('blockchain', () => {
     })
 
     it('Should return the lastly added Transaction', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
       const lastTx = bc.createDailyGuzisTx(privateKey1, '2021-09-26')
       bc.addTx(lastTx)
@@ -90,7 +86,7 @@ describe('blockchain', () => {
   describe('load', () => {
     it('Should load directly from object', () => {
       const bc = new Blockchain()
-      const blocks = validBlockchain()
+      const blocks = [validBirthBlock(), validInitBlock()]
 
       bc.load(blocks)
 
@@ -98,7 +94,7 @@ describe('blockchain', () => {
     })
 
     it('Should load correctly from binary', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       const bc2 = new Blockchain()
       const bin = bc.asBinary()
 
@@ -108,7 +104,7 @@ describe('blockchain', () => {
     })
 
     it('Should load correctly from b64', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       const bc2 = new Blockchain()
       const b64 = bc.asB64()
 
@@ -250,11 +246,19 @@ describe('blockchain', () => {
     })
   })
 
+  describe('isValidBirthBlock', () => {
+    it('Should return true for valid block', () => {
+      const result = Blockchain.isValidBirthBlock(validBirthBlock())
+
+      assert.isTrue(result)
+    })
+  })
+
   describe('isValidInitializationBlock', () => {
     it('Should return true for valid block', () => {
-      const result = Blockchain.isValidInitializationBlock(validBirthBlock())
+      const result = Blockchain.isValidInitializationBlock(validInitBlock())
 
-      assert.ok(result)
+      assert.isTrue(result)
     })
   })
 
@@ -279,13 +283,14 @@ describe('blockchain', () => {
       assert.ok(Blockchain.verifyBlock(result.blocks[0], pubkey))
 
       delete result.blocks[0].h
+      console.log(toHex(result.blocks[0].ph))
 
       const expectedInitializationBlock = {
         b: 0,
         d: new Date().toISOString().slice(0, 10),
         g: {},
-        ph: '3046022100a79541ba6261790d13bfaf2d4177a0a645a3baade652bbc31daf0e2b6801300c022100de8f9ad1842e5634dd8027c1e4c90026303f201a00322df4a76e6330943702bb',
-        s: '03cbe4edbfbbc99dfbae83e8c591fafdd6a82d61589be6f60775e3fe2a4677ef46',
+        ph: hexToBytes('3045022100f5f0e37b8db1c72e42442a795cb69379d9671bbad25e6013fcea9c7be8a445540220485365844c4416533541b27d0a284bb5b7eaee139f8f919f55723c29c04e6f17'),
+        s: hexToBytes('03cbe4edbfbbc99dfbae83e8c591fafdd6a82d61589be6f60775e3fe2a4677ef46'),
         t: 0,
         v: 1
       }
@@ -303,7 +308,7 @@ describe('blockchain', () => {
     })
 
     it('Should return 2 for t=1 to 3', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.blocks[0].t = 1
       assert.equal(bc.getLevel(), 2)
       bc.blocks[0].t = 2
@@ -322,7 +327,7 @@ describe('blockchain', () => {
     })
 
     it('Should return 16 for total at 11 (target is 27)', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.blocks[0].t = 11
       const result = bc.getGuzisBeforeNextLevel()
 
@@ -330,7 +335,7 @@ describe('blockchain', () => {
     })
 
     it('Should return percent if as_percent is true', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.blocks[0].t = 11
 
       const result = bc.getGuzisBeforeNextLevel(true)
@@ -362,7 +367,7 @@ describe('blockchain', () => {
     })
 
     it('Should return last block g for valid blockchain', () => {
-      const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+      const bc = validBlockchain()
       bc.blocks[0].t = 27
       bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
       bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-26'))
@@ -448,14 +453,14 @@ describe('blockchain', () => {
     })
 
     it('Should return false if the first block is not a birth one', () => {
-      const bc = new Blockchain([validInitBlock(), validInitBlock()])
+      const bc = new Blockchain([validInitBlock()])
       const result = bc.isValidated()
 
       assert.isNotOk(result)
     })
 
     it('Should return true totally valid blockchain', () => {
-      const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+      const bc = validBlockchain()
       const result = bc.isValidated()
 
       assert.ok(result)
@@ -464,14 +469,14 @@ describe('blockchain', () => {
 
   describe('createDailyGuzisTx', () => {
     it('Should throw error if Guzis have already been created today.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.addTx(bc.createDailyGuzisTx(privateKey1))
 
       assert.throws(() => { bc.createDailyGuzisTx(privateKey1) }, 'Guzis already created today')
     })
 
     it('Should return blockchain in OK case.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.addTx(bc.createDailyGuzisTx(privateKey1))
       const result = bc.blocks[0].tx[0]
 
@@ -485,7 +490,7 @@ describe('blockchain', () => {
         v: 1,
         t: 0,
         d: d,
-        s: '02c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3',
+        s: hexToBytes('02c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3'),
         a: 1,
         gp: expectedGP
       }
@@ -494,7 +499,7 @@ describe('blockchain', () => {
     })
 
     it('Should create 1+Total^(1/3) Guzis.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.blocks[0].t = 27 // => 3 +1 Guzi/day
       bc.addTx(bc.createDailyGuzisTx(privateKey1))
       const result = bc.blocks[0].tx[0]
@@ -509,7 +514,7 @@ describe('blockchain', () => {
         v: 1,
         t: 0,
         d: d,
-        s: '02c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3',
+        s: hexToBytes('02c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3'),
         a: 4,
         gp: expectedGP
       }
@@ -520,7 +525,7 @@ describe('blockchain', () => {
 
   describe('getAvailableGuzis', () => {
     it('Should return {} for new Blockchain.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       const result = bc.getAvailableGuzis()
 
       const expected = {}
@@ -529,7 +534,7 @@ describe('blockchain', () => {
     })
 
     it('Should return each index.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.blocks[0].t = 27
       bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
       const result = bc.getAvailableGuzis()
@@ -540,7 +545,7 @@ describe('blockchain', () => {
     })
 
     it('Should return each date.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.blocks[0].t = 27
       const d1 = '2021-09-23'
       const d2 = '2021-09-24'
@@ -559,7 +564,7 @@ describe('blockchain', () => {
     })
 
     it('Should return only given amount if given.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.blocks[0].t = 27
       const d = '2021-09-25'
       bc.addTx(bc.createDailyGuzisTx(privateKey1, d))
@@ -572,7 +577,7 @@ describe('blockchain', () => {
     })
 
     it('Should return only given amount for complexe cases.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.blocks[0].t = 27
       const d1 = '2021-09-23'
       const d2 = '2021-09-24'
@@ -590,7 +595,7 @@ describe('blockchain', () => {
     })
 
     it('Should return only unspent Guzis.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.blocks[0].t = 27
       const d1 = '2021-09-23'
       const d2 = '2021-09-24'
@@ -611,7 +616,7 @@ describe('blockchain', () => {
 
   describe('createPaymentTx', () => {
     it('Should make valid transaction.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.blocks[0].t = 27
       bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
       bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 3, '2021-09-25'))
@@ -636,7 +641,7 @@ describe('blockchain', () => {
 
   describe('addTx', () => {
     it('Should increase g of the block for tx of type guzi creation.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.blocks[0].t = 27
       const d = '2021-09-25'
       bc.addTx(bc.createDailyGuzisTx(privateKey1, d))
@@ -648,7 +653,7 @@ describe('blockchain', () => {
     })
 
     it('Should decrease g of the block for tx of type payment.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.blocks[0].t = 27
       const d1 = '2021-09-23'
       const d2 = '2021-09-24'
@@ -664,11 +669,23 @@ describe('blockchain', () => {
 
       assert.deepEqual(result, expected)
     })
+
+    it('Should increase my total if target is me.', () => {
+      const bc = validBlockchain()
+      bc.blocks[0].t = 27
+      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-23'))
+      // TODO : public key must be Uint Array
+      bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey1, true), 2))
+      const result = bc.blocks[0].t
+      const expected = 29
+
+      assert.deepEqual(result, expected)
+    })
   })
 
   describe('hasLevelUpOnLastTx', () => {
     it('Should return false if there is no transaction.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
 
       const result = bc.hasLevelUpOnLastTx()
 
@@ -676,7 +693,7 @@ describe('blockchain', () => {
     })
 
     it('Should return false if last Transaction did not change level.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-23'))
 
       const result = bc.hasLevelUpOnLastTx()
@@ -685,7 +702,7 @@ describe('blockchain', () => {
     })
 
     it('Should return true after passed from 26 to 27 Total.', () => {
-      const bc = new Blockchain(validBlockchain())
+      const bc = validBlockchain()
       bc.blocks[0].t = 26
       bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-23'))
       bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey1, true), 1))

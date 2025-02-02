@@ -73,8 +73,8 @@ describe('blockchain', () => {
 
     it('Should return the lastly added Transaction', () => {
       const bc = validBlockchain()
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
-      const lastTx = bc.createDailyGuzisTx(privateKey1, '2021-09-26')
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, '2021-09-25'))
+      const lastTx = bc.createDailyMoneyTx(privateKey1, '2021-09-26')
       bc.addTx(lastTx)
 
       const result = bc.getLastTx()
@@ -318,10 +318,10 @@ describe('blockchain', () => {
     })
   })
 
-  describe('getGuzisBeforeNextLevel', () => {
+  describe('getMoneyBeforeNextLevel', () => {
     it('Should return 0 for empty blockchain', () => {
       const bc = new Blockchain()
-      const result = bc.getGuzisBeforeNextLevel()
+      const result = bc.getMoneyBeforeNextLevel()
 
       assert.equal(result, 0)
     })
@@ -329,7 +329,7 @@ describe('blockchain', () => {
     it('Should return 16 for total at 11 (target is 27)', () => {
       const bc = validBlockchain()
       bc.blocks[0].t = 11
-      const result = bc.getGuzisBeforeNextLevel()
+      const result = bc.getMoneyBeforeNextLevel()
 
       assert.equal(result, 16)
     })
@@ -338,30 +338,30 @@ describe('blockchain', () => {
       const bc = validBlockchain()
       bc.blocks[0].t = 11
 
-      const result = bc.getGuzisBeforeNextLevel(true)
+      const result = bc.getMoneyBeforeNextLevel(true)
 
       assert.equal(result, 15)
     })
   })
 
-  describe('getAvailableGuziAmount', () => {
+  describe('getAvailableMoneyAmount', () => {
     it('Should return 0 for empty blockchain', () => {
       const bc = new Blockchain()
-      const result = bc.getAvailableGuziAmount()
+      const result = bc.getAvailableMoneyAmount()
 
       assert.equal(result, 0)
     })
 
     it('Should return 0 for created blockchain', () => {
       const bc = new Blockchain([])
-      const result = bc.getAvailableGuziAmount()
+      const result = bc.getAvailableMoneyAmount()
 
       assert.equal(result, 0)
     })
 
     it('Should return 0 for validation waiting blockchain', () => {
       const bc = new Blockchain([validBirthBlock()])
-      const result = bc.getAvailableGuziAmount()
+      const result = bc.getAvailableMoneyAmount()
 
       assert.equal(result, 0)
     })
@@ -369,9 +369,9 @@ describe('blockchain', () => {
     it('Should return last block g for valid blockchain', () => {
       const bc = validBlockchain()
       bc.blocks[0].t = 27
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-26'))
-      const result = bc.getAvailableGuziAmount()
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, '2021-09-25'))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, '2021-09-26'))
+      const result = bc.getAvailableMoneyAmount()
 
       assert.equal(result, 8)
     })
@@ -467,17 +467,17 @@ describe('blockchain', () => {
     })
   })
 
-  describe('createDailyGuzisTx', () => {
-    it('Should throw error if Guzis have already been created today.', () => {
+  describe('createDailyMoneyTx', () => {
+    it('Should throw error if Money have already been created today.', () => {
       const bc = validBlockchain()
-      bc.addTx(bc.createDailyGuzisTx(privateKey1))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1))
 
-      assert.throws(() => { bc.createDailyGuzisTx(privateKey1) }, 'Guzis already created today')
+      assert.throws(() => { bc.createDailyMoneyTx(privateKey1) }, 'Money already created today')
     })
 
     it('Should return blockchain in OK case.', () => {
       const bc = validBlockchain()
-      bc.addTx(bc.createDailyGuzisTx(privateKey1))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1))
       const result = bc.blocks[0].tx[0]
 
       assert.ok(Blockchain.verifyTx(result, secp.getPublicKey(privateKey1)))
@@ -498,10 +498,10 @@ describe('blockchain', () => {
       assert.deepEqual(result, expected)
     })
 
-    it('Should create 1+Total^(1/3) Guzis.', () => {
+    it('Should create 1+Total^(1/3) Money.', () => {
       const bc = validBlockchain()
-      bc.blocks[0].t = 27 // => 3 +1 Guzi/day
-      bc.addTx(bc.createDailyGuzisTx(privateKey1))
+      bc.blocks[0].t = 27 // => 3 +1 Money/day
+      bc.addTx(bc.createDailyMoneyTx(privateKey1))
       const result = bc.blocks[0].tx[0]
 
       assert.ok(Blockchain.verifyTx(result, secp.getPublicKey(privateKey1)))
@@ -523,10 +523,10 @@ describe('blockchain', () => {
     })
   })
 
-  describe('getAvailableGuzis', () => {
+  describe('getAvailableMoney', () => {
     it('Should return {} for new Blockchain.', () => {
       const bc = validBlockchain()
-      const result = bc.getAvailableGuzis()
+      const result = bc.getAvailableMoney()
 
       const expected = {}
 
@@ -536,8 +536,8 @@ describe('blockchain', () => {
     it('Should return each index.', () => {
       const bc = validBlockchain()
       bc.blocks[0].t = 27
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
-      const result = bc.getAvailableGuzis()
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, '2021-09-25'))
+      const result = bc.getAvailableMoney()
 
       const expected = { '2021-09-25': [0, 1, 2, 3] }
 
@@ -550,10 +550,10 @@ describe('blockchain', () => {
       const d1 = '2021-09-23'
       const d2 = '2021-09-24'
       const d3 = '2021-09-25'
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d1))
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d2))
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d3))
-      const result = bc.getAvailableGuzis()
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d1))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d2))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d3))
+      const result = bc.getAvailableMoney()
 
       const expected = {}
       expected[d1] = [0, 1, 2, 3]
@@ -567,8 +567,8 @@ describe('blockchain', () => {
       const bc = validBlockchain()
       bc.blocks[0].t = 27
       const d = '2021-09-25'
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d))
-      const result = bc.getAvailableGuzis(2)
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d))
+      const result = bc.getAvailableMoney(2)
 
       const expected = {}
       expected[d] = [0, 1]
@@ -582,10 +582,10 @@ describe('blockchain', () => {
       const d1 = '2021-09-23'
       const d2 = '2021-09-24'
       const d3 = '2021-09-25'
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d1))
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d2))
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d3))
-      const result = bc.getAvailableGuzis(7)
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d1))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d2))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d3))
+      const result = bc.getAvailableMoney(7)
 
       const expected = {}
       expected[d1] = [0, 1, 2, 3]
@@ -594,17 +594,17 @@ describe('blockchain', () => {
       assert.deepEqual(result, expected)
     })
 
-    it('Should return only unspent Guzis.', () => {
+    it('Should return only unspent Money.', () => {
       const bc = validBlockchain()
       bc.blocks[0].t = 27
       const d1 = '2021-09-23'
       const d2 = '2021-09-24'
       const d3 = '2021-09-25'
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d1))
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d2))
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d3))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d1))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d2))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d3))
       bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 7))
-      const result = bc.getAvailableGuzis()
+      const result = bc.getAvailableMoney()
 
       const expected = {}
       expected[d2] = [3]
@@ -618,7 +618,7 @@ describe('blockchain', () => {
     it('Should make valid transaction.', () => {
       const bc = validBlockchain()
       bc.blocks[0].t = 27
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-25'))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, '2021-09-25'))
       bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 3, '2021-09-25'))
       const result = bc.blocks[0].tx[0]
 
@@ -644,7 +644,7 @@ describe('blockchain', () => {
       const bc = validBlockchain()
       bc.blocks[0].t = 27
       const d = '2021-09-25'
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d))
       const result = bc.blocks[0].g
       const expected = {}
       expected[d] = [0, 1, 2, 3]
@@ -658,9 +658,9 @@ describe('blockchain', () => {
       const d1 = '2021-09-23'
       const d2 = '2021-09-24'
       const d3 = '2021-09-25'
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d1))
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d2))
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, d3))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d1))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d2))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, d3))
       bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 7))
       const result = bc.blocks[0].g
       const expected = {}
@@ -673,7 +673,7 @@ describe('blockchain', () => {
     it('Should increase my total if target is me.', () => {
       const bc = validBlockchain()
       bc.blocks[0].t = 27
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-23'))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, '2021-09-23'))
       // TODO : public key must be Uint Array
       bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey1, true), 2))
       const result = bc.blocks[0].t
@@ -694,7 +694,7 @@ describe('blockchain', () => {
 
     it('Should return false if last Transaction did not change level.', () => {
       const bc = validBlockchain()
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-23'))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, '2021-09-23'))
 
       const result = bc.hasLevelUpOnLastTx()
 
@@ -704,7 +704,7 @@ describe('blockchain', () => {
     it('Should return true after passed from 26 to 27 Total.', () => {
       const bc = validBlockchain()
       bc.blocks[0].t = 26
-      bc.addTx(bc.createDailyGuzisTx(privateKey1, '2021-09-23'))
+      bc.addTx(bc.createDailyMoneyTx(privateKey1, '2021-09-23'))
       bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey1, true), 1))
 
       const result = bc.hasLevelUpOnLastTx()

@@ -1,26 +1,27 @@
 {
-  "name": "guzi-money",
+  "name": "organic-money",
   "version": "0.1.9",
-  "description": "The javascript implementation of Guzi cryptography",
+  "description": "The javascript implementation of Organic money cryptography",
   "main": "index.js",
   "scripts": {
     "test": "mocha"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GuziEconomy/guzi.js.git"
+    "url": "git+https://github.com/GuziEconomy/organic-money.js.git"
   },
   "keywords": [
-    "guzi",
+    "organic-economy",
+	"money",
     "crypto",
     "money"
   ],
   "author": "Gus",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/GuziEconomy/guzi.js/issues"
+    "url": "https://github.com/GuziEconomy/organic-money.js/issues"
   },
-  "homepage": "https://github.com/GuziEconomy/guzi.js#readme",
+  "homepage": "https://github.com/GuziEconomy/organic-money.js#readme",
   "devDependencies": {
     "eslint": "^7.32.0",
     "eslint-config-standard": "^16.0.3",

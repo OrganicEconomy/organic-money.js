@@ -11,31 +11,16 @@ class Blockchain {
   static get IV () { return utf8ToBytes('thisisnounique') }
   static get REF_HASH () { return 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5' }
   static get VERSION () { return 1 }
-  static get MSG () {
-    return {
-      VALIDATION_DEMAND: 'dv',
-      VALIDATION_ACCEPT: 'av',
-      PAYMENT: 'p',
-      PAYMENT_REFUSED: 'pr',
-      SIGN_DEMAND: 'ds',
-      SIGN_ACCEPT: 'as'
-    }
-  }
 
   static get TXTYPE () {
     return {
-      GUZI_CREATE: 0,
-      GUZIBOX_CREATE: 1,
+      MONEY_CREATE: 0,
+      INVEST_CREATE: 1,
       PAYMENT: 2,
-      GUZI_ENGAGEMENT: 3,
-      GUZIBOX_ENGAGEMENT: 4,
-      REFUSAL: 5,
-      OWNER_SET: 10,
-      ADMIN_SET: 11,
-      WORKER_SET: 12,
-      PAYER_SET: 13,
-      PAY_ORDER: 14,
-      LEAVE_ORDER: 15
+      MONEY_ENGAGEMENT: 3,
+      INVEST_ENGAGEMENT: 4,
+      PAY_ORDER: 10,
+      ACTOR_SET: 11,
     }
   }
 
@@ -107,8 +92,8 @@ class Blockchain {
   /**
    * Return true if given blockchain is a valid one :
    * - signatures are ok
-   * - created Guzis are ok
-   * - spended Guzis are ok
+   * - created Money are ok
+   * - spended Money are ok
    * - referent is known
    * Return false else
    * TODO !
@@ -119,7 +104,7 @@ class Blockchain {
 
   /**
    * Return the level of the Blockchain
-   * The level is equal to the number of Guzis (and Boxes) created
+   * The level is equal to the number of Money (and Boxes) created
    * each day
    */
   getLevel () {
@@ -128,23 +113,24 @@ class Blockchain {
   }
 
   /**
-   * If as_percent is true, return the percentage of Guzis already
+   * If as_percent is true, return the percentage of Money already
    * made before the next level.
+   * If Blockchain is invalid, return 0
    */
-  getGuzisBeforeNextLevel (asPercent = false) {
+  getMoneyBeforeNextLevel (asPercent = false) {
     if (this.isEmpty() || !this.isValidated()) { return 0 }
     const level = this.getLevel()
     if (asPercent) {
-      return Math.floor(100 * (1 - this.getGuzisBeforeNextLevel() / (Math.pow(level, 3) - Math.pow(level - 1, 3))))
+      return Math.floor(100 * (1 - this.getMoneyBeforeNextLevel() / (Math.pow(level, 3) - Math.pow(level - 1, 3))))
     }
     return Math.pow(level, 3) - this.bks[0].t
   }
 
   /**
-   * Return the amount of Guzis available in the Blockchain
+   * Return the amount of Money available in the Blockchain
    * If Blockchain is invalid, return 0
    */
-  getAvailableGuziAmount () {
+  getAvailableMoneyAmount () {
     if (this.isEmpty() || this.isWaitingValidation()) {
       return 0
     }
@@ -182,13 +168,13 @@ class Blockchain {
   }
 
   /**
-   * Return the transaction that creates daily Guzis for the Blockchain.
+   * Return the transaction that creates daily Money for the Blockchain.
    * If d is not given, uses today's date.
-   * raise an error if Guzis has already been created at the given date.
+   * raise an error if Money has already been created at the given date.
    */
-  createDailyGuzisTx (key, d = null) {
-    if (this.hasCreatedGuzisToday()) {
-      throw new Error('Guzis already created today')
+  createDailyMoneyTx (key, d = null) {
+    if (this.hasCreatedMoneyToday()) {
+      throw new Error('Money already created today')
     }
     d = d || new Date().toISOString().slice(0, 10)
     const amount = this.getLevel()
@@ -196,7 +182,7 @@ class Blockchain {
     gp[d] = [...Array(amount).keys()]
     const tx = {
       v: Blockchain.VERSION,
-      t: Blockchain.TXTYPE.GUZI_CREATE,
+      t: Blockchain.TXTYPE.MONEY_CREATE,
       d: d,
       s: secp.getPublicKey(key, true),
       a: amount,
@@ -206,11 +192,11 @@ class Blockchain {
   }
 
   /**
-   * Return the list of all available Guzis
-   * If amount > 0, return only this amount of Guzis
+   * Return the list of all available Money
+   * If amount > 0, return only this amount of Money
    *
    */
-  getAvailableGuzis (amount = -1) {
+  getAvailableMoney (amount = -1) {
     if (amount < 0) {
       return this.bks[0].g
     }
@@ -228,16 +214,16 @@ class Blockchain {
   }
 
   /**
-   * Remove given guzis from the available ones.
-   * That means those Guzis have been spended.
+   * Remove given money from the available ones.
+   * That means those Money have been spended.
    */
-  removeGuzisFromAvailable (guzis) {
+  removeMoneyFromAvailable (money) {
     const result = {}
     Object.keys(this.bks[0].g).forEach(k => {
-      if (!guzis[k]) {
+      if (!money[k]) {
         result[k] = this.bks[0].g[k]
-      } else if (guzis[k] && guzis[k].length < this.bks[0].g[k].length) {
-        result[k] = this.bks[0].g[k].slice(guzis[k].length, this.bks[0].g[k].length)
+      } else if (money[k] && money[k].length < this.bks[0].g[k].length) {
+        result[k] = this.bks[0].g[k].slice(money[k].length, this.bks[0].g[k].length)
       }
     })
     return result
@@ -251,14 +237,14 @@ class Blockchain {
    * Throws an error if Blockchain can't afford it
    */
   createPaymentTx (key, target, amount, d = null) {
-    if (this.getAvailableGuziAmount() < amount) {
+    if (this.getAvailableMoneyAmount() < amount) {
       throw new Error('Insufficient funds')
     }
     d = d || new Date().toISOString().slice(0, 10)
     const tx = {
       a: amount,
       d: d,
-      gp: this.getAvailableGuzis(amount),
+      gp: this.getAvailableMoney(amount),
       s: secp.getPublicKey(key, true),
       t: 2,
       tu: target,
@@ -276,13 +262,13 @@ class Blockchain {
     if (this.bks[0].s !== undefined) {
       this.newBlock()
     }
-    if (tx.t === Blockchain.TXTYPE.GUZI_CREATE) {
+    if (tx.t === Blockchain.TXTYPE.MONEY_CREATE) {
       this.bks[0].g = Object.assign(this.bks[0].g, tx.gp)
     }
     if (tx.t === Blockchain.TXTYPE.PAYMENT) {
       const myPrivateKey = this.bks[this.bks.length-1].s
       if (toHex(tx.s) === toHex(myPrivateKey)) {
-        this.bks[0].g = this.removeGuzisFromAvailable(tx.gp)
+        this.bks[0].g = this.removeMoneyFromAvailable(tx.gp)
       }
       if (toHex(tx.tu) === toHex(myPrivateKey)) {
         let toadd = 0
@@ -310,16 +296,16 @@ class Blockchain {
   }
 
   /**
-   * Return true if Guzis have already been created today
+   * Return true if Money have already been created today
    */
-  hasCreatedGuzisToday () {
+  hasCreatedMoneyToday () {
     for (let i = 0; i < this.bks.length; i++) {
       if (this.bks[i].d !== undefined && new Date(this.bks[i].d) < new Date()) {
         return false
       }
       if (this.bks[i].tx !== undefined) {
         for (let t = 0; t < this.bks[i].tx.length; t++) {
-          if (this.bks[i].tx[t].d === new Date().toISOString().slice(0, 10) && this.bks[i].tx[t].t === Blockchain.TXTYPE.GUZI_CREATE) {
+          if (this.bks[i].tx[t].d === new Date().toISOString().slice(0, 10) && this.bks[i].tx[t].t === Blockchain.TXTYPE.MONEY_CREATE) {
             return true
           }
         }
@@ -367,7 +353,7 @@ class Blockchain {
       s: secp.getPublicKey(privKey, true), // Compressed Signer public key, here the new one created
       g: {},
       b: 0,
-      t: 0 // 0 guzis, 0 boxes, 0 total
+      t: 0 // 0 money, 0 boxes, 0 total
     }
     return this.signblock(block, privKey)
   }
@@ -396,7 +382,7 @@ class Blockchain {
     const t = {
       a: tx.a, // amount
       d: tx.d, // date
-      gp: tx.gp, // Guzis
+      gp: tx.gp, // Money
       s: tx.s, // Signer
       t: tx.t, // Transaction Type
       tu: tx.tu, // Target User
@@ -510,7 +496,7 @@ class Blockchain {
       g: {},
       ph: birthblock.h,
       s: secp.getPublicKey(key, true),
-      t: Blockchain.TXTYPE.GUZI_CREATE,
+      t: Blockchain.TXTYPE.MONEY_CREATE,
       v: Blockchain.VERSION
     }
     initializationBlock = Blockchain.signblock(initializationBlock, key)

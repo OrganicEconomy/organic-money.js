@@ -6,10 +6,10 @@ const { hexToBytes, toHex } = require("ethereum-cryptography/utils");
 const assert = require('chai').assert
 const msgpack = require('msgpack-lite')
 
-const privateKey1 = hexToBytes('ed945716dddb7af2c9774939e9946f1fee31f5ec0a3c6ec96059f119c396912f')
-const publicKey1 = hexToBytes('02c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3')
-const privateKey2 = hexToBytes('e68955130b2c4adc6165b0bae6e6b8f4bcce1879dbf0c6f91b3acc69479ef272')
-const publicKey2 = hexToBytes('03cbe4edbfbbc99dfbae83e8c591fafdd6a82d61589be6f60775e3fe2a4677ef46')
+const privateKey1 = 'ed945716dddb7af2c9774939e9946f1fee31f5ec0a3c6ec96059f119c396912f'
+const publicKey1 = '02c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3'
+const privateKey2 = 'e68955130b2c4adc6165b0bae6e6b8f4bcce1879dbf0c6f91b3acc69479ef272'
+const publicKey2 = '03cbe4edbfbbc99dfbae83e8c591fafdd6a82d61589be6f60775e3fe2a4677ef46'
 
 const validBirthBlock = () => {
   const res =  {
@@ -19,6 +19,8 @@ const validBirthBlock = () => {
     signer: publicKey1,
     total: 0,
     version: 1,
+    money: [],
+    invests: [],
     transactions: []
   }
   Blockchain.signblock(res, privateKey1);
@@ -33,6 +35,8 @@ const validInitBlock = () => {
     signer: publicKey2,
     total: 0,
     version: 1,
+    money: [],
+    invests: [],
     transactions: []
   }
   Blockchain.signblock(res, privateKey2);
@@ -43,85 +47,33 @@ const validBlockchain = () => {
   return new Blockchain([validInitBlock(), validBirthBlock()])
 }
 
-const toHexString = (byteArray) => {
-  return Array.from(byteArray, function(byte) {
-    return ('0' + (byte & 0xFF).toString(16)).slice(-2);
-  }).join('')
-}
-
-const printBlockchain = (blockchain) => {
-	const res = [];
-	blockchain.blocks.forEach(block => {
-		res.push({
-		  v: block.version,
-		  d: block.closedate,
-		  p: block.previousHash,
-		  s: block.signer,
-		  r: block.merkleroot,
-		  t: block.total,
-          x: block.transactions,
-		  h: block.hash
-        })
-	});
-    const packedblockchain = msgpack.encode(res)
-	//console.log(toHexString(packedblockchain));
-	console.log(toHexString(packedblockchain));
-}
-
-const printBlockHash = (block) => {
-	const b = {
-		v: block.version,
-		d: block.closedate,
-		p: block.previousHash,
-		s: block.signer,
-		r: block.merkleroot,
-		t: block.total
-	}
-    const packedblock = msgpack.encode(b)
-	console.log(toHexString(sha256(packedblock)));
-}
-
-const printTransactionHash = (tx) => {
-	const transaction = {
-		d: tx.date,
-		m: tx.money,
-		i: tx.invests,
-		s: tx.signer,
-		t: tx.type,
-		p: tx.target,
-		v: tx.version
-	}
-    const packedtx = msgpack.encode(transaction)
-	console.log(toHexString(sha256(packedtx)));
-}
-
 describe('blockchain', () => {
 
-  describe('asBinary', () => {
-    it('Should return binary blockchain... Yes !', () => {
-      const bc = validBlockchain()
+  // describe('asBinary', () => {
+  //   it('Should return binary blockchain... Yes !', () => {
+  //     const bc = validBlockchain()
 
-		printBlockchain(bc)
-		console.log(bc)
+  //   	printBlockchain(bc)
+  //   	console.log(bc)
 
-      const expected = hexToBytes('9288a17601a164aa32312f30392f32303231a170c7461230440220368cc9f21933a4e41ac555b22e7f365dc32275c4c3007760954f038b80d285e602201f44e7f715d434f8a1f74d0ac7ae2b5d3891565ec10690ce6c2783e2e049d109a173c7211203cbe4edbfbbc99dfbae83e8c591fafdd6a82d61589be6f60775e3fe2a4677ef46a17200a17400a17890a168c747123045022100d394cca7e510b933130b7da3ff607f6f83c7c4062ca2b4cdf96e02d198dcf272022021ead0c1e96a14f07cad9c3d4edbd206863d4126bc379d0082802f536ebf0cee88a17601a164aa32382f31312f31393839a170d94063316135353163613163306465656135656665613531623165316465613131326564316465613061353135306635653131616231653530633161313565656435a173c7211202c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3a17200a17400a17890a168c7461230440220368cc9f21933a4e41ac555b22e7f365dc32275c4c3007760954f038b80d285e602201f44e7f715d434f8a1f74d0ac7ae2b5d3891565ec10690ce6c2783e2e049d109')
+  //     const expected = hexToBytes('')
 
-      const result = bc.asBinary()
+  //     const result = bc.asBinary()
 
-      assert.deepEqual(result, expected)
-    })
-  })
+  //     assert.deepEqual(result, expected)
+  //   })
+  // })
 
-  describe('asB64', () => {
-    it('Should return b64 encoded blockchain...', () => {
-      const bc = validBlockchain()
+  // describe('asB64', () => {
+  //   it('Should return b64 encoded blockchain...', () => {
+  //     const bc = validBlockchain()
 
-      const expected = 'koehdgGhZKoyMS8wOS8yMDIxoXDHSBIwRgIhAPAKSNCxOT3p8W/bUV32JQuDr4ZGckgxXpv2xNc8D+0jAiEA+jRg31wTMUm9uKpEiJbU3dnHh/TiZp6Gm40MK0fDwzmhc8cgEuaJVRMLLErcYWWwuubmuPS8zhh52/DG+Rs6zGlHnvJyoXIAoXQAoWjHRxIwRQIgXl5ZY1qd7hzzgJ5WOyhvQwcIN0JzIt+ifmnGPyS9FCkCIQDvGiLQv9ThOGicS1EZ0jJ2U7DxpOnLxxSrtXmMo9aXH4ehdgGhZKoyOC8xMS8xOTg5oXDZQGMxYTU1MWNhMWMwZGVlYTVlZmVhNTFiMWUxZGVhMTEyZWQxZGVhMGE1MTUwZjVlMTFhYjFlNTBjMWExNWVlZDWhc8cgEu2UVxbd23ryyXdJOemUbx/uMfXsCjxuyWBZ8RnDlpEvoXIAoXQAoWjHSBIwRgIhAPAKSNCxOT3p8W/bUV32JQuDr4ZGckgxXpv2xNc8D+0jAiEA+jRg31wTMUm9uKpEiJbU3dnHh/TiZp6Gm40MK0fDwzk='
-      const result = bc.asB64()
+  //     const expected = ''
+  //     const result = bc.asB64()
 
-      assert.deepEqual(result, expected)
-    })
-  })
+  //     assert.deepEqual(result, expected)
+  //   })
+  // })
 
   describe('getLastTx', () => {
     it('Should return null if no transaction exists.', () => {
@@ -134,8 +86,8 @@ describe('blockchain', () => {
 
     it('Should return the lastly added Transaction', () => {
       const bc = validBlockchain()
-      bc.addTx(bc.createMoney(privateKey1, '2021-09-25'))
-      const lastTx = bc.createMoney(privateKey1, '2021-09-26')
+      bc.addTx(bc.createMoney(privateKey1, new Date('2021-09-25')))
+      const lastTx = bc.createMoney(privateKey1, new Date('2021-09-26'))
       bc.addTx(lastTx)
 
       const result = bc.getLastTx()
@@ -154,25 +106,25 @@ describe('blockchain', () => {
       assert.deepEqual(bc.blocks, blocks)
     })
 
-    it('Should load correctly from binary', () => {
-      const bc = validBlockchain()
-      const bc2 = new Blockchain()
-      const bin = bc.asBinary()
+    // it('Should load correctly from binary', () => {
+    //   const bc = validBlockchain()
+    //   const bc2 = new Blockchain()
+    //   const bin = bc.asBinary()
 
-      bc2.load(bin)
+    //   bc2.load(bin)
 
-      assert.deepEqual(bc2.blocks, bc.blocks)
-    })
+    //   assert.deepEqual(bc2.blocks, bc.blocks)
+    // })
 
-    it('Should load correctly from b64', () => {
-      const bc = validBlockchain()
-      const bc2 = new Blockchain()
-      const b64 = bc.asB64()
+    // it('Should load correctly from b64', () => {
+    //   const bc = validBlockchain()
+    //   const bc2 = new Blockchain()
+    //   const b64 = bc.asB64()
 
-      bc2.load(b64)
+    //   bc2.load(b64)
 
-      assert.deepEqual(bc2.blocks, bc.blocks)
-    })
+    //   assert.deepEqual(bc2.blocks, bc.blocks)
+    // })
   })
 
   describe('makeBirthBlock', () => {
@@ -187,6 +139,8 @@ describe('blockchain', () => {
         closedate: birthdate,
         previousHash: Blockchain.REF_HASH,
         signer: secp.getPublicKey(privateKey1, true),
+        money: [],
+        invests: [],
         total: 0,
 		merkleroot: 0,
         transactions: []
@@ -213,10 +167,12 @@ describe('blockchain', () => {
         signer: publicKey1,
 		merkleroot: 0,
         transactions: [],
+        money: [],
+        invests: [],
         total: 0
       }
 
-      const expected = hexToBytes('650bd56d968b42f306d369dcabe0623a24e07b305578230b357fd982c6e43c68')
+      const expected = hexToBytes('ef5691bc90b1748bc9d95c18783ef9cdadf11bb326608bc07a6950c96df7a75a')
 
       const result = Blockchain.hashblock(block)
 
@@ -231,11 +187,13 @@ describe('blockchain', () => {
         signer: publicKey1,
 		merkleroot: 0,
         transactions: [],
+        money: [],
+        invests: [],
         total: 0,
         hash: 12
       }
 
-      const expected = hexToBytes('650bd56d968b42f306d369dcabe0623a24e07b305578230b357fd982c6e43c68')
+      const expected = hexToBytes('ef5691bc90b1748bc9d95c18783ef9cdadf11bb326608bc07a6950c96df7a75a')
 
       const result = Blockchain.hashblock(block)
 
@@ -255,7 +213,7 @@ describe('blockchain', () => {
 		invests: []
       }
 
-      const expected = hexToBytes('84e87d0b606615c1455df1c12834431195a0480dbc5fe58ef4c7a83d559f60f9')
+      const expected = hexToBytes('159a659898428e906945a9a18cb983a74a42eb766b4bbdffcbee0a39ea9299d2')
 
       const result = Blockchain.hashtx(tx)
 
@@ -288,6 +246,8 @@ describe('blockchain', () => {
         previousHash: Blockchain.REF_HASH,
         signer: publicKey1,
         total: 0,
+        money: [],
+        invests: [],
 		merkleroot: 0
       }
 
@@ -297,9 +257,12 @@ describe('blockchain', () => {
         previousHash: Blockchain.REF_HASH,
         signer: publicKey1,
         total: 0,
+        money: [],
+        invests: [],
 		merkleroot: 0,
-        hash: hexToBytes('30440220368cc9f21933a4e41ac555b22e7f365dc32275c4c3007760954f038b80d285e602201f44e7f715d434f8a1f74d0ac7ae2b5d3891565ec10690ce6c2783e2e049d109')
+        hash: '30440220770c161689997e1652f29f1abd2ac6bfc46b7de94b0e8b4528575776e8d246d3022001221607c6eaf2d81ba02394b53d464a5a79275806ed8a966b0e14a7f30675c7'
       }
+
 
       const signedBlock = Blockchain.signblock(block, privateKey1)
 
@@ -315,218 +278,222 @@ describe('blockchain', () => {
     })
   })
 
-  //describe('isValidInitializationBlock', () => {
-  //  it('Should return true for valid block', () => {
-  //    const result = Blockchain.isValidInitializationBlock(validInitBlock())
+  describe('isValidInitializationBlock', () => {
+    it('Should return true for valid block', () => {
+      const result = Blockchain.isValidInitializationBlock(validInitBlock())
 
-  //    assert.isTrue(result)
-  //  })
-  //})
+      assert.isTrue(result)
+    })
+  })
 
-  //describe('validateAccount', () => {
-  //  it('Should return a 2 blocks long Blockchain', () => {
-  //    const result = Blockchain.validateAccount(validBirthBlock(), privateKey2)
+  describe('validateAccount', () => {
+    it('Should return a 2 blocks long Blockchain', () => {
+      const result = Blockchain.validateAccount(validBirthBlock(), privateKey2)
 
-  //    assert.equal(result.blocks.length, 2)
-  //  })
+      assert.equal(result.blocks.length, 2)
+    })
 
-  //  it('Should return unmodified birth block', () => {
-  //    const bb = validBirthBlock()
-  //    const result = Blockchain.validateAccount(bb, privateKey2)
+    it('Should return unmodified birth block', () => {
+      const bb = validBirthBlock()
+      const result = Blockchain.validateAccount(bb, privateKey2)
 
-  //    assert.equal(result.blocks[1], bb)
-  //  })
+      assert.equal(result.blocks[1], bb)
+    })
 
-  //  it('Should return a valid initialization block', () => {
-  //    const result = Blockchain.validateAccount(validBirthBlock(), privateKey2)
+    it('Should return a valid initialization block', () => {
+      const result = Blockchain.validateAccount(validBirthBlock(), privateKey2)
 
-  //    const pubkey = secp.getPublicKey(privateKey2, true)
-  //    assert.ok(Blockchain.verifyBlock(result.blocks[0], pubkey))
+      const pubkey = secp.getPublicKey(privateKey2, true)
+      assert.ok(Blockchain.verifyBlock(result.blocks[0], pubkey))
 
-  //    delete result.blocks[0].h
-  //    console.log(toHex(result.blocks[0].ph))
+      delete result.blocks[0].hash
+      // console.log(result.blocks[0].previousHash)
 
-  //    const expectedInitializationBlock = {
-  //      invest: [],
-  //      d: new Date().toISOString().slice(0, 10),
-  //      money: [],
-  //      previousHash: hexToBytes('3045022100f5f0e37b8db1c72e42442a795cb69379d9671bbad25e6013fcea9c7be8a445540220485365844c4416533541b27d0a284bb5b7eaee139f8f919f55723c29c04e6f17'),
-  //      signer: hexToBytes('03cbe4edbfbbc99dfbae83e8c591fafdd6a82d61589be6f60775e3fe2a4677ef46'),
-  //      total: 0,
-  //      version: 1
-  //    }
+      const expectedInitializationBlock = {
+        closedate: new Date().toISOString().slice(0, 10),
+        previousHash: '30440220770c161689997e1652f29f1abd2ac6bfc46b7de94b0e8b4528575776e8d246d3022001221607c6eaf2d81ba02394b53d464a5a79275806ed8a966b0e14a7f30675c7',
+        signer: publicKey2,
+        total: 0,
+        money: [],
+        invests: [],
+        version: 1,
+        transactions: [],
+	    merkleroot: 0
+      }
 
-  //    assert.deepEqual(result.blocks[0], expectedInitializationBlock)
-  //  })
-  //})
+      assert.deepEqual(result.blocks[0], expectedInitializationBlock)
+    })
+  })
 
-  //describe('getLevel', () => {
-  //  it('Should return 0 for empty blockchain', () => {
-  //    const bc = new Blockchain()
-  //    const result = bc.getLevel()
+  describe('getLevel', () => {
+    it('Should return 0 for empty blockchain', () => {
+      const bc = new Blockchain()
+      const result = bc.getLevel()
 
-  //    assert.equal(result, 0)
-  //  })
+      assert.equal(result, 0)
+    })
 
-  //  it('Should return 2 for t=1 to 3', () => {
-  //    const bc = validBlockchain()
-  //    bc.blocks[0].t = 1
-  //    assert.equal(bc.getLevel(), 2)
-  //    bc.blocks[0].t = 2
-  //    assert.equal(bc.getLevel(), 2)
-  //    bc.blocks[0].t = 3
-  //    assert.equal(bc.getLevel(), 2)
-  //  })
-  //})
+    it('Should return 2 for t=1 to 3', () => {
+      const bc = validBlockchain()
+      bc.blocks[0].total = 1
+      assert.equal(bc.getLevel(), 2)
+      bc.blocks[0].total = 2
+      assert.equal(bc.getLevel(), 2)
+      bc.blocks[0].total = 3
+      assert.equal(bc.getLevel(), 2)
+    })
+  })
 
-  //describe('getMoneyBeforeNextLevel', () => {
-  //  it('Should return 0 for empty blockchain', () => {
-  //    const bc = new Blockchain()
-  //    const result = bc.getMoneyBeforeNextLevel()
+  describe('getMoneyBeforeNextLevel', () => {
+    it('Should return 0 for empty blockchain', () => {
+      const bc = new Blockchain()
+      const result = bc.getMoneyBeforeNextLevel()
 
-  //    assert.equal(result, 0)
-  //  })
+      assert.equal(result, 0)
+    })
 
-  //  it('Should return 16 for total at 11 (target is 27)', () => {
-  //    const bc = validBlockchain()
-  //    bc.blocks[0].t = 11
-  //    const result = bc.getMoneyBeforeNextLevel()
+    it('Should return 16 for total at 11 (target is 27)', () => {
+      const bc = validBlockchain()
+      bc.blocks[0].total = 11
 
-  //    assert.equal(result, 16)
-  //  })
+      const result = bc.getMoneyBeforeNextLevel()
 
-  //  it('Should return percent if as_percent is true', () => {
-  //    const bc = validBlockchain()
-  //    bc.blocks[0].t = 11
+      assert.equal(result, 16)
+    })
 
-  //    const result = bc.getMoneyBeforeNextLevel(true)
+    it('Should return percent if as_percent is true', () => {
+      const bc = validBlockchain()
+      bc.blocks[0].total = 11
 
-  //    assert.equal(result, 15)
-  //  })
-  //})
+      const result = bc.getMoneyBeforeNextLevel(true)
 
-  //describe('getAvailableMoneyAmount', () => {
-  //  it('Should return 0 for empty blockchain', () => {
-  //    const bc = new Blockchain()
-  //    const result = bc.getAvailableMoneyAmount()
+      assert.equal(result, 15)
+    })
+  })
 
-  //    assert.equal(result, 0)
-  //  })
+  describe('getAvailableMoneyAmount', () => {
+    it('Should return 0 for empty blockchain', () => {
+      const bc = new Blockchain()
+      const result = bc.getAvailableMoneyAmount()
 
-  //  it('Should return 0 for created blockchain', () => {
-  //    const bc = new Blockchain([])
-  //    const result = bc.getAvailableMoneyAmount()
+      assert.equal(result, 0)
+    })
 
-  //    assert.equal(result, 0)
-  //  })
+    it('Should return 0 for created blockchain', () => {
+      const bc = new Blockchain([])
+      const result = bc.getAvailableMoneyAmount()
 
-  //  it('Should return 0 for validation waiting blockchain', () => {
-  //    const bc = new Blockchain([validBirthBlock()])
-  //    const result = bc.getAvailableMoneyAmount()
+      assert.equal(result, 0)
+    })
 
-  //    assert.equal(result, 0)
-  //  })
+    it('Should return 0 for validation waiting blockchain', () => {
+      const bc = new Blockchain([validBirthBlock()])
+      const result = bc.getAvailableMoneyAmount()
 
-  //  it('Should return last block g for valid blockchain', () => {
-  //    const bc = validBlockchain()
-  //    bc.blocks[0].t = 27
-  //    bc.addTx(bc.createMoney(privateKey1, '2021-09-25'))
-  //    bc.addTx(bc.createMoney(privateKey1, '2021-09-26'))
-  //    const result = bc.getAvailableMoneyAmount()
+      assert.equal(result, 0)
+    })
 
-  //    assert.equal(result, 8)
-  //  })
-  //})
+    it('Should return last block money for valid blockchain', () => {
+      const bc = validBlockchain()
+      bc.newBlock()
+      bc.blocks[0].total = 27
+      bc.createMoney(privateKey1, new Date('2021-09-21'))
+      bc.createMoney(privateKey1, new Date('2021-09-22'))
+      const result = bc.getAvailableMoneyAmount()
 
-  //describe('isEmpty', () => {
-  //  it('Should return true for empty array', () => {
-  //    const bc = new Blockchain([])
-  //    const result = bc.isEmpty()
+      assert.equal(result, 8)
+    })
+  })
 
-  //    assert.ok(result)
-  //  })
+  describe('isEmpty', () => {
+    it('Should return true for empty array', () => {
+      const bc = new Blockchain([])
+      const result = bc.isEmpty()
 
-  //  it('Should return true for empty blockchain', () => {
-  //    const bc = new Blockchain()
-  //    const result = bc.isEmpty()
+      assert.ok(result)
+    })
 
-  //    assert.ok(result)
-  //  })
+    it('Should return true for empty blockchain', () => {
+      const bc = new Blockchain()
+      const result = bc.isEmpty()
 
-  //  it('Should return true for null blockchain', () => {
-  //    const bc = new Blockchain(null)
-  //    const result = bc.isEmpty()
+      assert.ok(result)
+    })
 
-  //    assert.ok(result)
-  //  })
-  //})
+    it('Should return true for null blockchain', () => {
+      const bc = new Blockchain(null)
+      const result = bc.isEmpty()
 
-  //describe('isWaitingValidation', () => {
-  //  it('Should return false for empty blockchain', () => {
-  //    const bc = new Blockchain()
-  //    const result = bc.isWaitingValidation()
+      assert.ok(result)
+    })
+  })
 
-  //    assert.isNotOk(result)
-  //  })
+  describe('isWaitingValidation', () => {
+    it('Should return false for empty blockchain', () => {
+      const bc = new Blockchain()
+      const result = bc.isWaitingValidation()
 
-  //  it('Should return false for only created blockchain', () => {
-  //    const bc = new Blockchain([])
-  //    const result = bc.isWaitingValidation()
+      assert.isNotOk(result)
+    })
 
-  //    assert.isNotOk(result)
-  //  })
+    it('Should return false for only created blockchain', () => {
+      const bc = new Blockchain([])
+      const result = bc.isWaitingValidation()
 
-  //  it('Should return false totally valid blockchain', () => {
-  //    const bc = new Blockchain([validBirthBlock(), validBirthBlock()])
-  //    const result = bc.isWaitingValidation()
+      assert.isNotOk(result)
+    })
 
-  //    assert.isNotOk(result)
-  //  })
+    it('Should return false totally valid blockchain', () => {
+      const bc = new Blockchain([validBirthBlock(), validBirthBlock()])
+      const result = bc.isWaitingValidation()
 
-  //  it('Should return false if the block is not a birth one', () => {
-  //    const bc = new Blockchain([validInitBlock()])
-  //    const result = bc.isWaitingValidation()
+      assert.isNotOk(result)
+    })
 
-  //    assert.isNotOk(result)
-  //  })
+    it('Should return false if the block is not a birth one', () => {
+      const bc = new Blockchain([validInitBlock()])
+      const result = bc.isWaitingValidation()
 
-  //  it('Should return true for blockchain effectively waiting for validation', () => {
-  //    const bc = new Blockchain([validBirthBlock()])
-  //    const result = bc.isWaitingValidation()
+      assert.isNotOk(result)
+    })
 
-  //    assert.ok(result)
-  //  })
-  //})
+    it('Should return true for blockchain effectively waiting for validation', () => {
+      const bc = new Blockchain([validBirthBlock()])
+      const result = bc.isWaitingValidation()
 
-  //describe('isValidated', () => {
-  //  it('Should return false for empty blockchain', () => {
-  //    const bc = new Blockchain()
-  //    const result = bc.isValidated()
+      assert.ok(result)
+    })
+  })
 
-  //    assert.isNotOk(result)
-  //  })
+  describe('isValidated', () => {
+    it('Should return false for empty blockchain', () => {
+      const bc = new Blockchain()
+      const result = bc.isValidated()
 
-  //  it('Should return false for only created blockchain', () => {
-  //    const bc = new Blockchain([])
-  //    const result = bc.isValidated()
+      assert.isNotOk(result)
+    })
 
-  //    assert.isNotOk(result)
-  //  })
+    it('Should return false for only created blockchain', () => {
+      const bc = new Blockchain([])
+      const result = bc.isValidated()
 
-  //  it('Should return false if the first block is not a birth one', () => {
-  //    const bc = new Blockchain([validInitBlock()])
-  //    const result = bc.isValidated()
+      assert.isNotOk(result)
+    })
 
-  //    assert.isNotOk(result)
-  //  })
+    it('Should return false if the first block is not a birth one', () => {
+      const bc = new Blockchain([validInitBlock()])
+      const result = bc.isValidated()
 
-  //  it('Should return true totally valid blockchain', () => {
-  //    const bc = validBlockchain()
-  //    const result = bc.isValidated()
+      assert.isNotOk(result)
+    })
 
-  //    assert.ok(result)
-  //  })
-  //})
+    it('Should return true totally valid blockchain', () => {
+      const bc = validBlockchain()
+      const result = bc.isValidated()
+
+      assert.ok(result)
+    })
+  })
 
   describe('createMoney', () => {
     it('Should throw error if date is in the futur.', () => {
@@ -540,7 +507,7 @@ describe('blockchain', () => {
 
     it('Should return blockchain in OK case.', () => {
       const bc = validBlockchain();
-      const d = new Date().toISOString().slice(0, 10);
+      const d = new Date();
       bc.addTx(bc.createMoney(privateKey1, d));
       const result = bc.blocks[0].transactions[0]
 
@@ -550,7 +517,7 @@ describe('blockchain', () => {
       const expected = {
         version: 1,
         type: Blockchain.TXTYPE.CREATE,
-        date: d,
+        date: d.toISOString().slice(0, 10),
         signer: publicKey1,
         target: publicKey1,
         money: [0],
@@ -584,121 +551,91 @@ describe('blockchain', () => {
     })
   })
 
-  //describe('getAvailableMoney', () => {
-  //  it('Should return {} for new Blockchain.', () => {
-  //    const bc = validBlockchain()
-  //    const result = bc.getAvailableMoney()
+  describe('getAvailableMoney', () => {
+    it('Should return [] for new Blockchain.', () => {
+      const bc = validBlockchain()
+      const result = bc.getAvailableMoney()
 
-  //    const expected = {}
+      const expected = []
 
-  //    assert.deepEqual(result, expected)
-  //  })
+      assert.deepEqual(result, expected)
+    })
 
-  //  it('Should return each index.', () => {
-  //    const bc = validBlockchain()
-  //    bc.blocks[0].t = 27
-  //    bc.addTx(bc.createMoney(privateKey1, '2021-09-25'))
-  //    const result = bc.getAvailableMoney()
+    it('Should return each index.', () => {
+      const bc = validBlockchain()
+      bc.blocks[0].total = 27
+      bc.createMoney(privateKey1, new Date('2021-09-21'))
+      const result = bc.getAvailableMoney()
 
-  //    const expected = { '2021-09-25': [0, 1, 2, 3] }
+      const expected =  [0, 1, 2, 3] 
 
-  //    assert.deepEqual(result, expected)
-  //  })
+      assert.deepEqual(result, expected)
+    })
 
-  //  it('Should return each date.', () => {
-  //    const bc = validBlockchain()
-  //    bc.blocks[0].t = 27
-  //    const d1 = '2021-09-23'
-  //    const d2 = '2021-09-24'
-  //    const d3 = '2021-09-25'
-  //    bc.addTx(bc.createMoney(privateKey1, d1))
-  //    bc.addTx(bc.createMoney(privateKey1, d2))
-  //    bc.addTx(bc.createMoney(privateKey1, d3))
-  //    const result = bc.getAvailableMoney()
+    it('Should return only given amount if given.', () => {
+      const bc = validBlockchain()
+      bc.blocks[0].total = 27
+      const d = new Date('2021-09-25')
+      bc.createMoney(privateKey1, d)
+      const result = bc.getAvailableMoney(2)
 
-  //    const expected = {}
-  //    expected[d1] = [0, 1, 2, 3]
-  //    expected[d2] = [0, 1, 2, 3]
-  //    expected[d3] = [0, 1, 2, 3]
+      const expected = [0, 1]
 
-  //    assert.deepEqual(result, expected)
-  //  })
+      assert.deepEqual(result, expected)
+    })
 
-  //  it('Should return only given amount if given.', () => {
-  //    const bc = validBlockchain()
-  //    bc.blocks[0].t = 27
-  //    const d = '2021-09-25'
-  //    bc.addTx(bc.createMoney(privateKey1, d))
-  //    const result = bc.getAvailableMoney(2)
+    it('Should return only given amount for complexe cases.', () => {
+      const bc = validBlockchain()
+      bc.blocks[0].total = 27
+      bc.createMoney(privateKey1, new Date('2021-09-21'))
+      bc.createMoney(privateKey1, new Date('2021-09-25'))
+      const result = bc.getAvailableMoney(7)
 
-  //    const expected = {}
-  //    expected[d] = [0, 1]
+      const expected = [0, 1, 2, 3, 4, 5, 6]
 
-  //    assert.deepEqual(result, expected)
-  //  })
+      assert.deepEqual(result, expected)
+    })
 
-  //  it('Should return only given amount for complexe cases.', () => {
-  //    const bc = validBlockchain()
-  //    bc.blocks[0].t = 27
-  //    const d1 = '2021-09-23'
-  //    const d2 = '2021-09-24'
-  //    const d3 = '2021-09-25'
-  //    bc.addTx(bc.createMoney(privateKey1, d1))
-  //    bc.addTx(bc.createMoney(privateKey1, d2))
-  //    bc.addTx(bc.createMoney(privateKey1, d3))
-  //    const result = bc.getAvailableMoney(7)
+    //it('Should return only unspent Money.', () => {
+    //  const bc = validBlockchain()
+    //  bc.blocks[0].t = 27
+    //  const d1 = '2021-09-23'
+    //  bc.createMoney(privateKey1, d1)
+    //  bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 7)
+    //  const result = bc.getAvailableMoney()
 
-  //    const expected = {}
-  //    expected[d1] = [0, 1, 2, 3]
-  //    expected[d2] = [0, 1, 2]
+    //  const expected = {}
+    //  expected[d2] = [3]
+    //  expected[d3] = [0, 1, 2, 3]
 
-  //    assert.deepEqual(result, expected)
-  //  })
+    //  assert.deepEqual(result, expected)
+    //})
+  })
 
-  //  it('Should return only unspent Money.', () => {
-  //    const bc = validBlockchain()
-  //    bc.blocks[0].t = 27
-  //    const d1 = '2021-09-23'
-  //    const d2 = '2021-09-24'
-  //    const d3 = '2021-09-25'
-  //    bc.addTx(bc.createMoney(privateKey1, d1))
-  //    bc.addTx(bc.createMoney(privateKey1, d2))
-  //    bc.addTx(bc.createMoney(privateKey1, d3))
-  //    bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 7))
-  //    const result = bc.getAvailableMoney()
+  describe('createPaymentTx', () => {
+    it('Should make valid transaction.', () => {
+      const bc = validBlockchain()
+      bc.blocks[0].total = 27
+      bc.addTx(bc.createMoney(privateKey1, new Date('2021-09-25')))
+      bc.addTx(bc.createPaymentTx(privateKey1, publicKey2, 3, new Date('2021-09-25')))
+      const result = bc.blocks[0].transactions[0]
 
-  //    const expected = {}
-  //    expected[d2] = [3]
-  //    expected[d3] = [0, 1, 2, 3]
+      assert.ok(Blockchain.verifyTx(result, publicKey1))
+      delete result.hash
 
-  //    assert.deepEqual(result, expected)
-  //  })
-  //})
+      const expected = {
+        date: '2021-09-25',
+        money: [0, 1, 2],
+        invests: [],
+        signer: publicKey1,
+        type: Blockchain.TXTYPE.PAYMENT,
+        target: publicKey2,
+        version: Blockchain.VERSION
+      }
 
-  //describe('createPaymentTx', () => {
-  //  it('Should make valid transaction.', () => {
-  //    const bc = validBlockchain()
-  //    bc.blocks[0].t = 27
-  //    bc.addTx(bc.createMoney(privateKey1, '2021-09-25'))
-  //    bc.addTx(bc.createPaymentTx(privateKey1, secp.getPublicKey(privateKey2, true), 3, '2021-09-25'))
-  //    const result = bc.blocks[0].transactions[0]
-
-  //    assert.ok(Blockchain.verifyTx(result, secp.getPublicKey(privateKey1)))
-  //    delete result.h
-
-  //    const expected = {
-  //      a: 3,
-  //      d: '2021-09-25',
-  //      gp: { '2021-09-25': [0, 1, 2] },
-  //      signer: secp.getPublicKey(privateKey1, true),
-  //      t: Blockchain.TXTYPE.PAYMENT,
-  //      tu: secp.getPublicKey(privateKey2, true),
-  //      version: Blockchain.VERSION
-  //    }
-
-  //    assert.deepEqual(result, expected)
-  //  })
-  //})
+      assert.deepEqual(result, expected)
+    })
+  })
 
   //describe('addTx', () => {
   //  it('Should increase g of the block for tx of type guzi creation.', () => {

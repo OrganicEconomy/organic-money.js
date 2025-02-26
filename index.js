@@ -87,11 +87,11 @@ class Blockchain {
 			previousHash: Blockchain.REF_HASH, // Previous hash : here 'random'
 			signer: publicKey, // Compressed Signer public key, here the new one created
 			merkleroot: 0,
-			money: [+(Blockchain.dateToInt(date)+'001')],
-			invests: [+(Blockchain.dateToInt(date)+'001')],
+			money: [Blockchain.formatIndex(date, 0)],
+			invests: [Blockchain.formatIndex(date, 0)],
 			total: 0,
 			transactions: [
-				{
+				Blockchain.signtx({
 					version: Blockchain.VERSION,
 					date: Blockchain.dateToInt(birthdate),
 					source: name,
@@ -99,16 +99,16 @@ class Blockchain {
 					money: [],
 					invests: [],
 					type: Blockchain.TXTYPE.INIT
-				},
-				{
+				}, privateKey),
+				Blockchain.signtx({
 					version: Blockchain.VERSION,
 					date: Blockchain.dateToInt(date),
 					source: publicKey,
 					target: publicKey,
-					money: [+(Blockchain.dateToInt(date)+'001')],
-					invests: [+(Blockchain.dateToInt(date)+'001')],
+					money: [Blockchain.formatIndex(date, 0)],
+					invests: [Blockchain.formatIndex(date, 0)],
 					type: Blockchain.TXTYPE.CREATE
-				}
+				}, privateKey)
 			]
 		}
 		return this.signblock(block, privateKey)

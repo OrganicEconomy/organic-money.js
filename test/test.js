@@ -211,14 +211,16 @@ describe('blockchain', () => {
 
 			const block = Blockchain.makeBirthBlock(privateKey1, birthdate, name, today)
 			delete block.hash
+			delete block.transactions[0].hash
+			delete block.transactions[1].hash
 
 			const expected = {
 				version: Blockchain.VERSION,
 				closedate: Blockchain.dateToInt(today),
 				previousHash: Blockchain.REF_HASH,
 				signer: publicKey1,
-				money: [20250225001],
-				invests: [20250225001],
+				money: [20250225000],
+				invests: [20250225000],
 				total: 0,
 				merkleroot: 0,
 				transactions: [
@@ -236,8 +238,8 @@ describe('blockchain', () => {
 						date: 20250225,
 						source: publicKey1,
 						target: publicKey1,
-						money: [20250225001],
-						invests: [20250225001],
+						money: [20250225000],
+						invests: [20250225000],
 						type: Blockchain.TXTYPE.CREATE
 					}
 				]
@@ -246,7 +248,7 @@ describe('blockchain', () => {
 			assert.deepEqual(block, expected)
 		})
 
-		it('Should return a signed block', () => {
+		it('Should return a signed block.', () => {
 			const birthdate = new Date('2002-12-12')
 			const today = new Date('2025-02-25')
 			const name = 'Gus'
@@ -255,6 +257,19 @@ describe('blockchain', () => {
 			const signature = Blockchain.verifyBlock(block, publicKey1)
 
 			assert.ok(signature)
+		})
+
+		it('Should return a block with signed transactions.', () => {
+			const birthdate = new Date('2002-12-12')
+			const today = new Date('2025-02-25')
+			const name = 'Gus'
+			const block = Blockchain.makeBirthBlock(privateKey1, birthdate, name, today)
+
+			const signature1 = Blockchain.verifyTx(block.transactions[0], publicKey1)
+			const signature2 = Blockchain.verifyTx(block.transactions[1], publicKey1)
+
+			assert.ok(signature1)
+			assert.ok(signature2)
 		})
 	})
 

@@ -123,7 +123,6 @@ describe('blockchain', () => {
 	//     const bc = validBlockchain()
 
 	//   	printBlockchain(bc)
-	//   	console.log(bc)
 
 	//     const expected = hexToBytes('')
 
@@ -273,6 +272,80 @@ describe('blockchain', () => {
 		})
 	})
 
+	describe('initializeBrandNewBlockchain', () => {
+		it('Should return a ready to go blockchain', () => {
+			const birthdate = new Date('2002-12-12')
+			const today = new Date('2025-02-01')
+			const name = 'Gus'
+
+			const blockchain = Blockchain.initializeBrandNewBlockchain(name, birthdate, privateKey2, privateKey1, today)
+			for (let block of blockchain.blocks) {
+				delete block.hash
+				delete block.previousHash
+				for (let tx of block.transactions) {
+					delete tx.hash
+				}
+			}
+
+			const expected = [
+				{
+					closedate: 20250201,
+					signer: publicKey2,
+					total: 0,
+					money: [],
+					invests: [],
+					version: 1,
+					transactions: [],
+					merkleroot: 0
+				},
+				{
+					version: Blockchain.VERSION,
+					closedate: Blockchain.dateToInt(today),
+					signer: publicKey1,
+					money: [20250201000],
+					invests: [20250201000],
+					total: 0,
+					merkleroot: 0,
+					transactions: [
+						{
+							version: Blockchain.VERSION,
+							date: 20021212,
+							source: name,
+							target: publicKey1,
+							money: [],
+							invests: [],
+							type: Blockchain.TXTYPE.INIT
+						},
+						{
+							version: Blockchain.VERSION,
+							date: 20250201,
+							source: publicKey1,
+							target: publicKey1,
+							money: [20250201000],
+							invests: [20250201000],
+							type: Blockchain.TXTYPE.CREATE
+						}
+					]
+				}
+			]
+
+				assert.deepEqual(blockchain.blocks, expected)
+		})
+
+		it('Should use todays date if none given', () => {
+			const birthdate = new Date('2002-12-12')
+			const today = Blockchain.dateToInt(new Date())
+			const name = 'Gus'
+
+			const blockchain = Blockchain.initializeBrandNewBlockchain(name, birthdate, privateKey2, privateKey1)
+
+
+			assert.equal(blockchain.blocks[0].closedate, today)
+			assert.equal(blockchain.blocks[1].closedate, today)
+			assert.equal(blockchain.blocks[1].transactions[1].date, today)
+		})
+	})
+
 	describe('hashblock', () => {
 		it('Should make valid hash', () => {
 			const block = {
@@ -416,17 +489,16 @@ describe('blockchain', () => {
 		})
 
 		it('Should return a valid initialization block', () => {
-			const result = Blockchain.validateAccount(validBirthBlock(), privateKey2)
+			const result = Blockchain.validateAccount(validBirthBlock(), privateKey2, new Date('2025-01-03'))
 
 			const pubkey = secp.getPublicKey(privateKey2, true)
 			assert.ok(Blockchain.verifyBlock(result.blocks[0], pubkey))
 
 			delete result.blocks[0].hash
 			delete result.blocks[0].previousHash
-			// console.log(result.blocks[0].previousHash)
 
 			const expectedInitializationBlock = {
-				closedate: new Date().toISOString().slice(0, 10),
+				closedate: 20250103,
 				signer: publicKey2,
 				total: 0,
 				money: [],

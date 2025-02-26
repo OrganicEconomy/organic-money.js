@@ -115,6 +115,15 @@ class Blockchain {
 	}
 
 	/**
+	 * Initalize and return a ready to go brand new Blockchain
+	 */
+	static initializeBrandNewBlockchain(name, birthdate, signerPrivateKey, newPrivateKey=null, date=new Date()) {
+		const birthblock = Blockchain.makeBirthBlock(newPrivateKey, birthdate, name, date)
+		const blockchain = Blockchain.validateAccount(birthblock, signerPrivateKey, date)
+		return blockchain
+	}
+
+	/**
 	 * Return the hash of given Block
 	 */
 	static hashblock (block) {
@@ -238,9 +247,9 @@ class Blockchain {
 	/**
 	 * Return a validated Blockchain for given birthblock
 	 */
-	static validateAccount (birthblock, privateKey) {
+	static validateAccount (birthblock, privateKey, date=new Date()) {
 		let initializationBlock = {
-			closedate: new Date().toISOString().slice(0, 10),
+			closedate: Blockchain.dateToInt(date),
 			previousHash: birthblock.hash,
 			signer: secp.getPublicKey(privateKey, true),
 			merkleroot: 0,
@@ -469,6 +478,10 @@ class Blockchain {
 			signer: null,
 			transactions: []
 		})
+	}
+
+	addBlock (block) {
+		this.blocks.unshift(block)
 	}
 
 	/**

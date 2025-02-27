@@ -46,7 +46,7 @@ class Blockchain {
 		return await decrypt(encrypted.msg, key, encrypted.iv)
 	}
 
-	static publicFromPrivate (privateKey) {
+	static getPublicFromPrivate (privateKey) {
 		return secp.getPublicKey(privateKey, true)
 	}
 
@@ -373,6 +373,14 @@ class Blockchain {
 	}
 
 	/**
+	 * Return the date of the lastly added transaction
+	 */
+	getLastTransactionDate () {
+		const tx = this.getLastTx()
+		return Blockchain.intToDate(tx.date)
+	}
+
+	/**
 	 * Return the level of the Blockchain
 	 * The level is equal to the number of Money (and Boxes) created
 	 * each day
@@ -643,28 +651,31 @@ class Blockchain {
 	}
 
 	/**
-	 * Add and return the transaction holding the payment with :
-	 *    - sourcePrivateKey to sign the transaction
-	 *    - target pubkey
-	 *    - given amount
-	 * Throws an error if Blockchain can't afford it
+	 * Add to last block and return a transaction creating a paper of given amount
+	 *
+	 * Throws an error if amount is not affordable
+	 * Throws an error if given date is before last transaction date
 	 */
-	pay (sourcePrivateKey, targetPublicKey, amount, d = new Date()) {
+	generatePaper (myPrivateKey, amount, date=new Date()) {
 		const money = this.getAvailableMoney(amount);
-		const transaction = {
-			type: Blockchain.TXTYPE.PAY,
-			date: Blockchain.dateToInt(d),
-			money: money,
-			source: secp.getPublicKey(sourcePrivateKey, true),
-			invests: [],
-			target: targetPublicKey,
-			version: Blockchain.VERSION
+		if (date < this.getLastTransactionDate()) {
+			throw new Error('Invalid date')
 		}
 
-		const result = Blockchain.signtx(transaction, sourcePrivateKey)
+		const transaction = {
+			version: Blockchain.VERSION,
+			type: Blockchain.TXTYPE.PAPER,
+			date: Blockchain.dateToInt(date),
+			money: money,
+			invests: [],
+			source: Blockchain.getPublicFromPrivate(myPrivateKey),
+			target: 0
+		}
+
+		const result = Blockchain.signtx(transaction, myPrivateKey)
 		this.addTx(result)
 		this.removeMoney(money);
-		return result;
+		return transaction
 	}
 
 	/**
@@ -684,6 +695,31 @@ class Blockchain {
 		this.addTx(transaction)
 
 		return transaction
+	}
+
+	/**
+	 * Add and return the transaction holding the payment with :
+	 *    - myPrivateKey to sign the transaction
+	 *    - target pubkey
+	 *    - given amount
+	 * Throws an error if Blockchain can't afford it
+	 */
+	pay (myPrivateKey, targetPublicKey, amount, d = new Date()) {
+		const money = this.getAvailableMoney(amount);
+		const transaction = {
+			type: Blockchain.TXTYPE.PAY,
+			date: Blockchain.dateToInt(d),
+			money: money,
+			source: secp.getPublicKey(myPrivateKey, true),
+			invests: [],
+			target: targetPublicKey,
+			version: Blockchain.VERSION
+		}
+
+		const result = Blockchain.signtx(transaction, myPrivateKey)
+		this.addTx(result)
+		this.removeMoney(money);
+		return result;
 	}
 }
 module.exports = Blockchain

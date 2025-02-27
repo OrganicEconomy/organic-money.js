@@ -1068,33 +1068,54 @@ describe('blockchain', () => {
 		})
 	})
 
-	describe('pay', () => {
-		it('Should make valid transaction.', () => {
+	describe('generatePaper', () => {
+		it('Should throw error if blockchain can t afford the amount.', () => {
+			const bc = validBlockchain()
+
+			assert.throws(() => { bc.generatePaper(privateKey1, 2) }, 'Unsufficient funds')
+		})
+
+		it('Should throw error if date is already passed in the blockchain.', () => {
 			const bc = validCashedBlockchain()
 
-			bc.pay(privateKey1, publicKey2, 3, new Date('2025-01-03'))
-			const result = bc.blocks[0].transactions[0]
+			assert.throws(() => { bc.generatePaper(privateKey1, 2, new Date('2025-01-01')) }, 'Invalid date')
+		})
 
-			assert.ok(Blockchain.verifyTx(result))
-			delete result.hash
+		it('Should return a valid transaction.', () => {
+			const bc = validCashedBlockchain()
 
-			const expected = {
-				version: Blockchain.VERSION,
-				type: Blockchain.TXTYPE.PAY,
-				date: 20250103,
-				money: [20250101000, 20250102000, 20250102001],
-				invests: [],
-				source: publicKey1,
-				target: publicKey2
-			}
+		 	const result = bc.generatePaper(privateKey1, 3, new Date('2025-01-03'))
+
+		 	assert.ok(Blockchain.verifyTx(result), "invalid signature")
+		 	delete result.hash
+
+		 	const expected = {
+		 		version: Blockchain.VERSION,
+		 		type: Blockchain.TXTYPE.PAPER,
+		 		date: 20250103,
+		 		money: [20250101000, 20250102000, 20250102001],
+		 		invests: [],
+		 		source: publicKey1,
+		 		target: 0
+		 	}
 
 			assert.deepEqual(result, expected)
+		})
+
+		it('Should add the created transaction to the blockchain.', () => {
+			const bc = validCashedBlockchain()
+
+			const tx = bc.generatePaper(privateKey1, 3, new Date('2025-01-03'))
+
+			const result = bc.blocks[0].transactions[0]
+
+			assert.deepEqual(result, tx)
 		})
 
 		it('Should decrease money of the block.', () => {
 			const bc = validCashedBlockchain()
 
-			bc.pay(privateKey1, publicKey2, 3, new Date('2025-01-03'))
+			bc.generatePaper(privateKey1, 3, new Date('2025-01-03'))
 
 			const result = bc.blocks[0].money
 			const expected = [20250102002, 20250102003]
@@ -1102,11 +1123,6 @@ describe('blockchain', () => {
 			assert.deepEqual(result, expected)
 		})
 
-		it('Should throw error if blockchain can t afford it.', () => {
-			const bc = validBlockchain()
-
-			assert.throws(() => { bc.pay(privateKey1, publicKey2, 2) }, 'Unsufficient funds')
-		})
 	})
 
 	describe('income', () => {
@@ -1227,6 +1243,47 @@ describe('blockchain', () => {
 			bc.income(tx)
 
 			assert.deepEqual(bc.blocks[0].transactions[0], tx)
+		})
+	})
+
+	describe('pay', () => {
+		it('Should make valid transaction.', () => {
+			const bc = validCashedBlockchain()
+
+			bc.pay(privateKey1, publicKey2, 3, new Date('2025-01-03'))
+			const result = bc.blocks[0].transactions[0]
+
+			assert.ok(Blockchain.verifyTx(result))
+			delete result.hash
+
+			const expected = {
+				version: Blockchain.VERSION,
+				type: Blockchain.TXTYPE.PAY,
+				date: 20250103,
+				money: [20250101000, 20250102000, 20250102001],
+				invests: [],
+				source: publicKey1,
+				target: publicKey2
+			}
+
+			assert.deepEqual(result, expected)
+		})
+
+		it('Should decrease money of the block.', () => {
+			const bc = validCashedBlockchain()
+
+			bc.pay(privateKey1, publicKey2, 3, new Date('2025-01-03'))
+
+			const result = bc.blocks[0].money
+			const expected = [20250102002, 20250102003]
+
+			assert.deepEqual(result, expected)
+		})
+
+		it('Should throw error if blockchain can t afford it.', () => {
+			const bc = validBlockchain()
+
+			assert.throws(() => { bc.pay(privateKey1, publicKey2, 2) }, 'Unsufficient funds')
 		})
 	})
 })

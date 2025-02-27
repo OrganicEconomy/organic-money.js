@@ -685,6 +685,5 @@ class Blockchain {
 
 		return transaction
 	}
-
 }
 module.exports = Blockchain

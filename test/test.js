@@ -1,5 +1,5 @@
 const { describe, it } = require('mocha')
-const Blockchain = require('../index')
+const { Blockchain, InvalidTransactionError } = require('../index')
 const { sha256 } = require('ethereum-cryptography/sha256')
 const secp = require('ethereum-cryptography/secp256k1')
 const { hexToBytes, toHex } = require("ethereum-cryptography/utils");
@@ -993,6 +993,162 @@ describe('blockchain', () => {
 	 *                           MAIN METHODS
 	 **********************************************************************/
 
+	describe('cashPaper', () => {
+		/** A tool for this section tests */
+		let paper1 = () => {
+			let paper = {
+				version: Blockchain.VERSION,
+				date: 20250101,
+				source: publicKey2,
+				target: 0,
+				money: [20250101000],
+				invests: [],
+				type: Blockchain.TXTYPE.PAPER,
+			}
+			paper = Blockchain.signtx(paper, privateKey2)
+			return paper
+		}
+
+		let paper2 = () => {
+			let paper = {
+				version: Blockchain.VERSION,
+				date: 20250102,
+				source: publicKey2,
+				target: 0,
+				money: [20250101001, 20250101002, 20250101003],
+				invests: [],
+				type: Blockchain.TXTYPE.PAPER,
+			}
+			paper = Blockchain.signtx(paper, privateKey2)
+			return paper
+		}
+
+		it('Should throw an error if target is not 0.', () => {
+			const bc = validBlockchain()
+
+			const tx = paper1()
+			tx.target = publicKey1
+
+			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Target is != 0')
+		})
+
+		it('Should throw an error if transaction has no target.', () => {
+			const bc = validBlockchain()
+
+			const tx = paper1()
+			delete tx.target
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Target is != 0')
+		})
+		
+		it('Should throw an error if transaction is not signed.', () => {
+			const bc = validBlockchain()
+
+			const tx = paper1()
+			delete tx.hash
+
+			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong signature ' + tx.hash)
+		})
+
+		it('Should throw an error if transaction has no version.', () => {
+			const bc = validBlockchain()
+
+			const tx = paper1()
+			delete tx.version
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Missing version ' + tx.hash)
+		})
+
+		it('Should throw an error if transaction has no date.', () => {
+			const bc = validBlockchain()
+
+			const tx = paper1()
+			delete tx.date
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong date ' + tx.hash)
+		})
+
+		it('Should throw an error if transaction has no source.', () => {
+			const bc = validBlockchain()
+
+			const tx = paper1()
+			delete tx.source
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong source format ' + tx.hash)
+		})
+
+		it('Should throw an error if transaction has no money.', () => {
+			const bc = validBlockchain()
+
+			const tx = paper1()
+			delete tx.money
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong money format ' + tx.hash)
+		})
+
+		it('Should throw an error if transaction has no invests field.', () => {
+			const bc = validBlockchain()
+
+			const tx = paper1()
+			delete tx.invests
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong invests format ' + tx.hash)
+		})
+
+		it('Should throw an error if transaction has no type.', () => {
+			const bc = validBlockchain()
+
+			const tx = paper1()
+			delete tx.type
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong transaction type ' + tx.hash)
+		})
+
+		it('Should throw an error if transaction type is != PAPER.', () => {
+			const bc = validBlockchain()
+
+			const tx = paper1()
+			tx.type = Blockchain.TXTYPE.CREATE
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong transaction type ' + tx.hash)
+		})
+
+		it('Should return the transaction.', () => {
+			const bc = validBlockchain()
+
+			const paper = paper1()
+			const result = bc.cashPaper(paper)
+
+			assert.deepEqual(result, paper)
+		})
+
+		it('Should add the transactions to last block.', () => {
+			const bc = validBlockchain()
+
+			const paper = paper1()
+			bc.cashPaper(paper)
+
+			assert.deepEqual(bc.blocks[0].transactions[0], paper)
+		})
+
+		it('Should increase the blockchain total.', () => {
+			const bc = validBlockchain()
+
+			const paper = paper2()
+			bc.cashPaper(paper)
+
+			assert.deepEqual(bc.blocks[0].total, 3)
+		})
+	})
+
 	describe('createMoney', () => {
 		it('Should throw error if date is in the futur.', () => {
 			const bc = validBlockchain()
@@ -1122,7 +1278,6 @@ describe('blockchain', () => {
 
 			assert.deepEqual(result, expected)
 		})
-
 	})
 
 	describe('income', () => {
@@ -1243,6 +1398,15 @@ describe('blockchain', () => {
 			bc.income(tx)
 
 			assert.deepEqual(bc.blocks[0].transactions[0], tx)
+		})
+
+		it('Should increase the blockchain total.', () => {
+			const bc = validBlockchain()
+
+			const tx = makeTx()
+			bc.income(tx)
+
+			assert.deepEqual(bc.blocks[0].total, 1)
 		})
 	})
 

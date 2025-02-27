@@ -7,6 +7,13 @@ const { encrypt, decrypt } = require("ethereum-cryptography/aes");
 const { getRandomBytesSync } = require("ethereum-cryptography/random");
 const msgpack = require('msgpack-lite')
 
+class InvalidTransactionError extends Error {
+	constructor(message) {
+        super(message);
+        this.name = "InvalidTransactionError";
+    }
+}
+
 class Blockchain {
 	/***********************************************************************
 	 *                              CONSTANTS
@@ -20,7 +27,8 @@ class Blockchain {
 			INIT: 0,
 			CREATE: 1,
 			PAY: 2,
-			ENGAGE: 3
+			ENGAGE: 3,
+			PAPER: 4
 		}
 	}
 
@@ -600,6 +608,38 @@ class Blockchain {
 	 **********************************************************************/
 
 	/**
+	 * And and return the given transaction as a paper cash
+	 */
+	cashPaper (transaction) {
+		if (transaction.target !== 0) {
+			throw new InvalidTransactionError('Target is != 0')
+		} else if (! transaction.version) {
+			throw new InvalidTransactionError('Missing version ' + transaction.hash)
+		} else if (! transaction.date > 0) {
+			throw new InvalidTransactionError('Wrong date ' + transaction.hash)
+		} else if (! transaction.source || transaction.source.length !== 66) {
+			throw new InvalidTransactionError('Wrong source format ' + transaction.hash)
+		} else if (! transaction.money 
+			|| ! Object.prototype.toString.call(transaction.money) == '[object Array]') {
+			throw new InvalidTransactionError('Wrong money format ' + transaction.hash)
+		} else if (transaction.money.length === 0) {
+			throw new InvalidTransactionError('Empty paper (no money) ' + transaction.hash)
+		} else if (! transaction.invests 
+			|| ! Object.prototype.toString.call(transaction.invests) == '[object Array]'
+			|| transaction.invests.length > 0) {
+			throw new InvalidTransactionError('Wrong invests format ' + transaction.hash)
+		} else if (transaction.type !== Blockchain.TXTYPE.PAPER) {
+			throw new InvalidTransactionError('Wrong transaction type ' + transaction.hash)
+		} else if (! transaction.hash || ! Blockchain.verifyTx(transaction)) {
+			throw new InvalidTransactionError('Wrong signature ' + transaction.hash)
+		}
+
+		this.addTx(transaction)
+		this.blocks[0].total += transaction.money.length
+		return transaction
+	}
+
+	/**
 	 * Add and return the transaction that creates Money for the Blockchain.
 	 * If date is not given, uses today's date.
 	 * Creates money from last date it was created until given date or today.
@@ -693,6 +733,7 @@ class Blockchain {
 			throw new Error('Invalid transaction')
 		}
 		this.addTx(transaction)
+		this.blocks[0].total += transaction.money.length
 
 		return transaction
 	}
@@ -722,4 +763,4 @@ class Blockchain {
 		return result;
 	}
 }
-module.exports = Blockchain
+module.exports = { Blockchain, InvalidTransactionError }

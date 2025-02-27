@@ -94,8 +94,8 @@ class Blockchain {
 				Blockchain.signtx({
 					version: Blockchain.VERSION,
 					date: Blockchain.dateToInt(birthdate),
-					source: name,
-					target: publicKey,
+					source: publicKey,
+					target: name,
 					money: [],
 					invests: [],
 					type: Blockchain.TXTYPE.INIT
@@ -198,14 +198,14 @@ class Blockchain {
 	/**
 	 * Return true if given Transaction has valid signature
 	 */
-	static verifyTx (transaction, pubkey) {
+	static verifyTx (transaction) {
 		const hash = this.hashtx(transaction)
 		const hashInTx = transaction.hash
 
 		return secp.verify(
 			hashInTx,
 			hash,
-			pubkey
+			transaction.source
 		)
 	}
 
@@ -242,6 +242,27 @@ class Blockchain {
 			block.invests.length === 0 &&
 			block.total === 0 &&
 			secp.verify(signature, messageHash, publicKey)
+	}
+
+	/**
+	 * Return true if given transaction has all it's fields
+	 * and is correctly signed
+	 */
+	static isValidTransaction (transaction) {
+		const txHash = Blockchain.hashtx(transaction)
+
+		if (! transaction.source) {
+			return false
+		}
+
+		return transaction.version === Blockchain.VERSION &&
+			transaction.date > 0 &&
+			transaction.source.length === 66 &&
+			transaction.target.length > 0 &&
+			Object.prototype.toString.call(transaction.money) == '[object Array]' &&
+			Object.prototype.toString.call(transaction.invests) == '[object Array]' &&
+			Object.values(Blockchain.TXTYPE).indexOf(transaction.type) > -1 &&
+			secp.verify(transaction.hash, txHash, transaction.source)
 	}
 
 	/**
@@ -437,7 +458,7 @@ class Blockchain {
 		}
 
 		if (amount > this.blocks[0].money.length) {
-			throw new Error('Unsufficient founds.')
+			throw new Error('Unsufficient funds.')
 		}
 
 		return this.blocks[0].money.slice(0, amount)
@@ -545,6 +566,27 @@ class Blockchain {
 		return result
 	}
 
+	/**
+	 * Return the public key written in the last creation block or in the
+	 * initialization block
+	 */
+	getMyPublicKey () {
+		for (let block of this.blocks) {
+			if (block.previousHash === Blockchain.REF_HASH) {
+				// Case 1: Birth block
+				return block.signer
+			} else if (block.transactions.length > 0) {
+				// Case 2: Standard block => find in transactions
+				for (let tx of block.transactions) {
+					if (tx.type === Blockchain.TXTYPE.CREATE) {
+						return tx.source
+					}
+				}
+			}
+		}
+		return null
+	}
+
 	/***********************************************************************
 	 *                           MAIN METHODS
 	 **********************************************************************/
@@ -588,7 +630,7 @@ class Blockchain {
 			version: Blockchain.VERSION,
 			type: Blockchain.TXTYPE.CREATE,
 			date: Blockchain.dateToInt(date),
-			signer: secp.getPublicKey(privateKey, true),
+			source: secp.getPublicKey(privateKey, true),
 			target: secp.getPublicKey(privateKey, true),
 			money: moneys,
 			invests: moneys,
@@ -601,22 +643,19 @@ class Blockchain {
 	}
 
 	/**
-	 * Return the transaction holding the payment with :
-	 *    - key to sign the transaction
+	 * Add and return the transaction holding the payment with :
+	 *    - sourcePrivateKey to sign the transaction
 	 *    - target pubkey
 	 *    - given amount
 	 * Throws an error if Blockchain can't afford it
 	 */
 	pay (sourcePrivateKey, targetPublicKey, amount, d = new Date()) {
-		if (this.getAvailableMoneyAmount() < amount) {
-			// throw new Error('Insufficient funds')
-		}
 		const money = this.getAvailableMoney(amount);
 		const transaction = {
 			type: Blockchain.TXTYPE.PAY,
 			date: Blockchain.dateToInt(d),
 			money: money,
-			signer: secp.getPublicKey(sourcePrivateKey, true),
+			source: secp.getPublicKey(sourcePrivateKey, true),
 			invests: [],
 			target: targetPublicKey,
 			version: Blockchain.VERSION
@@ -626,6 +665,25 @@ class Blockchain {
 		this.addTx(result)
 		this.removeMoney(money);
 		return result;
+	}
+
+	/**
+	 * Add and return the given Income transaction to the blockchain
+	 * and add the funds to total
+	 * Throws an error if target is not blockchain owner
+	 * Throws an error if transaction is invalid
+	 */
+	income (transaction) {
+		const myPublicKey = this.getMyPublicKey()
+		if (transaction.target !== myPublicKey ||
+			transaction.type !== Blockchain.TXTYPE.PAY ||
+			! Blockchain.isValidTransaction(transaction)
+		) {
+			throw new Error('Invalid transaction')
+		}
+		this.addTx(transaction)
+
+		return transaction
 	}
 
 }

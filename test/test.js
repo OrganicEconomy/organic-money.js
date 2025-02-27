@@ -226,8 +226,8 @@ describe('blockchain', () => {
 					{
 						version: Blockchain.VERSION,
 						date: 20021212,
-						source: name,
-						target: publicKey1,
+						source: publicKey1,
+						target: name,
 						money: [],
 						invests: [],
 						type: Blockchain.TXTYPE.INIT
@@ -264,8 +264,8 @@ describe('blockchain', () => {
 			const name = 'Gus'
 			const block = Blockchain.makeBirthBlock(privateKey1, birthdate, name, today)
 
-			const signature1 = Blockchain.verifyTx(block.transactions[0], publicKey1)
-			const signature2 = Blockchain.verifyTx(block.transactions[1], publicKey1)
+			const signature1 = Blockchain.verifyTx(block.transactions[0])
+			const signature2 = Blockchain.verifyTx(block.transactions[1])
 
 			assert.ok(signature1)
 			assert.ok(signature2)
@@ -310,8 +310,8 @@ describe('blockchain', () => {
 						{
 							version: Blockchain.VERSION,
 							date: 20021212,
-							source: name,
-							target: publicKey1,
+							source: publicKey1,
+							target: name,
 							money: [],
 							invests: [],
 							type: Blockchain.TXTYPE.INIT
@@ -694,14 +694,14 @@ describe('blockchain', () => {
 			bc.createMoney(privateKey1, new Date('2025-01-02'));
 			const result = bc.blocks[0].transactions[0]
 
-			assert.ok(Blockchain.verifyTx(result, secp.getPublicKey(privateKey1)))
+			assert.ok(Blockchain.verifyTx(result))
 			delete result.hash
 
 			const expected = {
 				version: 1,
 				type: Blockchain.TXTYPE.CREATE,
 				date: 20250102,
-				signer: publicKey1,
+				source: publicKey1,
 				target: publicKey1,
 				money: [20250102000],
 				invests: [20250102000]
@@ -721,7 +721,7 @@ describe('blockchain', () => {
 				version: Blockchain.VERSION,
 				type: Blockchain.TXTYPE.CREATE,
 				date: 20250103,
-				signer: publicKey1,
+				source: publicKey1,
 				target: publicKey1,
 				money: [20250103000, 20250103001, 20250103002, 20250103003],
 				invests: [20250103000, 20250103001, 20250103002, 20250103003]
@@ -800,7 +800,7 @@ describe('blockchain', () => {
 		it('Should raise an error if amount is too big (1).', () => {
 			const bc = validBlockchain()
 
-			assert.throws(() => { bc.getAvailableMoney(2) }, 'Unsufficient founds.')
+			assert.throws(() => { bc.getAvailableMoney(2) }, 'Unsufficient funds.')
 		})
 
 		it('Should raise an error if amount is too big (2).', () => {
@@ -808,7 +808,7 @@ describe('blockchain', () => {
 			bc.blocks[0].total = 27
 			bc.createMoney(privateKey1, new Date('2021-09-21'))
 
-			assert.throws(() => { bc.getAvailableMoney(5) }, 'Unsufficient founds.')
+			assert.throws(() => { bc.getAvailableMoney(5) }, 'Unsufficient funds.')
 		})
 	})
 
@@ -830,17 +830,17 @@ describe('blockchain', () => {
 			bc.pay(privateKey1, publicKey2, 3, new Date('2025-01-03'))
 			const result = bc.blocks[0].transactions[0]
 
-			assert.ok(Blockchain.verifyTx(result, publicKey1))
+			assert.ok(Blockchain.verifyTx(result))
 			delete result.hash
 
 			const expected = {
+				version: Blockchain.VERSION,
+				type: Blockchain.TXTYPE.PAY,
 				date: 20250103,
 				money: [20250101000, 20250102000, 20250102001],
 				invests: [],
-				signer: publicKey1,
-				type: Blockchain.TXTYPE.PAY,
-				target: publicKey2,
-				version: Blockchain.VERSION
+				source: publicKey1,
+				target: publicKey2
 			}
 
 			assert.deepEqual(result, expected)
@@ -855,6 +855,133 @@ describe('blockchain', () => {
 			const expected = [20250102002, 20250102003]
 
 			assert.deepEqual(result, expected)
+		})
+
+		it('Should throw error if blockchain can t afford it.', () => {
+			const bc = validBlockchain()
+
+			assert.throws(() => { bc.pay(privateKey1, publicKey2, 2) }, 'Unsufficient funds')
+		})
+	})
+
+	describe('income', () => {
+		const makeTx = () => {
+			const tx = {
+				version: Blockchain.VERSION,
+				date: 20250101,
+				source: publicKey2,
+				target: publicKey1,
+				money: [20250101000],
+				invests: [20250101000],
+				type: Blockchain.TXTYPE.PAY,
+			}
+			return Blockchain.signtx(tx, privateKey2)
+		}
+		it('Should throw an error if target is not blockchain owner.', () => {
+			const bc = validBlockchain()
+
+			const tx = makeTx()
+			tx.target = publicKey2
+
+			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
+		})
+		
+		it('Should throw an error if transaction is not signed.', () => {
+			const bc = validBlockchain()
+
+			const tx = makeTx()
+			delete tx.hash
+
+			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
+		})
+
+		it('Should throw an error if transaction has no version.', () => {
+			const bc = validBlockchain()
+
+			const tx = makeTx()
+			delete tx.version
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
+		})
+
+		it('Should throw an error if transaction has no date.', () => {
+			const bc = validBlockchain()
+
+			const tx = makeTx()
+			delete tx.date
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
+		})
+
+		it('Should throw an error if transaction has no source.', () => {
+			const bc = validBlockchain()
+
+			const tx = makeTx()
+			delete tx.source
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
+		})
+
+		it('Should throw an error if transaction has no target.', () => {
+			const bc = validBlockchain()
+
+			const tx = makeTx()
+			delete tx.target
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
+		})
+
+		it('Should throw an error if transaction has no money.', () => {
+			const bc = validBlockchain()
+
+			const tx = makeTx()
+			delete tx.money
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
+		})
+
+		it('Should throw an error if transaction has no invests.', () => {
+			const bc = validBlockchain()
+
+			const tx = makeTx()
+			delete tx.invests
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
+		})
+
+		it('Should throw an error if transaction has no type.', () => {
+			const bc = validBlockchain()
+
+			const tx = makeTx()
+			delete tx.type
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
+		})
+
+		it('Should throw an error if transaction type is != PAY.', () => {
+			const bc = validBlockchain()
+
+			const tx = makeTx()
+			tx.type = Blockchain.TXTYPE.CREATE
+			Blockchain.signtx(tx, privateKey2)
+
+			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
+		})
+
+		it('Should add the transaction to last block.', () => {
+			const bc = validBlockchain()
+
+			const tx = makeTx()
+			bc.income(tx)
+
+			assert.deepEqual(bc.blocks[0].transactions[0], tx)
 		})
 	})
 
@@ -969,6 +1096,42 @@ describe('blockchain', () => {
 		  const result = bc.hasLevelUpOnLastTx()
 
 		  assert.ok(result)
+		})
+	})
+
+	describe('getMyPublicKey', () => {
+		it('Should return null for empty Blockchain.', () => {
+			const bc = new Blockchain()
+
+			const result = bc.getMyPublicKey()
+
+			assert.isNull(result)
+		})
+
+		it('Should return the correct key from birth block.', () => {
+			const bc = new Blockchain([validBirthBlock()])
+
+			const result = bc.getMyPublicKey()
+
+			assert.equal(result, publicKey1)
+		})
+
+		it('Should return the correct key from last CREATE transaction.', () => {
+			const bc = new Blockchain([
+				{
+					version: Blockchain.VERSION,
+					transactions: [
+						{
+							source: publicKey1,
+							type: Blockchain.TXTYPE.CREATE,
+						}
+					]
+				}
+			])
+
+			const result = bc.getMyPublicKey()
+
+			assert.equal(result, publicKey1)
 		})
 	})
 

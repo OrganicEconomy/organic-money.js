@@ -37,6 +37,7 @@ const validBirthBlock = () => {
 				money: [],
 				invests: [],
 				type: Blockchain.TXTYPE.INIT,
+				signer: 0,
 				hash: 0
 			},
 			{
@@ -47,6 +48,7 @@ const validBirthBlock = () => {
 				money: [20250101000],
 				invests: [20250101000],
 				type: Blockchain.TXTYPE.CREATE,
+				signer: 0,
 				hash: 0
 			}
 		]
@@ -90,6 +92,7 @@ const validCashBlock = () => {
 				money: [20250102000, 20250102001, 20250102002, 20250102003],
 				invests: [20250102000, 20250102001, 20250102002, 20250102003],
 				type: Blockchain.TXTYPE.CREATE,
+				signer: 0,
 				hash: 0
 			},
 			{
@@ -100,6 +103,7 @@ const validCashBlock = () => {
 				money: [20241228000, 20241228001, 20250101002, 20250101003, 20250101004, 20250101005, 20250101006, 20250101007, 20250101008, 20250101009, 20250101010, 20250101011, 20250101012, 20250101013, 20250101014, 20250101015, 20250101016, 20250101017, 20250101018, 20250101019, 20250101020, 20250101021, 20250101022, 20250101023, 20250101024, 20250101025, 20250101026],
 				invests: [],
 				type: Blockchain.TXTYPE.PAY,
+				signer: 0,
 				hash: 0
 			}
 		]
@@ -223,7 +227,8 @@ describe('blockchain', () => {
 						target: name,
 						money: [],
 						invests: [],
-						type: Blockchain.TXTYPE.INIT
+						type: Blockchain.TXTYPE.INIT,
+						signer: 0
 					},
 					{
 						version: Blockchain.VERSION,
@@ -232,7 +237,8 @@ describe('blockchain', () => {
 						target: publicKey1,
 						money: [20250225000],
 						invests: [20250225000],
-						type: Blockchain.TXTYPE.CREATE
+						type: Blockchain.TXTYPE.CREATE,
+						signer: 0
 					}
 				]
 			}
@@ -307,7 +313,8 @@ describe('blockchain', () => {
 							target: name,
 							money: [],
 							invests: [],
-							type: Blockchain.TXTYPE.INIT
+							type: Blockchain.TXTYPE.INIT,
+							signer: 0
 						},
 						{
 							version: Blockchain.VERSION,
@@ -316,7 +323,8 @@ describe('blockchain', () => {
 							target: publicKey1,
 							money: [20250201000],
 							invests: [20250201000],
-							type: Blockchain.TXTYPE.CREATE
+							type: Blockchain.TXTYPE.CREATE,
+							signer: 0
 						}
 					]
 				}
@@ -596,6 +604,7 @@ describe('blockchain', () => {
 				money: [20250102000, 20250102001, 20250102002, 20250102003],
 				invests: [20250102000, 20250102001, 20250102002, 20250102003],
 				type: Blockchain.TXTYPE.CREATE,
+				signer: 0,
 				hash: 0
 			}
 
@@ -850,6 +859,7 @@ describe('blockchain', () => {
 				money: [],
 				invests: [],
 				type: Blockchain.TXTYPE.CREATE,
+				signer: 0,
 				hash: 0
 			}
 
@@ -868,6 +878,7 @@ describe('blockchain', () => {
 				money: [],
 				invests: [],
 				type: Blockchain.TXTYPE.CREATE,
+				signer: 0,
 				hash: 0
 			}
 
@@ -886,6 +897,7 @@ describe('blockchain', () => {
 				money: [],
 				invests: [],
 				type: Blockchain.TXTYPE.CREATE,
+				signer: 0,
 				hash: 0
 			}
 
@@ -920,7 +932,8 @@ describe('blockchain', () => {
 				target: publicKey1,
 				money: money,
 				invests: [],
-				type: Blockchain.TXTYPE.PAY
+				type: Blockchain.TXTYPE.PAY,
+				signer: 0
 			})
 			bc.blocks[0].total += 36;
 
@@ -943,7 +956,8 @@ describe('blockchain', () => {
 				target: publicKey1,
 				money: money,
 				invests: [],
-				type: Blockchain.TXTYPE.PAY
+				type: Blockchain.TXTYPE.PAY,
+				signer: 0
 			})
 			bc.blocks[0].total += 37;
 
@@ -1004,6 +1018,7 @@ describe('blockchain', () => {
 				money: [20250101000],
 				invests: [],
 				type: Blockchain.TXTYPE.PAPER,
+				signer: 0
 			}
 			paper = Blockchain.signtx(paper, privateKey2)
 			return paper
@@ -1018,6 +1033,7 @@ describe('blockchain', () => {
 				money: [20250101001, 20250101002, 20250101003],
 				invests: [],
 				type: Blockchain.TXTYPE.PAPER,
+				signer: 0
 			}
 			paper = Blockchain.signtx(paper, privateKey2)
 			return paper
@@ -1174,6 +1190,7 @@ describe('blockchain', () => {
 				date: 20250102,
 				source: publicKey1,
 				target: publicKey1,
+				signer: 0,
 				money: [20250102000],
 				invests: [20250102000]
 			}
@@ -1195,7 +1212,8 @@ describe('blockchain', () => {
 				source: publicKey1,
 				target: publicKey1,
 				money: [20250103000, 20250103001, 20250103002, 20250103003],
-				invests: [20250103000, 20250103001, 20250103002, 20250103003]
+				invests: [20250103000, 20250103001, 20250103002, 20250103003],
+				signer: 0
 			}
 
 			assert.deepEqual(result, expected)
@@ -1252,7 +1270,8 @@ describe('blockchain', () => {
 		 		money: [20250101000, 20250102000, 20250102001],
 		 		invests: [],
 		 		source: publicKey1,
-		 		target: 0
+		 		target: 0,
+				signer: 0
 		 	}
 
 			assert.deepEqual(result, expected)
@@ -1290,6 +1309,7 @@ describe('blockchain', () => {
 				money: [20250101000],
 				invests: [20250101000],
 				type: Blockchain.TXTYPE.PAY,
+				signer: 0
 			}
 			return Blockchain.signtx(tx, privateKey2)
 		}
@@ -1427,7 +1447,8 @@ describe('blockchain', () => {
 				money: [20250101000, 20250102000, 20250102001],
 				invests: [],
 				source: publicKey1,
-				target: publicKey2
+				target: publicKey2,
+				signer: 0
 			}
 
 			assert.deepEqual(result, expected)

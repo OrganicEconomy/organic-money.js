@@ -104,6 +104,7 @@ class Blockchain {
 					date: Blockchain.dateToInt(birthdate),
 					source: publicKey,
 					target: name,
+					signer: 0,
 					money: [],
 					invests: [],
 					type: Blockchain.TXTYPE.INIT
@@ -113,6 +114,7 @@ class Blockchain {
 					date: Blockchain.dateToInt(date),
 					source: publicKey,
 					target: publicKey,
+					signer: 0,
 					money: [Blockchain.formatIndex(date, 0)],
 					invests: [Blockchain.formatIndex(date, 0)],
 					type: Blockchain.TXTYPE.CREATE
@@ -680,6 +682,7 @@ class Blockchain {
 			date: Blockchain.dateToInt(date),
 			source: secp.getPublicKey(privateKey, true),
 			target: secp.getPublicKey(privateKey, true),
+			signer: 0,
 			money: moneys,
 			invests: moneys,
 		}
@@ -709,7 +712,8 @@ class Blockchain {
 			money: money,
 			invests: [],
 			source: Blockchain.getPublicFromPrivate(myPrivateKey),
-			target: 0
+			target: 0,
+			signer: 0
 		}
 
 		const result = Blockchain.signtx(transaction, myPrivateKey)
@@ -754,6 +758,7 @@ class Blockchain {
 			source: secp.getPublicKey(myPrivateKey, true),
 			invests: [],
 			target: targetPublicKey,
+			signer: 0,
 			version: Blockchain.VERSION
 		}
 

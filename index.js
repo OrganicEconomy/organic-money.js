@@ -14,6 +14,13 @@ class InvalidTransactionError extends Error {
     }
 }
 
+class UnauthorizedError extends Error {
+	constructor(message) {
+        super(message);
+        this.name = "UnauthorizedError";
+    }
+}
+
 class Blockchain {
 	/***********************************************************************
 	 *                              CONSTANTS
@@ -36,7 +43,7 @@ class Blockchain {
 	 *                           STATIC METHODS
 	 **********************************************************************/
 	static randomPrivateKey () {
-		return secp.utils.randomPrivateKey()
+		return toHex(secp.utils.randomPrivateKey())
 	}
 
 	static async aesEncrypt (msg, pwd) {
@@ -67,8 +74,17 @@ class Blockchain {
 		return new Date(datestr.slice(0,4) + '-' + datestr.slice(4,6) + '-' + datestr.slice(6,8))
 	}
 
-	static formatIndex(date, index) {
+	static intToIndex(dateint) {
+		const datestr = '' + dateint
+		return +datestr.slice(-3)
+	}
+
+	static formatMoneyIndex(date, index) {
 		return +(''+Blockchain.dateToInt(date) + ("00" + index).slice(-3))
+	}
+
+	static formatInvestIndex(date, index) {
+		return +(''+Blockchain.dateToInt(date) + '9' + ("00" + index).slice(-3))
 	}
 
 	/**
@@ -95,8 +111,8 @@ class Blockchain {
 			previousHash: Blockchain.REF_HASH, // Previous hash : here 'random'
 			signer: publicKey, // Compressed Signer public key, here the new one created
 			merkleroot: 0,
-			money: [Blockchain.formatIndex(date, 0)],
-			invests: [Blockchain.formatIndex(date, 0)],
+			money: [Blockchain.formatMoneyIndex(date, 0)],
+			invests: [Blockchain.formatMoneyIndex(date, 0)],
 			total: 0,
 			transactions: [
 				Blockchain.signtx({
@@ -115,8 +131,8 @@ class Blockchain {
 					source: publicKey,
 					target: publicKey,
 					signer: 0,
-					money: [Blockchain.formatIndex(date, 0)],
-					invests: [Blockchain.formatIndex(date, 0)],
+					money: [Blockchain.formatMoneyIndex(date, 0)],
+					invests: [Blockchain.formatMoneyIndex(date, 0)],
 					type: Blockchain.TXTYPE.CREATE
 				}, privateKey)
 			]
@@ -371,6 +387,70 @@ class Blockchain {
 	}
 
 	/**
+	 * Return the level of the blockchain, minus the already engaged
+	 * amount of money
+	 */
+	getAffordableMoneyAmount () {
+	}
+
+	/**
+	 * Return the level of the blockchain, minus the already engaged
+	 * amount of invest
+	 */
+	getAffordableInvestAmount () {
+		let result = this.getLevel()
+		for (let tx of this.blocks[0].transactions) {
+			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
+				let moneyDate = Blockchain.intToDate(tx.invests[0])
+				let previousMoneyDate = moneyDate
+				for (let invest of tx.invests) {
+					if (moneyDate === previousMoneyDate) {
+						result -= 1
+					}
+					previousMoneyDate = moneyDate
+					moneyDate = Blockchain.intToDate(invest)
+				}
+			}
+		}
+		return result
+	}
+
+	/**
+	 * Return the amount of Money available in the Blockchain
+	 * If Blockchain is invalid, return 0
+	 */
+	getAvailableMoneyAmount () {
+		if (this.isEmpty() || this.isWaitingValidation()) {
+			return 0
+		}
+		return this.blocks[0].money.length;
+	}
+
+	/**
+	 * Return the index of the first invest available
+	 * not already engaged
+	 */
+	getFirstUnengagedInvestIndex () {
+		let lastIndex = 0
+		for (let tx of this.blocks[0].transactions) {
+			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
+				let moneyDate = Blockchain.intToDate(tx.invests[0])
+				let previousMoneyDate = moneyDate
+				for (let invest of tx.invests) {
+					if (moneyDate !== previousMoneyDate) {
+						if (lastIndex < Blockchain.intToIndex(invest)) {
+							lastIndex = Blockchain.intToIndex(invest)
+						}
+					}
+					previousMoneyDate = moneyDate
+					moneyDate = Blockchain.intToDate(invest)
+				}
+			}
+		}
+		return lastIndex + 1
+	}
+
+	/**
 	 * Return the lastly added Transaction
 	 */
 	getLastTx () {
@@ -412,17 +492,6 @@ class Blockchain {
 			return Math.floor(100 * (1- (this.getMoneyBeforeNextLevel() / Math.pow(level, 3))))
 		}
 		return Math.pow(level, 3) - this.blocks[0].total
-	}
-
-	/**
-	 * Return the amount of Money available in the Blockchain
-	 * If Blockchain is invalid, return 0
-	 */
-	getAvailableMoneyAmount () {
-		if (this.isEmpty() || this.isWaitingValidation()) {
-			return 0
-		}
-		return this.blocks[0].money.length;
 	}
 
 	/**
@@ -468,7 +537,7 @@ class Blockchain {
 	/**
 	 * Return the list of all available Money
 	 * If amount > 0, return only this amount of Money
-	 *
+	 * If amount is not affordable, return empty array []
 	 */
 	getAvailableMoney (amount = -1) {
 		if (amount < 0) {
@@ -476,7 +545,7 @@ class Blockchain {
 		}
 
 		if (amount > this.blocks[0].money.length) {
-			throw new Error('Unsufficient funds.')
+			return []
 		}
 
 		return this.blocks[0].money.slice(0, amount)
@@ -517,6 +586,19 @@ class Blockchain {
 			signer: null,
 			transactions: []
 		})
+	}
+
+	/**
+	 * Sign the last block of the Blockchain
+	 */
+	sealLastBlock (privateKey) {
+		const myPublicKey = this.getMyPublicKey()
+		for (let tx of this.blocks[0].transactions) {
+			if (tx.type === Blockchain.TXTYPE.PAPER && Blockchain.getPublicFromPrivate(privateKey) !== tx.signer) {
+				throw new UnauthorizedError('Only Paper signer can seal a block with it.')
+			}
+		}
+		return Blockchain.signblock(this.blocks[0], privateKey)
 	}
 
 	addBlock (block) {
@@ -669,7 +751,7 @@ class Blockchain {
 
 		while (lastdate <= date) {
 			for (let i = 0; i < amount; i++) {
-				index = Blockchain.formatIndex(lastdate, i)
+				index = Blockchain.formatMoneyIndex(lastdate, i)
 				moneys.push(index);
 				index += 1;
 			}
@@ -694,6 +776,38 @@ class Blockchain {
 	}
 
 	/**
+	 * Add and return the transaction that engage invests of the BLockchain.
+	 */
+	engageInvests (myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
+		if (dailyAmount > this.getAffordableInvestAmount()) {
+			throw new InvalidTransactionError('Unsufficient funds.')
+		}
+
+		const invests = []
+		const dateIndex = new Date(date)
+		const firstIndex = this.getFirstUnengagedInvestIndex()
+		for (let d = 0; d < days; d++) {
+			for (let i = firstIndex; i < dailyAmount + firstIndex; i++) {
+				invests.push(Blockchain.formatInvestIndex(dateIndex, i))
+			}
+			dateIndex.setDate(dateIndex.getDate() + 1)
+		}
+		const tx = {
+			version: Blockchain.VERSION,
+			type: Blockchain.TXTYPE.ENGAGE,
+			date: Blockchain.dateToInt(date),
+			source: Blockchain.getPublicFromPrivate(myPrivateKey),
+			target: targetPublicKey,
+			money: [],
+			invests: invests,
+			signer: 0
+		}
+		const result = Blockchain.signtx(tx, myPrivateKey)
+		this.addTx(result)
+		return result
+	}
+
+	/**
 	 * Add to last block and return a transaction creating a paper of given amount
 	 *
 	 * Throws an error if amount is not affordable
@@ -701,6 +815,9 @@ class Blockchain {
 	 */
 	generatePaper (myPrivateKey, amount, date=new Date()) {
 		const money = this.getAvailableMoney(amount);
+		if (money.length === 0) {
+			throw new InvalidTransactionError('Unsufficient funds.')
+		}
 		if (date < this.getLastTransactionDate()) {
 			throw new Error('Invalid date')
 		}
@@ -751,6 +868,9 @@ class Blockchain {
 	 */
 	pay (myPrivateKey, targetPublicKey, amount, d = new Date()) {
 		const money = this.getAvailableMoney(amount);
+		if (money.length === 0) {
+			throw new InvalidTransactionError('Unsufficient funds.')
+		}
 		const transaction = {
 			type: Blockchain.TXTYPE.PAY,
 			date: Blockchain.dateToInt(d),
@@ -768,4 +888,4 @@ class Blockchain {
 		return result;
 	}
 }
-module.exports = { Blockchain, InvalidTransactionError }
+module.exports = { Blockchain, InvalidTransactionError, UnauthorizedError }

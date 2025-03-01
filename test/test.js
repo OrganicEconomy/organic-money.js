@@ -1,5 +1,5 @@
 const { describe, it } = require('mocha')
-const { Blockchain, InvalidTransactionError } = require('../index')
+const { Blockchain, InvalidTransactionError, UnauthorizedError} = require('../index')
 const { sha256 } = require('ethereum-cryptography/sha256')
 const secp = require('ethereum-cryptography/secp256k1')
 const { hexToBytes, toHex } = require("ethereum-cryptography/utils");
@@ -14,6 +14,8 @@ const privateKey1 = 'ed945716dddb7af2c9774939e9946f1fee31f5ec0a3c6ec96059f119c39
 const publicKey1 = '02c85e4e448d67a8dc724c620f3fe7d2a3a3cce9fe905b918f712396b4f8effcb3'
 const privateKey2 = 'e68955130b2c4adc6165b0bae6e6b8f4bcce1879dbf0c6f91b3acc69479ef272'
 const publicKey2 = '03cbe4edbfbbc99dfbae83e8c591fafdd6a82d61589be6f60775e3fe2a4677ef46'
+const privateKey3 = 'f8a33b8aa0cbf892f1c9e617126711f7304d6e5cead1d592a8b4288c0985b3c5'
+const publicKey3 = '02f126a536777e95f23b5798b1e357dc2a4f5b1869b739c290b4b2efbc18eca6fd'
 
 const validBirthBlock = () => {
 	// A valid birth block for someone named Gus,
@@ -112,6 +114,34 @@ const validCashBlock = () => {
 	return res;
 }
 
+const validPaperdBlock = () => {
+	const res = {
+		closedate: 20250103,
+		previousHash: validInitBlock().hash,
+		merkleroot: 0,
+		signer: publicKey1,
+		total: 27,
+		version: 1,
+		money: [20250101000],
+		invests: [20250101000],
+		transactions: [
+			{
+				version: Blockchain.VERSION,
+				date: 20250102,
+				source: publicKey2,
+				target: 0,
+				money: [20241228000, 20241228001, 20250101002, 20250101003],
+				invests: [],
+				type: Blockchain.TXTYPE.PAPER,
+				signer: publicKey3,
+				hash: 0
+			}
+		]
+	}
+	Blockchain.signblock(res, privateKey3);
+	return res;
+}
+
 const validBlockchain = () => {
 	return new Blockchain([validInitBlock(), validBirthBlock()])
 }
@@ -141,7 +171,7 @@ describe('blockchain', () => {
 
 	describe('aesDecrypt', () => {
 		it('Should decrypt data correctly.', async () => {
-			const msg = Blockchain.randomPrivateKey()
+			const msg = hexToBytes(Blockchain.randomPrivateKey())
 			const encrypted = await Blockchain.aesEncrypt(msg, 'test_pwd')
 			const result = await Blockchain.aesDecrypt(encrypted, 'test_pwd')
 
@@ -428,7 +458,7 @@ describe('blockchain', () => {
 	})
 
 	describe('signblock', () => {
-		it('Should make valid signature', () => {
+		it('Should make valid signature.', () => {
 			const block = {
 				version: 1,
 				closedate: '28/11/1989',
@@ -822,18 +852,22 @@ describe('blockchain', () => {
 			assert.deepEqual(result, expected)
 		})
 
-		it('Should raise an error if amount is too big (1).', () => {
+		it('Should return [] if amount is too big (1).', () => {
 			const bc = validBlockchain()
 
-			assert.throws(() => { bc.getAvailableMoney(2) }, 'Unsufficient funds.')
+			const result = bc.getAvailableMoney(2)
+
+			assert.deepEqual(result, [])
 		})
 
-		it('Should raise an error if amount is too big (2).', () => {
+		it('Should return [] if amount is too big (2).', () => {
 			const bc = validBlockchain()
 			bc.blocks[0].total = 27
 			bc.createMoney(privateKey1, new Date('2021-09-21'))
 
-			assert.throws(() => { bc.getAvailableMoney(5) }, 'Unsufficient funds.')
+			const result = bc.getAvailableMoney(3)
+
+			assert.deepEqual(result, [])
 		})
 	})
 
@@ -906,6 +940,31 @@ describe('blockchain', () => {
 			bc.addTx(tx)
 
 			assert.equal(bc.blocks.length, 3)
+		})
+	})
+
+	describe('sealLastBlock', () => {
+		it('Should raise an error if block contains Cashes Papers and signer is me.', () => {
+			const bc = new Blockchain([validPaperdBlock(), validInitBlock(), validBirthBlock()])
+			delete bc.blocks[0].hash
+
+			assert.throws(() => { bc.sealLastBlock(privateKey1) }, UnauthorizedError, 'Only Paper signer can seal a block with it.')
+		})
+
+		it('Should raise an error if block contains Cashes Papers and signer is not Paper signer.', () => {
+			const bc = new Blockchain([validPaperdBlock(), validInitBlock(), validBirthBlock()])
+			delete bc.blocks[0].hash
+
+			assert.throws(() => { bc.sealLastBlock(privateKey2) }, UnauthorizedError, 'Only Paper signer can seal a block with it.')
+		})
+
+		it('Should sign the last block even if it contains Cashes Papers while signer is Paper signer.', () => {
+			const bc = new Blockchain([validPaperdBlock(), validInitBlock(), validBirthBlock()])
+			delete bc.blocks[0].hash
+
+			signature = bc.sealLastBlock(privateKey3)
+
+			assert.ok(signature)
 		})
 	})
 
@@ -1242,6 +1301,88 @@ describe('blockchain', () => {
 		})
 	})
 
+	describe('engageInvests', () => {
+		it('Should throw error if daily amount is unaffordable.', () => {
+			const bc = validCashedBlockchain()
+			const dailyAmount = 5 // total is 27 so daily creation is 3+1=4
+
+			const fn = () => { bc.engageInvests(privateKey1, publicKey2, dailyAmount, 12) }
+
+			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
+		})
+
+		it('Should return a transaction with correct invests engaged.', () => {
+			const bc = validCashedBlockchain()
+			const dailyAmount = 4
+			const days = 3
+			const date = new Date("2025-01-04")
+
+			const expected = {
+				version: Blockchain.VERSION,
+				date: 20250104,
+				source: publicKey1,
+				target: publicKey2,
+				money: [],
+				invests: [
+					202501049000, 202501049001, 202501049002, 202501049003,
+					202501059000, 202501059001, 202501059002, 202501059003,
+					202501069000, 202501069001, 202501069002, 202501069003,
+				],
+				type: Blockchain.TXTYPE.ENGAGE,
+				signer: 0,
+			}
+
+			const tx = bc.engageInvests(privateKey1, publicKey2, dailyAmount, days, date)
+			delete tx.hash
+
+			assert.deepEqual(tx, expected)
+		})
+
+		it('Should return a signed transaction.', () => {
+			const bc = validCashedBlockchain()
+			const dailyAmount = 4
+			const days = 3
+			const date = new Date("2025-01-04")
+			const tx = bc.engageInvests(privateKey1, publicKey2, dailyAmount, days, date)
+
+			const signature = Blockchain.verifyTx(tx)
+
+			assert.ok(signature, 'invalid signature')
+		})
+
+		it('Should add the returned transaction to the blockchain.', () => {
+			const bc = validCashedBlockchain()
+			const tx = bc.engageInvests(privateKey1, publicKey2, 3, 3)
+
+			assert.deepEqual(bc.blocks[0].transactions[0], tx)
+		})
+
+		it('Should throw error if daily amount is already engaged.', () => {
+			const bc = validCashedBlockchain()
+ 			bc.engageInvests(privateKey1, publicKey2, 3, 12) 
+
+			const fn = () => { bc.engageInvests(privateKey1, publicKey2, 2, 12) }
+
+			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
+		})
+
+		it.only('Should engage invests that was not already engaged.', () => {
+			const bc = validCashedBlockchain()
+			bc.engageInvests(privateKey1, publicKey2, 2, 3, new Date("2025-01-04"))
+
+			const expected = [
+				202501059002, 202501059003, // the 5th, 2 firsts are already engaged
+				202501069002, 202501069003, // the 6th too
+				202501079000, 202501079001, // the 7th, nothing was engaged
+			]
+
+
+			const tx = bc.engageInvests(privateKey1, publicKey2, 2, 3, new Date("2025-01-05"))
+
+			assert.deepEqual(tx.invests, expected)
+		})
+	})
+
 	describe('generatePaper', () => {
 		it('Should throw error if blockchain can t afford the amount.', () => {
 			const bc = validBlockchain()
@@ -1468,7 +1609,25 @@ describe('blockchain', () => {
 		it('Should throw error if blockchain can t afford it.', () => {
 			const bc = validBlockchain()
 
-			assert.throws(() => { bc.pay(privateKey1, publicKey2, 2) }, 'Unsufficient funds')
+			assert.throws(() => { bc.pay(privateKey1, publicKey2, 2) }, InvalidTransactionError, 'Unsufficient funds.')
 		})
 	})
 })
+
+//describe('toto', () => {
+//	describe('tata', () => {
+//		it.only('Should encrypt data correctly.', async () => {
+//			console.log(JSON.stringify({
+//				v: 1,
+//				d: 20250102,
+//				f: publicKey1,
+//				t: publicKey2,
+//				m: [20241228000, 20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000,20241228000],
+//				i: [],
+//				t: 2,
+//				s: 0,
+//				h: '03cbe4edbfbbc99dfbae83e8c591fafdd6a82d61589be6f60775e3fe2a4677ef46'
+//			}))
+//		})
+//	})
+//})

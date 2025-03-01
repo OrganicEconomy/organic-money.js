@@ -87,10 +87,18 @@ class Blockchain {
 		return +(''+Blockchain.dateToInt(date) + '9' + ("00" + index).slice(-3))
 	}
 
-	static buildIndexes(date, level) {
+	static buildInvestIndexes(date, level) {
 		const result = []
 		for (let i = 0; i < level; i++) {
 			result.push(Blockchain.formatInvestIndex(date, i))
+		}
+		return result
+	}
+
+	static buildMoneyIndexes(date, level) {
+		const result = []
+		for (let i = 0; i < level; i++) {
+			result.push(Blockchain.formatMoneyIndex(date, i))
 		}
 		return result
 	}
@@ -398,7 +406,9 @@ class Blockchain {
 	 * Return the level of the blockchain, minus the already engaged
 	 * amount of money
 	 */
-	getAffordableMoneyAmount () {
+	getAffordableMoneyAmount (date) {
+		const result = this.getLevel() - this.getEngagedMoney(date).length
+		return result
 	}
 
 	/**
@@ -436,6 +446,28 @@ class Blockchain {
 						}
 					} else {
 						result.push(invest)
+					}
+				}
+			}
+		}
+		return result
+	}
+
+	/**
+	 * Return the list of money identifiers already engaged
+	 * If date is given, return those of this day engaged
+	 */
+	getEngagedMoney (date = null) {
+		const result = []
+		for (let tx of this.blocks[0].transactions) {
+			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
+				for (let m of tx.money) {
+					if (date !== null) {
+						if (Blockchain.intToDate(m).getDate() === date.getDate()) {
+							result.push(m)
+						}
+					} else {
+						result.push(m)
 					}
 				}
 			}
@@ -781,7 +813,7 @@ class Blockchain {
 		const dateIndex = new Date(date)
 		let tmpInvests, filteredInvests
 		for (let d = 0; d < days; d++) {
-			tmpInvests = Blockchain.buildIndexes(dateIndex, level)
+			tmpInvests = Blockchain.buildInvestIndexes(dateIndex, level)
 			filteredInvests = tmpInvests.filter(x => !this.getEngagedInvests(dateIndex).includes(x))
 			invests = invests.concat(filteredInvests.slice(0, dailyAmount))
 
@@ -795,6 +827,40 @@ class Blockchain {
 			target: targetPublicKey,
 			money: [],
 			invests: invests,
+			signer: 0
+		}
+		const result = Blockchain.signtx(tx, myPrivateKey)
+		this.addTx(result)
+		return result
+	}
+
+	/**
+	 * Add and return the transaction that engage money of the BLockchain.
+	 */
+	engageMoney (myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
+		if (dailyAmount > this.getAffordableMoneyAmount(date)) {
+			throw new InvalidTransactionError('Unsufficient funds.')
+		}
+
+		let money = []
+		const level = this.getLevel()
+		const dateIndex = new Date(date)
+		let tmpMoney, filteredMoney
+		for (let d = 0; d < days; d++) {
+			tmpMoney = Blockchain.buildMoneyIndexes(dateIndex, level)
+			filteredMoney = tmpMoney.filter(x => !this.getEngagedMoney(dateIndex).includes(x))
+			money = money.concat(filteredMoney.slice(0, dailyAmount))
+
+			dateIndex.setDate(dateIndex.getDate() + 1)
+		}
+		const tx = {
+			version: Blockchain.VERSION,
+			type: Blockchain.TXTYPE.ENGAGE,
+			date: Blockchain.dateToInt(date),
+			source: Blockchain.getPublicFromPrivate(myPrivateKey),
+			target: targetPublicKey,
+			money: money,
+			invests: [],
 			signer: 0
 		}
 		const result = Blockchain.signtx(tx, myPrivateKey)

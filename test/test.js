@@ -197,7 +197,7 @@ const validEngagedBlock2 = () => {
 				date: 20250105,
 				source: publicKey1,
 				target: 0,
-				money: [20250105002, 20250105003, 20250106002, 20250106003],
+				money: [20250105002, 20250105003, 20250106002, 20250106003, 20250107000, 20250107001],
 				invests: [],
 				type: Blockchain.TXTYPE.ENGAGE,
 				signer: publicKey1,
@@ -856,6 +856,49 @@ describe('blockchain', () => {
 			const result = bc.getEngagedInvests(new Date('2025-01-05'))
 
 			const expected = [202501059002, 202501059003, 202501059000, 202501059001]
+
+			assert.deepEqual(result, expected)
+		})
+	})
+
+	describe('getEngagedMoney', () => {
+		it('Should return all engaged money if no date is given.', () => {
+			const bc = new Blockchain([validEngagedBlock(), validInitBlock(), validBirthBlock()])
+
+			const result = bc.getEngagedMoney()
+
+			const expected = [20250104002, 20250104003, 20250105000, 20250105001, 20250106000, 20250106001]
+
+			assert.deepEqual(result, expected)
+		})
+
+		it('Should return engaged money of given date if given.', () => {
+			const bc = new Blockchain([validEngagedBlock(), validInitBlock(), validBirthBlock()])
+
+			const result = bc.getEngagedMoney(new Date('2025-01-05'))
+
+			const expected = [20250105000, 20250105001]
+
+			assert.deepEqual(result, expected)
+		})
+
+		it('Should return engaged money from every transactions.', () => {
+			const bc = new Blockchain([validEngagedBlock2(), validInitBlock(), validBirthBlock()])
+
+			const result = bc.getEngagedMoney()
+
+			const expected = [20250105002, 20250105003, 20250106002, 20250106003, 20250107000, 20250107001,
+				20250104002, 20250104003, 20250105000, 20250105001, 20250106000, 20250106001]
+
+			assert.deepEqual(result, expected)
+		})
+
+		it('Should return engaged money of given date if given from every transactions.', () => {
+			const bc = new Blockchain([validEngagedBlock2(), validInitBlock(), validBirthBlock()])
+
+			const result = bc.getEngagedMoney(new Date('2025-01-05'))
+
+			const expected = [20250105002, 20250105003, 20250105000, 20250105001]
 
 			assert.deepEqual(result, expected)
 		})
@@ -1522,6 +1565,87 @@ describe('blockchain', () => {
 			const tx = bc.engageInvests(privateKey1, publicKey2, 2, 3, new Date("2025-01-05"))
 
 			assert.deepEqual(tx.invests, expected)
+		})
+	})
+
+	describe('engageMoney', () => {
+		it('Should throw error if daily amount is unaffordable.', () => {
+			const bc = validCashedBlockchain()
+			const dailyAmount = 5 // total is 27 so daily creation is 3+1=4
+
+			const fn = () => { bc.engageMoney(privateKey1, publicKey2, dailyAmount, 12) }
+
+			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
+		})
+
+		it('Should return a transaction with correct money engaged.', () => {
+			const bc = validCashedBlockchain()
+			const dailyAmount = 4
+			const days = 3
+			const date = new Date("2025-01-04")
+
+			const expected = {
+				version: Blockchain.VERSION,
+				date: 20250104,
+				source: publicKey1,
+				target: publicKey2,
+				money: [
+					20250104000, 20250104001, 20250104002, 20250104003,
+					20250105000, 20250105001, 20250105002, 20250105003,
+					20250106000, 20250106001, 20250106002, 20250106003,
+				],
+				invests: [],
+				type: Blockchain.TXTYPE.ENGAGE,
+				signer: 0,
+			}
+
+			const tx = bc.engageMoney(privateKey1, publicKey2, dailyAmount, days, date)
+			delete tx.hash
+
+			assert.deepEqual(tx, expected)
+		})
+
+		it('Should return a signed transaction.', () => {
+			const bc = validCashedBlockchain()
+			const dailyAmount = 4
+			const days = 3
+			const date = new Date("2025-01-04")
+			const tx = bc.engageMoney(privateKey1, publicKey2, dailyAmount, days, date)
+
+			const signature = Blockchain.verifyTx(tx)
+
+			assert.ok(signature, 'invalid signature')
+		})
+
+		it('Should add the returned transaction to the blockchain.', () => {
+			const bc = validCashedBlockchain()
+			const tx = bc.engageMoney(privateKey1, publicKey2, 3, 3)
+
+			assert.deepEqual(bc.blocks[0].transactions[0], tx)
+		})
+
+		it('Should throw error if daily amount is already engaged.', () => {
+			const bc = validCashedBlockchain()
+ 			bc.engageMoney(privateKey1, publicKey2, 3, 12) 
+
+			const fn = () => { bc.engageMoney(privateKey1, publicKey2, 2, 12) }
+
+			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
+		})
+
+		it('Should engage money that was not already engaged.', () => {
+			const bc = validCashedBlockchain()
+			bc.engageMoney(privateKey1, publicKey2, 2, 3, new Date("2025-01-04"))
+
+			const expected = [
+				20250105002, 20250105003, // the 5th, 2 firsts are already engaged
+				20250106002, 20250106003, // the 6th too
+				20250107000, 20250107001, // the 7th, nothing was engaged
+			]
+
+			const tx = bc.engageMoney(privateKey1, publicKey2, 2, 3, new Date("2025-01-05"))
+
+			assert.deepEqual(tx.money, expected)
 		})
 	})
 

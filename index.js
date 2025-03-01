@@ -87,6 +87,14 @@ class Blockchain {
 		return +(''+Blockchain.dateToInt(date) + '9' + ("00" + index).slice(-3))
 	}
 
+	static buildIndexes(date, level) {
+		const result = []
+		for (let i = 0; i < level; i++) {
+			result.push(Blockchain.formatInvestIndex(date, i))
+		}
+		return result
+	}
+
 	/**
 	 * Return true if given blockchain is a valid one :
 	 * - signatures are ok
@@ -397,21 +405,8 @@ class Blockchain {
 	 * Return the level of the blockchain, minus the already engaged
 	 * amount of invest
 	 */
-	getAffordableInvestAmount () {
-		let result = this.getLevel()
-		for (let tx of this.blocks[0].transactions) {
-			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
-				let moneyDate = Blockchain.intToDate(tx.invests[0])
-				let previousMoneyDate = moneyDate
-				for (let invest of tx.invests) {
-					if (moneyDate === previousMoneyDate) {
-						result -= 1
-					}
-					previousMoneyDate = moneyDate
-					moneyDate = Blockchain.intToDate(invest)
-				}
-			}
-		}
+	getAffordableInvestAmount (date) {
+		const result = this.getLevel() - this.getEngagedInvests(date).length
 		return result
 	}
 
@@ -427,27 +422,25 @@ class Blockchain {
 	}
 
 	/**
-	 * Return the index of the first invest available
-	 * not already engaged
+	 * Return the list of invest identifiers already engaged
+	 * If date is given, return those of this day engaged
 	 */
-	getFirstUnengagedInvestIndex () {
-		let lastIndex = 0
+	getEngagedInvests (date = null) {
+		const result = []
 		for (let tx of this.blocks[0].transactions) {
 			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
-				let moneyDate = Blockchain.intToDate(tx.invests[0])
-				let previousMoneyDate = moneyDate
 				for (let invest of tx.invests) {
-					if (moneyDate !== previousMoneyDate) {
-						if (lastIndex < Blockchain.intToIndex(invest)) {
-							lastIndex = Blockchain.intToIndex(invest)
+					if (date !== null) {
+						if (Blockchain.intToDate(invest).getDate() === date.getDate()) {
+							result.push(invest)
 						}
+					} else {
+						result.push(invest)
 					}
-					previousMoneyDate = moneyDate
-					moneyDate = Blockchain.intToDate(invest)
 				}
 			}
 		}
-		return lastIndex + 1
+		return result
 	}
 
 	/**
@@ -779,17 +772,19 @@ class Blockchain {
 	 * Add and return the transaction that engage invests of the BLockchain.
 	 */
 	engageInvests (myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
-		if (dailyAmount > this.getAffordableInvestAmount()) {
+		if (dailyAmount > this.getAffordableInvestAmount(date)) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
 
-		const invests = []
+		let invests = []
+		const level = this.getLevel()
 		const dateIndex = new Date(date)
-		const firstIndex = this.getFirstUnengagedInvestIndex()
+		let tmpInvests, filteredInvests
 		for (let d = 0; d < days; d++) {
-			for (let i = firstIndex; i < dailyAmount + firstIndex; i++) {
-				invests.push(Blockchain.formatInvestIndex(dateIndex, i))
-			}
+			tmpInvests = Blockchain.buildIndexes(dateIndex, level)
+			filteredInvests = tmpInvests.filter(x => !this.getEngagedInvests(dateIndex).includes(x))
+			invests = invests.concat(filteredInvests.slice(0, dailyAmount))
+
 			dateIndex.setDate(dateIndex.getDate() + 1)
 		}
 		const tx = {

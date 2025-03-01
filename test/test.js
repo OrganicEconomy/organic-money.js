@@ -142,6 +142,106 @@ const validPaperdBlock = () => {
 	return res;
 }
 
+const validEngagedBlock = () => {
+	const res = {
+		closedate: 20250104,
+		previousHash: validInitBlock().hash,
+		merkleroot: 0,
+		signer: publicKey1,
+		total: 27,
+		version: 1,
+		money: [20250101000],
+		invests: [20250101000],
+		transactions: [
+			{
+				version: Blockchain.VERSION,
+				date: 20250104,
+				source: publicKey1,
+				target: 0,
+				money: [20250104002, 20250104003, 20250105000, 20250105001, 20250106000, 20250106001],
+				invests: [],
+				type: Blockchain.TXTYPE.ENGAGE,
+				signer: publicKey1,
+				hash: 0
+			},
+			{
+				version: Blockchain.VERSION,
+				date: 20250104,
+				source: publicKey1,
+				target: 0,
+				money: [],
+				invests: [202501049002, 202501049003, 202501059000, 202501059001, 202501069000, 202501069001],
+				type: Blockchain.TXTYPE.ENGAGE,
+				signer: publicKey1,
+				hash: 0
+			}
+		]
+	}
+	Blockchain.signblock(res, privateKey3);
+	return res;
+}
+
+const validEngagedBlock2 = () => {
+	const res = {
+		closedate: 20250105,
+		previousHash: validPaperdBlock().hash,
+		merkleroot: 0,
+		signer: publicKey1,
+		total: 27,
+		version: 1,
+		money: [20250101000],
+		invests: [20250101000],
+		transactions: [
+			{
+				version: Blockchain.VERSION,
+				date: 20250105,
+				source: publicKey1,
+				target: 0,
+				money: [20250105002, 20250105003, 20250106002, 20250106003],
+				invests: [],
+				type: Blockchain.TXTYPE.ENGAGE,
+				signer: publicKey1,
+				hash: 0
+			},
+			{
+				version: Blockchain.VERSION,
+				date: 20250105,
+				source: publicKey1,
+				target: 0,
+				money: [],
+				invests: [202501059002, 202501059003, 202501069002, 202501069003, 202501079000, 202501079001],
+				type: Blockchain.TXTYPE.ENGAGE,
+				signer: publicKey1,
+				hash: 0
+			},
+			{
+				version: Blockchain.VERSION,
+				date: 20250104,
+				source: publicKey1,
+				target: 0,
+				money: [20250104002, 20250104003, 20250105000, 20250105001, 20250106000, 20250106001],
+				invests: [],
+				type: Blockchain.TXTYPE.ENGAGE,
+				signer: publicKey1,
+				hash: 0
+			},
+			{
+				version: Blockchain.VERSION,
+				date: 20250104,
+				source: publicKey1,
+				target: 0,
+				money: [],
+				invests: [202501049002, 202501049003, 202501059000, 202501059001, 202501069000, 202501069001],
+				type: Blockchain.TXTYPE.ENGAGE,
+				signer: publicKey1,
+				hash: 0
+			}
+		]
+	}
+	Blockchain.signblock(res, privateKey3);
+	return res;
+}
+
 const validBlockchain = () => {
 	return new Blockchain([validInitBlock(), validBirthBlock()])
 }
@@ -715,6 +815,49 @@ describe('blockchain', () => {
 			const result = bc.getAvailableMoneyAmount()
 
 			assert.equal(result, 5)
+		})
+	})
+
+	describe('getEngagedInvests', () => {
+		it('Should return all engaged invests if no date is given.', () => {
+			const bc = new Blockchain([validEngagedBlock(), validInitBlock(), validBirthBlock()])
+
+			const result = bc.getEngagedInvests()
+
+			const expected = [202501049002, 202501049003, 202501059000, 202501059001, 202501069000, 202501069001]
+
+			assert.deepEqual(result, expected)
+		})
+
+		it('Should return engaged invests of given date if given.', () => {
+			const bc = new Blockchain([validEngagedBlock(), validInitBlock(), validBirthBlock()])
+
+			const result = bc.getEngagedInvests(new Date('2025-01-05'))
+
+			const expected = [202501059000, 202501059001]
+
+			assert.deepEqual(result, expected)
+		})
+
+		it('Should return engaged invests from every transactions.', () => {
+			const bc = new Blockchain([validEngagedBlock2(), validInitBlock(), validBirthBlock()])
+
+			const result = bc.getEngagedInvests()
+
+			const expected = [202501059002, 202501059003, 202501069002, 202501069003, 202501079000, 202501079001,
+				202501049002, 202501049003, 202501059000, 202501059001, 202501069000, 202501069001]
+
+			assert.deepEqual(result, expected)
+		})
+
+		it('Should return engaged invests of given date if given from every transactions.', () => {
+			const bc = new Blockchain([validEngagedBlock2(), validInitBlock(), validBirthBlock()])
+
+			const result = bc.getEngagedInvests(new Date('2025-01-05'))
+
+			const expected = [202501059002, 202501059003, 202501059000, 202501059001]
+
+			assert.deepEqual(result, expected)
 		})
 	})
 
@@ -1366,7 +1509,7 @@ describe('blockchain', () => {
 			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
 		})
 
-		it.only('Should engage invests that was not already engaged.', () => {
+		it('Should engage invests that was not already engaged.', () => {
 			const bc = validCashedBlockchain()
 			bc.engageInvests(privateKey1, publicKey2, 2, 3, new Date("2025-01-04"))
 
@@ -1375,7 +1518,6 @@ describe('blockchain', () => {
 				202501069002, 202501069003, // the 6th too
 				202501079000, 202501079001, // the 7th, nothing was engaged
 			]
-
 
 			const tx = bc.engageInvests(privateKey1, publicKey2, 2, 3, new Date("2025-01-05"))
 

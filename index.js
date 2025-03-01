@@ -755,9 +755,8 @@ class Blockchain {
 	 * if Money has already been created at the given date, create nothing and return null.
 	 * Throw an error if date is in the futur. You cannot create futur money.
 	 */
-	createMoney (privateKey, date = new Date()) {
-		var lastdate = date,
-			index;
+	createMoneyAndInvests (privateKey, date = new Date()) {
+		var lastdate = date
 
 		const today = new Date();
 		if (date.getTime() > today.getTime()) {
@@ -771,15 +770,20 @@ class Blockchain {
 		if (lastdate > date) {
 			return null;
 		}
-		const amount = this.getLevel()
-		const moneys = [];
+		const level = this.getLevel()
+		let moneys = [];
+		let invests = [];
+		let tmpMoney, tmpInvests, filteredInvests, filteredMoney
 
 		while (lastdate <= date) {
-			for (let i = 0; i < amount; i++) {
-				index = Blockchain.formatMoneyIndex(lastdate, i)
-				moneys.push(index);
-				index += 1;
-			}
+			tmpInvests = Blockchain.buildInvestIndexes(lastdate, level)
+			filteredInvests = tmpInvests.filter(x => !this.getEngagedInvests(lastdate).includes(x))
+			invests = invests.concat(filteredInvests);
+
+			tmpMoney = Blockchain.buildMoneyIndexes(lastdate, level)
+			filteredMoney = tmpMoney.filter(x => !this.getEngagedMoney(lastdate).includes(x))
+			moneys = moneys.concat(filteredMoney);
+
 			lastdate.setDate(lastdate.getDate() + 1);
 		}
 
@@ -791,11 +795,11 @@ class Blockchain {
 			target: secp.getPublicKey(privateKey, true),
 			signer: 0,
 			money: moneys,
-			invests: moneys,
+			invests: invests,
 		}
 		const result = Blockchain.signtx(transaction, privateKey)
 		this.blocks[0].money = this.blocks[0].money.concat(moneys);
-		this.blocks[0].invests = this.blocks[0].invests.concat(moneys);
+		this.blocks[0].invests = this.blocks[0].invests.concat(invests);
 		this.addTx(result);
 		return result;
 	}

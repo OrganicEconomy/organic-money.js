@@ -155,7 +155,7 @@ const validEngagedBlock = () => {
 		transactions: [
 			{
 				version: Blockchain.VERSION,
-				date: 20250104,
+				date: 20250102,
 				source: publicKey1,
 				target: 0,
 				money: [20250102002, 20250102003, 20250103000, 20250103001, 20250104000, 20250104001],
@@ -166,7 +166,7 @@ const validEngagedBlock = () => {
 			},
 			{
 				version: Blockchain.VERSION,
-				date: 20250104,
+				date: 20250102,
 				source: publicKey1,
 				target: 0,
 				money: [],
@@ -232,6 +232,45 @@ const validEngagedBlock2 = () => {
 				target: 0,
 				money: [],
 				invests: [202501029002, 202501029003, 202501039000, 202501039001, 202501049000, 202501049001],
+				type: Blockchain.TXTYPE.ENGAGE,
+				signer: publicKey1,
+				hash: 0
+			}
+		]
+	}
+	Blockchain.signblock(res, privateKey3);
+	return res;
+}
+
+const validNoMoreEngagedBlock = () => {
+	const res = {
+		closedate: 20250102,
+		previousHash: validInitBlock().hash,
+		merkleroot: 0,
+		signer: publicKey1,
+		total: 27,
+		version: 1,
+		money: [20250101000],
+		invests: [20250101000],
+		transactions: [
+			{
+				version: Blockchain.VERSION,
+				date: 20250102,
+				source: publicKey1,
+				target: 0,
+				money: [20250102002, 20250102003],
+				invests: [],
+				type: Blockchain.TXTYPE.ENGAGE,
+				signer: publicKey1,
+				hash: 0
+			},
+			{
+				version: Blockchain.VERSION,
+				date: 20250102,
+				source: publicKey1,
+				target: 0,
+				money: [],
+				invests: [202501029002, 202501029003],
 				type: Blockchain.TXTYPE.ENGAGE,
 				signer: publicKey1,
 				hash: 0
@@ -1126,6 +1165,45 @@ describe('blockchain', () => {
 			bc.addTx(tx)
 
 			assert.equal(bc.blocks.length, 3)
+		})
+	})
+
+	describe('newBlock', () => {
+		it('Should throw error if previous block is not signed.', () => {
+			const bc = validBlockchain()
+			delete bc.blocks[0].hash
+
+			const fn = () => { bc.newBlock() }
+
+			assert.throws(fn, Error, 'Previous block not signed.')
+		})
+
+		it('Should add an empty block to the blockchain.', () => {
+			const bc = validBlockchain()
+
+			assert.equal(bc.blocks.length, 2)
+
+			bc.newBlock()
+
+			assert.equal(bc.blocks.length, 3)
+		})
+
+		it('Should report runing engagement from previous block.', () => {
+			const bc = new Blockchain([validEngagedBlock(), validInitBlock(), validBirthBlock()])
+
+			bc.newBlock()
+
+			const expected = validEngagedBlock().transactions
+
+			assert.deepEqual(bc.blocks[0].transactions, expected)
+		})
+
+		it('Should NOT report finished engagements from previous block.', () => {
+			const bc = new Blockchain([validNoMoreEngagedBlock(), validInitBlock(), validBirthBlock()])
+
+			bc.newBlock()
+
+			assert.equal(bc.blocks[0].transactions.length, 0)
 		})
 	})
 

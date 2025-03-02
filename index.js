@@ -590,7 +590,7 @@ class Blockchain {
 	 * Add given transaction to the Blockchain
 	 */
 	addTx (transaction) {
-		if (this.blocks[0].signer !== null) {
+		if (this.blocks[0].signer) {
 			this.newBlock()
 		}
 		this.blocks[0].transactions.unshift(transaction)
@@ -600,7 +600,10 @@ class Blockchain {
 	 * Create a new block and add it to the Blockchain
 	 */
 	newBlock () {
-		this.blocks.unshift({
+		if (! this.blocks[0].signer || ! this.blocks[0].hash) {
+			throw new Error('Previous block not signed.')
+		}
+		const block = {
 			closedate: null,
 			version: Blockchain.VERSION,
 			previousHash: this.blocks[0].hash,
@@ -610,7 +613,26 @@ class Blockchain {
 			merkleroot: 0,
 			signer: null,
 			transactions: []
-		})
+		}
+		const date = Blockchain.intToDate(this.blocks[0].closedate)
+		date.setDate(date.getDate() + 1)
+		for (let tx of this.blocks[0].transactions) {
+			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
+				for (let money of tx.money) {
+					if (Blockchain.intToDate(money).getTime() === date.getTime()) {
+						block.transactions.push(tx)
+						break
+					}
+				}
+				for (let invest of tx.invests) {
+					if (Blockchain.intToDate(invest).getTime() === date.getTime()) {
+						block.transactions.push(tx)
+						break
+					}
+				}
+			}
+		}
+		this.blocks.unshift(block)
 	}
 
 	/**

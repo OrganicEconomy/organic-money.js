@@ -25,7 +25,6 @@ class Blockchain {
 	/***********************************************************************
 	 *                              CONSTANTS
 	 **********************************************************************/
-	static get IV () { return utf8ToBytes('thisisnounique') }
 	static get REF_HASH () { return 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5' }
 	static get VERSION () { return 1 }
 
@@ -114,55 +113,6 @@ class Blockchain {
 	 */
 	static isValidBlockchain (bc) {
 		return true
-	}
-
-	/**
-	 * Return the birthblock based on given informations
-	 */
-	static makeBirthBlock (privateKey, birthdate, name, date=new Date()) {
-		const publicKey = secp.getPublicKey(privateKey, true)
-		const block = {
-			version: Blockchain.VERSION,
-			closedate: Blockchain.dateToInt(date),
-			previousHash: Blockchain.REF_HASH, // Previous hash : here 'random'
-			signer: publicKey, // Compressed Signer public key, here the new one created
-			merkleroot: 0,
-			money: [Blockchain.formatMoneyIndex(date, 0)],
-			invests: [Blockchain.formatMoneyIndex(date, 0)],
-			total: 0,
-			transactions: [
-				Blockchain.signtx({
-					version: Blockchain.VERSION,
-					date: Blockchain.dateToInt(birthdate),
-					source: publicKey,
-					target: name,
-					signer: 0,
-					money: [],
-					invests: [],
-					type: Blockchain.TXTYPE.INIT
-				}, privateKey),
-				Blockchain.signtx({
-					version: Blockchain.VERSION,
-					date: Blockchain.dateToInt(date),
-					source: publicKey,
-					target: publicKey,
-					signer: 0,
-					money: [Blockchain.formatMoneyIndex(date, 0)],
-					invests: [Blockchain.formatMoneyIndex(date, 0)],
-					type: Blockchain.TXTYPE.CREATE
-				}, privateKey)
-			]
-		}
-		return this.signblock(block, privateKey)
-	}
-
-	/**
-	 * Initalize and return a ready to go brand new Blockchain
-	 */
-	static initializeBrandNewBlockchain(name, birthdate, signerPrivateKey, newPrivateKey=null, date=new Date()) {
-		const birthblock = Blockchain.makeBirthBlock(newPrivateKey, birthdate, name, date)
-		const blockchain = Blockchain.validateAccount(birthblock, signerPrivateKey, date)
-		return blockchain
 	}
 
 	/**
@@ -307,25 +257,6 @@ class Blockchain {
 			secp.verify(transaction.hash, txHash, transaction.source)
 	}
 
-	/**
-	 * Return a validated Blockchain for given birthblock
-	 */
-	static validateAccount (birthblock, privateKey, date=new Date()) {
-		let initializationBlock = {
-			closedate: Blockchain.dateToInt(date),
-			previousHash: birthblock.hash,
-			signer: secp.getPublicKey(privateKey, true),
-			merkleroot: 0,
-			money: [],
-			invests: [],
-			total: 0,
-			transactions: [],
-			version: Blockchain.VERSION
-		}
-		initializationBlock = Blockchain.signblock(initializationBlock, privateKey)
-		return new Blockchain([initializationBlock, birthblock])
-	}
-
 	/***********************************************************************
 	 *                      BASE METHODS AND GETTES
 	 **********************************************************************/
@@ -400,15 +331,6 @@ class Blockchain {
 
 	isValid () {
 		return Blockchain.isValidBlockchain(this)
-	}
-
-	/**
-	 * Return the level of the blockchain, minus the already engaged
-	 * amount of money
-	 */
-	getAffordableMoneyAmount (date) {
-		const result = this.getLevel() - this.getEngagedMoney(date).length
-		return result
 	}
 
 	/**
@@ -496,67 +418,10 @@ class Blockchain {
 	}
 
 	/**
-	 * Return the level of the Blockchain
-	 * The level is equal to the number of Money (and Boxes) created
-	 * each day
-	 */
-	getLevel () {
-		if (this.isEmpty() && !this.isValidated()) { return 0 }
-		return Math.floor(Math.cbrt(this.blocks[0].total)) + 1
-	}
-
-	/**
-	 * If as_percent is true, return the percentage of Money already
-	 * made before the next level.
-	 * If Blockchain is invalid, return 0
-	 */
-	getMoneyBeforeNextLevel (asPercent = false) {
-		if (this.isEmpty() || !this.isValidated()) { return 0 }
-		const level = this.getLevel()
-		if (asPercent) {
-			return Math.floor(100 * (1- (this.getMoneyBeforeNextLevel() / Math.pow(level, 3))))
-		}
-		return Math.pow(level, 3) - this.blocks[0].total
-	}
-
-	/**
 	 * Return true if the Blockchain has no block in it
 	 */
 	isEmpty () {
 		return this.blocks.length === 0
-	}
-
-	/**
-	 * Return true if the Blockchain has only one Block
-	 * which is a Birth Block
-	 */
-	isWaitingValidation () {
-		return this.blocks.length === 1 &&
-			this.blocks[0].previousHash === Blockchain.REF_HASH
-	}
-
-	/**
-	 * Return true if the Blockchain has been validated by
-	 * a referent
-	 */
-	isValidated () {
-		return !this.isEmpty() && this.blocks.length >= 2 &&
-			this.blocks[this.blocks.length - 1].previousHash === Blockchain.REF_HASH
-	}
-
-	/**
-	 * Return the last transaction in the blockchain that have the
-	 * type CREATE
-	 */
-	getLastCreationTransaction () {
-		for (let block of this.blocks) {
-			for (let tx of block.transactions) {
-				if (tx.type === Blockchain.TXTYPE.CREATE) {
-					return tx;
-				}
-			}
-		}
-		return null;
 	}
 
 	/**
@@ -652,18 +517,6 @@ class Blockchain {
 		this.blocks.unshift(block)
 	}
 
-	/**
-	 * Return true if the last Transaction added made the Blockchain
-	 * level up
-	 */
-	hasLevelUpOnLastTx () {
-		const lastTx = this.getLastTx();
-		if (lastTx === null || lastTx.type != Blockchain.TXTYPE.PAY) {
-			return false
-		}
-		return Math.floor(Math.cbrt(this.blocks[0].total - lastTx.money.length)) + 1 < this.getLevel()
-	}
-
 	// asLightChain () {
 	// 	const lightchain = [];
 	// 	this.blocks.forEach(block => {
@@ -737,6 +590,59 @@ class Blockchain {
 	/***********************************************************************
 	 *                           MAIN METHODS
 	 **********************************************************************/
+
+	/**
+	 * Add and return the given Income transaction to the blockchain
+	 * and add the funds to total
+	 * Throws an error if target is not blockchain owner
+	 * Throws an error if transaction is invalid
+	 */
+	income (transaction) {
+		const myPublicKey = this.getMyPublicKey()
+		if (transaction.target !== myPublicKey ||
+			transaction.type !== Blockchain.TXTYPE.PAY ||
+			! Blockchain.isValidTransaction(transaction)
+		) {
+			throw new Error('Invalid transaction')
+		}
+		this.addTx(transaction)
+		this.blocks[0].total += transaction.money.length
+
+		return transaction
+	}
+
+	/**
+	 * Add and return the transaction holding the payment with :
+	 *    - myPrivateKey to sign the transaction
+	 *    - target pubkey
+	 *    - given amount
+	 * Throws an error if Blockchain can't afford it
+	 */
+	pay (myPrivateKey, targetPublicKey, amount, d = new Date()) {
+		const money = this.getAvailableMoney(amount);
+		if (money.length === 0) {
+			throw new InvalidTransactionError('Unsufficient funds.')
+		}
+		const transaction = {
+			type: Blockchain.TXTYPE.PAY,
+			date: Blockchain.dateToInt(d),
+			money: money,
+			source: secp.getPublicKey(myPrivateKey, true),
+			invests: [],
+			target: targetPublicKey,
+			signer: 0,
+			version: Blockchain.VERSION
+		}
+
+		const result = Blockchain.signtx(transaction, myPrivateKey)
+		this.addTx(result)
+		this.removeMoney(money);
+		return result;
+	}
+}
+
+
+class CitizenBlockchain extends Blockchain {
 
 	/**
 	 * And and return the given transaction as a paper cash
@@ -927,52 +833,159 @@ class Blockchain {
 	}
 
 	/**
-	 * Add and return the given Income transaction to the blockchain
-	 * and add the funds to total
-	 * Throws an error if target is not blockchain owner
-	 * Throws an error if transaction is invalid
+	 * Return the level of the blockchain, minus the already engaged
+	 * amount of money
 	 */
-	income (transaction) {
-		const myPublicKey = this.getMyPublicKey()
-		if (transaction.target !== myPublicKey ||
-			transaction.type !== Blockchain.TXTYPE.PAY ||
-			! Blockchain.isValidTransaction(transaction)
-		) {
-			throw new Error('Invalid transaction')
-		}
-		this.addTx(transaction)
-		this.blocks[0].total += transaction.money.length
-
-		return transaction
+	getAffordableMoneyAmount (date) {
+		const result = this.getLevel() - this.getEngagedMoney(date).length
+		return result
 	}
 
 	/**
-	 * Add and return the transaction holding the payment with :
-	 *    - myPrivateKey to sign the transaction
-	 *    - target pubkey
-	 *    - given amount
-	 * Throws an error if Blockchain can't afford it
+	 * Return the last transaction in the blockchain that have the
+	 * type CREATE
 	 */
-	pay (myPrivateKey, targetPublicKey, amount, d = new Date()) {
-		const money = this.getAvailableMoney(amount);
-		if (money.length === 0) {
-			throw new InvalidTransactionError('Unsufficient funds.')
+	getLastCreationTransaction () {
+		for (let block of this.blocks) {
+			for (let tx of block.transactions) {
+				if (tx.type === Blockchain.TXTYPE.CREATE) {
+					return tx;
+				}
+			}
 		}
-		const transaction = {
-			type: Blockchain.TXTYPE.PAY,
-			date: Blockchain.dateToInt(d),
-			money: money,
-			source: secp.getPublicKey(myPrivateKey, true),
+		return null;
+	}
+
+	/**
+	 * Return the level of the Blockchain
+	 * The level is equal to the number of Money (and Boxes) created
+	 * each day
+	 */
+	getLevel () {
+		if (this.isEmpty() && !this.isValidated()) { return 0 }
+		return Math.floor(Math.cbrt(this.blocks[0].total)) + 1
+	}
+
+	/**
+	 * If as_percent is true, return the percentage of Money already
+	 * made before the next level.
+	 * If Blockchain is invalid, return 0
+	 */
+	getMoneyBeforeNextLevel (asPercent = false) {
+		if (this.isEmpty() || !this.isValidated()) { return 0 }
+		const level = this.getLevel()
+		if (asPercent) {
+			return Math.floor(100 * (1- (this.getMoneyBeforeNextLevel() / Math.pow(level, 3))))
+		}
+		return Math.pow(level, 3) - this.blocks[0].total
+	}
+
+	/**
+	 * Return true if the last Transaction added made the Blockchain
+	 * level up
+	 */
+	hasLevelUpOnLastTx () {
+		const lastTx = this.getLastTx();
+		if (lastTx === null || lastTx.type != Blockchain.TXTYPE.PAY) {
+			return false
+		}
+		return Math.floor(Math.cbrt(this.blocks[0].total - lastTx.money.length)) + 1 < this.getLevel()
+	}
+
+	/**
+	 * Return true if the Blockchain has only one Block
+	 * which is a Birth Block
+	 */
+	isWaitingValidation () {
+		return this.blocks.length === 1 &&
+			this.blocks[0].previousHash === Blockchain.REF_HASH
+	}
+
+	/**
+	 * Return true if the Blockchain has been validated by
+	 * a referent
+	 */
+	isValidated () {
+		return !this.isEmpty() && this.blocks.length >= 2 &&
+			this.blocks[this.blocks.length - 1].previousHash === Blockchain.REF_HASH
+	}
+
+	/**
+	 * Return the birthblock based on given informations
+	 */
+	makeBirthBlock (privateKey, birthdate, name, date=new Date()) {
+		const publicKey = secp.getPublicKey(privateKey, true)
+		let block = {
+			version: Blockchain.VERSION,
+			closedate: Blockchain.dateToInt(date),
+			previousHash: Blockchain.REF_HASH, // Previous hash : here 'random'
+			signer: publicKey, // Compressed Signer public key, here the new one created
+			merkleroot: 0,
+			money: [Blockchain.formatMoneyIndex(date, 0)],
+			invests: [Blockchain.formatMoneyIndex(date, 0)],
+			total: 0,
+			transactions: [
+				Blockchain.signtx({
+					version: Blockchain.VERSION,
+					date: Blockchain.dateToInt(birthdate),
+					source: publicKey,
+					target: name,
+					signer: 0,
+					money: [],
+					invests: [],
+					type: Blockchain.TXTYPE.INIT
+				}, privateKey),
+				Blockchain.signtx({
+					version: Blockchain.VERSION,
+					date: Blockchain.dateToInt(date),
+					source: publicKey,
+					target: publicKey,
+					signer: 0,
+					money: [Blockchain.formatMoneyIndex(date, 0)],
+					invests: [Blockchain.formatMoneyIndex(date, 0)],
+					type: Blockchain.TXTYPE.CREATE
+				}, privateKey)
+			]
+		}
+		block =  Blockchain.signblock(block, privateKey)
+		this.addBlock(block)
+		return block
+	}
+
+	/**
+	 * Initalize and return a ready to go brand new Blockchain
+	 * If no newPrivateKey is given, make one
+	 * If no date is given, use today
+	 */
+	startBlockchain(name, birthdate, signerPrivateKey, newPrivateKey=null, date=new Date()) {
+		newPrivateKey = newPrivateKey || Blockchain.randomPrivateKey()
+		const birthblock = this.makeBirthBlock(newPrivateKey, birthdate, name, date)
+		this.validateAccount(birthblock, signerPrivateKey, date)
+		return newPrivateKey
+	}
+
+	/**
+	 * Return a validated Blockchain for given birthblock
+	 */
+	validateAccount (birthblock, privateKey, date=new Date()) {
+		let initializationBlock = {
+			closedate: Blockchain.dateToInt(date),
+			previousHash: birthblock.hash,
+			signer: secp.getPublicKey(privateKey, true),
+			merkleroot: 0,
+			money: [],
 			invests: [],
-			target: targetPublicKey,
-			signer: 0,
+			total: 0,
+			transactions: [],
 			version: Blockchain.VERSION
 		}
-
-		const result = Blockchain.signtx(transaction, myPrivateKey)
-		this.addTx(result)
-		this.removeMoney(money);
-		return result;
+		initializationBlock = Blockchain.signblock(initializationBlock, privateKey)
+		this.addBlock(initializationBlock)
+		return initializationBlock
 	}
 }
-module.exports = { Blockchain, InvalidTransactionError, UnauthorizedError }
+
+class EcosystemBlockchain extends Blockchain {
+}
+
+module.exports = { Blockchain, CitizenBlockchain, EcosystemBlockchain, InvalidTransactionError, UnauthorizedError }

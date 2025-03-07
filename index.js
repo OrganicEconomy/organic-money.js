@@ -60,7 +60,7 @@ class Blockchain {
 		return await decrypt(encrypted.msg, key, encrypted.iv)
 	}
 
-	static getPublicFromPrivate (privateKey) {
+	static publicFromPrivate (privateKey) {
 		return secp.getPublicKey(privateKey, true)
 	}
 
@@ -100,19 +100,6 @@ class Blockchain {
 			result.push(Blockchain.formatMoneyIndex(date, i))
 		}
 		return result
-	}
-
-	/**
-	 * Return true if given blockchain is a valid one :
-	 * - signatures are ok
-	 * - created Money are ok
-	 * - spended Money are ok
-	 * - referent is known
-	 * Return false else
-	 * TODO !
-	 */
-	static isValidBlockchain (bc) {
-		return true
 	}
 
 	/**
@@ -175,29 +162,17 @@ class Blockchain {
 
 	/**
 	 * Return true if given Block has valid signature
+	 * Return false else
 	 */
-	static verifyBlock (block, pubkey) {
+	static isValidBlock (block, pubkey=null) {
+		pubkey = pubkey || block.signer || block.source
 		const hash = this.hashblock(block)
-		const hashInBlock = block.hash
-
+		const signature = block.hash
+		
 		return secp.verify(
-			hashInBlock,
+			signature,
 			hash,
 			pubkey
-		)
-	}
-
-	/**
-	 * Return true if given Transaction has valid signature
-	 */
-	static verifyTx (transaction) {
-		const hash = this.hashtx(transaction)
-		const hashInTx = transaction.hash
-
-		return secp.verify(
-			hashInTx,
-			hash,
-			transaction.source
 		)
 	}
 
@@ -239,22 +214,22 @@ class Blockchain {
 	/**
 	 * Return true if given transaction has all it's fields
 	 * and is correctly signed
+	 * Return false else
 	 */
-	static isValidTransaction (transaction) {
-		const txHash = Blockchain.hashtx(transaction)
+	static isValidTransaction (tx) {
+		const txHash = Blockchain.hashtx(tx)
 
-		if (! transaction.source) {
+		if (! tx.source) {
 			return false
 		}
 
-		return transaction.version === Blockchain.VERSION &&
-			transaction.date > 0 &&
-			transaction.source.length === 66 &&
-			transaction.target.length > 0 &&
-			Object.prototype.toString.call(transaction.money) == '[object Array]' &&
-			Object.prototype.toString.call(transaction.invests) == '[object Array]' &&
-			Object.values(Blockchain.TXTYPE).indexOf(transaction.type) > -1 &&
-			secp.verify(transaction.hash, txHash, transaction.source)
+		return tx.version === Blockchain.VERSION &&
+			tx.date > 0 &&
+			tx.source.length === 66 &&
+			Object.prototype.toString.call(tx.money) == '[object Array]' &&
+			Object.prototype.toString.call(tx.invests) == '[object Array]' &&
+			Object.values(Blockchain.TXTYPE).indexOf(tx.type) > -1 &&
+			secp.verify(tx.hash, txHash, tx.source)
 	}
 
 	/***********************************************************************
@@ -276,9 +251,132 @@ class Blockchain {
 		this.bks = b
 	}
 
+	get lastblock () {
+		return this.bks[0]
+	}
+
 	/***********************************************************************
 	 *                            UTILS METHODS
 	 **********************************************************************/
+
+	addBlock (block) {
+		if (! this.isEmpty() && ! Blockchain.isValidBlock(this.lastblock)) {
+			throw new UnauthorizedError('Cannot add block if previous is not signed.')
+		}
+		this.blocks.unshift(block)
+	}
+
+	/**
+	 * Return the level of the blockchain, minus the already engaged
+	 * amount of invest
+	 */
+	getAffordableInvestAmount (date) {
+		const result = this.getLevel() - this.getEngagedInvests(date).length
+		return result
+	}
+
+	/**
+	 * Return the amount of Money available in the Blockchain
+	 * If Blockchain is invalid, return 0
+	 */
+	getAvailableMoneyAmount () {
+		if (this.isEmpty() || this.isWaitingValidation()) {
+			return 0
+		}
+		return this.lastblock.money.length;
+	}
+
+	/**
+	 * Return the list of all available Money
+	 * If amount > 0, return only this amount of Money
+	 * If amount is not affordable, return empty array []
+	 */
+	getAvailableMoney (amount = -1) {
+		if (amount < 0) {
+			return this.lastblock.money
+		}
+
+		if (amount > this.lastblock.money.length) {
+			return []
+		}
+
+		return this.lastblock.money.slice(0, amount)
+	}
+
+	/**
+	 * Return the list of invest identifiers already engaged
+	 * If date is given, return those of this day engaged
+	 */
+	getEngagedInvests (date = null) {
+		const result = []
+		for (let tx of this.lastblock.transactions) {
+			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
+				for (let invest of tx.invests) {
+					if (date !== null) {
+						if (Blockchain.intToDate(invest).getDate() === date.getDate()) {
+							result.push(invest)
+						}
+					} else {
+						result.push(invest)
+					}
+				}
+			}
+		}
+		return result
+	}
+
+	/**
+	 * Return the list of money identifiers already engaged
+	 * If date is given, return those of this day engaged
+	 */
+	getEngagedMoney (date = null) {
+		const result = []
+		for (let tx of this.lastblock.transactions) {
+			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
+				for (let m of tx.money) {
+					if (date !== null) {
+						if (Blockchain.intToDate(m).getDate() === date.getDate()) {
+							result.push(m)
+						}
+					} else {
+						result.push(m)
+					}
+				}
+			}
+		}
+		return result
+	}
+
+	/**
+	 * Return the lastly added Transaction
+	 */
+	getLastTransaction () {
+		for (let block of this.blocks) {
+			if (block.transactions.length > 0) {
+				return block.transactions[0];
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Return the date of the lastly added transaction
+	 */
+	getLastTransactionDate () {
+		const tx = this.getLastTransaction()
+		return Blockchain.intToDate(tx.date)
+	}
+
+	/**
+	 * Return true if the Blockchain has no block in it
+	 */
+	isEmpty () {
+		return this.blocks.length === 0
+	}
+
+	isValid () {
+		return true
+	}
 
 	/**
 	 * Load the given blocks into the Blockchain
@@ -299,7 +397,7 @@ class Blockchain {
 				this.blocks = msgpack.decode(binary)
 			}
 		}
-		if (this.blocks.length === 0 || this.blocks[0].version) {
+		if (this.blocks.length === 0 || this.lastblock.version) {
 			return;
 		}
 		for (let i = 0; i < this.blocks.length; i++) {
@@ -329,159 +427,49 @@ class Blockchain {
 		}
 	}
 
-	isValid () {
-		return Blockchain.isValidBlockchain(this)
-	}
-
-	/**
-	 * Return the level of the blockchain, minus the already engaged
-	 * amount of invest
-	 */
-	getAffordableInvestAmount (date) {
-		const result = this.getLevel() - this.getEngagedInvests(date).length
-		return result
-	}
-
-	/**
-	 * Return the amount of Money available in the Blockchain
-	 * If Blockchain is invalid, return 0
-	 */
-	getAvailableMoneyAmount () {
-		if (this.isEmpty() || this.isWaitingValidation()) {
-			return 0
-		}
-		return this.blocks[0].money.length;
-	}
-
-	/**
-	 * Return the list of invest identifiers already engaged
-	 * If date is given, return those of this day engaged
-	 */
-	getEngagedInvests (date = null) {
-		const result = []
-		for (let tx of this.blocks[0].transactions) {
-			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
-				for (let invest of tx.invests) {
-					if (date !== null) {
-						if (Blockchain.intToDate(invest).getDate() === date.getDate()) {
-							result.push(invest)
-						}
-					} else {
-						result.push(invest)
-					}
-				}
-			}
-		}
-		return result
-	}
-
-	/**
-	 * Return the list of money identifiers already engaged
-	 * If date is given, return those of this day engaged
-	 */
-	getEngagedMoney (date = null) {
-		const result = []
-		for (let tx of this.blocks[0].transactions) {
-			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
-				for (let m of tx.money) {
-					if (date !== null) {
-						if (Blockchain.intToDate(m).getDate() === date.getDate()) {
-							result.push(m)
-						}
-					} else {
-						result.push(m)
-					}
-				}
-			}
-		}
-		return result
-	}
-
-	/**
-	 * Return the lastly added Transaction
-	 */
-	getLastTx () {
-		for (let block of this.blocks) {
-			if (block.transactions.length > 0) {
-				return block.transactions[0];
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * Return the date of the lastly added transaction
-	 */
-	getLastTransactionDate () {
-		const tx = this.getLastTx()
-		return Blockchain.intToDate(tx.date)
-	}
-
-	/**
-	 * Return true if the Blockchain has no block in it
-	 */
-	isEmpty () {
-		return this.blocks.length === 0
-	}
-
-	/**
-	 * Return the list of all available Money
-	 * If amount > 0, return only this amount of Money
-	 * If amount is not affordable, return empty array []
-	 */
-	getAvailableMoney (amount = -1) {
-		if (amount < 0) {
-			return this.blocks[0].money
-		}
-
-		if (amount > this.blocks[0].money.length) {
-			return []
-		}
-
-		return this.blocks[0].money.slice(0, amount)
-	}
-
 	/**
 	 * Remove given money from the available ones.
 	 * That means those Money have been spended.
 	 */
 	removeMoney (money) {
-		const result = this.blocks[0].money.filter(x => !money.includes(x))
-		this.blocks[0].money = result;
+		const result = this.lastblock.money.filter(x => !money.includes(x))
+		this.lastblock.money = result;
 		return result
 	}
 
 	/**
 	 * Add given transaction to the Blockchain
 	 */
-	addTx (transaction) {
-		if (this.blocks[0].signer) {
+	addTransaction (transaction) {
+		if (this.lastblock.hash) {
 			this.newBlock()
 		}
-		this.blocks[0].transactions.unshift(transaction)
+		this.lastblock.transactions.unshift(transaction)
 	}
 
 	/**
 	 * Create a new block and add it to the Blockchain
+	 * Copy to this new block some transactions :
+	 *   - those with still running engagement
 	 */
 	newBlock () {
-		if (! this.blocks[0].signer || ! this.blocks[0].hash) {
+		if (! Blockchain.isValidBlock(this.lastblock)) {
 			throw new Error('Previous block not signed.')
 		}
 		const block = {
 			closedate: null,
 			version: Blockchain.VERSION,
-			previousHash: this.blocks[0].hash,
-			money: this.blocks[0].money,
-			invests: this.blocks[0].invests,
-			total: this.blocks[0].total,
+			previousHash: this.lastblock.hash,
+			money: this.lastblock.money,
+			invests: this.lastblock.invests,
+			total: this.lastblock.total,
 			merkleroot: 0,
 			signer: null,
 			transactions: []
 		}
-		const date = Blockchain.intToDate(this.blocks[0].closedate)
+		const date = Blockchain.intToDate(this.lastblock.closedate)
 		date.setDate(date.getDate() + 1)
-		for (let tx of this.blocks[0].transactions) {
+		for (let tx of this.lastblock.transactions) {
 			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
 				for (let money of tx.money) {
 					if (Blockchain.intToDate(money).getTime() === date.getTime()) {
@@ -502,19 +490,17 @@ class Blockchain {
 
 	/**
 	 * Sign the last block of the Blockchain
+	 * If there is at least one Paper cashed in the block, raise an error if the block
+	 * signer is not the Paper signer.
 	 */
 	sealLastBlock (privateKey) {
 		const myPublicKey = this.getMyPublicKey()
-		for (let tx of this.blocks[0].transactions) {
-			if (tx.type === Blockchain.TXTYPE.PAPER && Blockchain.getPublicFromPrivate(privateKey) !== tx.signer) {
+		for (let tx of this.lastblock.transactions) {
+			if (tx.type === Blockchain.TXTYPE.PAPER && Blockchain.publicFromPrivate(privateKey) !== tx.signer) {
 				throw new UnauthorizedError('Only Paper signer can seal a block with it.')
 			}
 		}
-		return Blockchain.signblock(this.blocks[0], privateKey)
-	}
-
-	addBlock (block) {
-		this.blocks.unshift(block)
+		return Blockchain.signblock(this.lastblock, privateKey)
 	}
 
 	// asLightChain () {
@@ -576,7 +562,7 @@ class Blockchain {
 				// Case 1: Birth block
 				return block.signer
 			} else if (block.transactions.length > 0) {
-				// Case 2: Standard block => find in transactions
+				// Case 2: Standard block => look in transactions
 				for (let tx of block.transactions) {
 					if (tx.type === Blockchain.TXTYPE.CREATE) {
 						return tx.source
@@ -605,8 +591,8 @@ class Blockchain {
 		) {
 			throw new Error('Invalid transaction')
 		}
-		this.addTx(transaction)
-		this.blocks[0].total += transaction.money.length
+		this.addTransaction(transaction)
+		this.lastblock.total += transaction.money.length
 
 		return transaction
 	}
@@ -616,6 +602,7 @@ class Blockchain {
 	 *    - myPrivateKey to sign the transaction
 	 *    - target pubkey
 	 *    - given amount
+	 *    - given date or today
 	 * Throws an error if Blockchain can't afford it
 	 */
 	pay (myPrivateKey, targetPublicKey, amount, d = new Date()) {
@@ -635,7 +622,7 @@ class Blockchain {
 		}
 
 		const result = Blockchain.signtx(transaction, myPrivateKey)
-		this.addTx(result)
+		this.addTransaction(result)
 		this.removeMoney(money);
 		return result;
 	}
@@ -643,37 +630,35 @@ class Blockchain {
 
 
 class CitizenBlockchain extends Blockchain {
-
 	/**
 	 * And and return the given transaction as a paper cash
 	 */
-	cashPaper (transaction) {
-		if (transaction.target !== 0) {
+	cashPaper (tx) {
+		if (tx.target !== 0) {
 			throw new InvalidTransactionError('Target is != 0')
-		} else if (! transaction.version) {
-			throw new InvalidTransactionError('Missing version ' + transaction.hash)
-		} else if (! transaction.date > 0) {
-			throw new InvalidTransactionError('Wrong date ' + transaction.hash)
-		} else if (! transaction.source || transaction.source.length !== 66) {
-			throw new InvalidTransactionError('Wrong source format ' + transaction.hash)
-		} else if (! transaction.money 
-			|| ! Object.prototype.toString.call(transaction.money) == '[object Array]') {
-			throw new InvalidTransactionError('Wrong money format ' + transaction.hash)
-		} else if (transaction.money.length === 0) {
-			throw new InvalidTransactionError('Empty paper (no money) ' + transaction.hash)
-		} else if (! transaction.invests 
-			|| ! Object.prototype.toString.call(transaction.invests) == '[object Array]'
-			|| transaction.invests.length > 0) {
-			throw new InvalidTransactionError('Wrong invests format ' + transaction.hash)
-		} else if (transaction.type !== Blockchain.TXTYPE.PAPER) {
-			throw new InvalidTransactionError('Wrong transaction type ' + transaction.hash)
-		} else if (! transaction.hash || ! Blockchain.verifyTx(transaction)) {
-			throw new InvalidTransactionError('Wrong signature ' + transaction.hash)
+		} else if (! tx.version) {
+			throw new InvalidTransactionError('Missing version ' + tx.hash)
+		} else if (! tx.date > 0) {
+			throw new InvalidTransactionError('Wrong date ' + tx.hash)
+		} else if (! tx.source || tx.source.length !== 66) {
+			throw new InvalidTransactionError('Wrong source format ' + tx.hash)
+		} else if (! tx.money || ! Object.prototype.toString.call(tx.money) == '[object Array]') {
+			throw new InvalidTransactionError('Wrong money format ' + tx.hash)
+		} else if (tx.money.length === 0) {
+			throw new InvalidTransactionError('Empty paper (no money) ' + tx.hash)
+		} else if (! tx.invests 
+			|| ! Object.prototype.toString.call(tx.invests) == '[object Array]'
+			|| tx.invests.length > 0) {
+			throw new InvalidTransactionError('Wrong invests format ' + tx.hash)
+		} else if (tx.type !== Blockchain.TXTYPE.PAPER) {
+			throw new InvalidTransactionError('Wrong transaction type ' + tx.hash)
+		} else if (! Blockchain.isValidTransaction(tx)) {
+			throw new InvalidTransactionError('Wrong signature ' + tx.hash)
 		}
 
-		this.addTx(transaction)
-		this.blocks[0].total += transaction.money.length
-		return transaction
+		this.addTransaction(tx)
+		this.lastblock.total += tx.money.length
+		return tx
 	}
 
 	/**
@@ -681,7 +666,7 @@ class CitizenBlockchain extends Blockchain {
 	 * If date is not given, uses today's date.
 	 * Creates money from last date it was created until given date or today.
 	 * if Money has already been created at the given date, create nothing and return null.
-	 * Throw an error if date is in the futur. You cannot create futur money.
+	 * Throw an error if date is in the futur as one cannot create futur money.
 	 */
 	createMoneyAndInvests (privateKey, date = new Date()) {
 		var lastdate = date
@@ -726,9 +711,9 @@ class CitizenBlockchain extends Blockchain {
 			invests: invests,
 		}
 		const result = Blockchain.signtx(transaction, privateKey)
-		this.blocks[0].money = this.blocks[0].money.concat(moneys);
-		this.blocks[0].invests = this.blocks[0].invests.concat(invests);
-		this.addTx(result);
+		this.addTransaction(result);
+		this.lastblock.money = this.lastblock.money.concat(moneys);
+		this.lastblock.invests = this.lastblock.invests.concat(invests);
 		return result;
 	}
 
@@ -755,14 +740,14 @@ class CitizenBlockchain extends Blockchain {
 			version: Blockchain.VERSION,
 			type: Blockchain.TXTYPE.ENGAGE,
 			date: Blockchain.dateToInt(date),
-			source: Blockchain.getPublicFromPrivate(myPrivateKey),
+			source: Blockchain.publicFromPrivate(myPrivateKey),
 			target: targetPublicKey,
 			money: [],
 			invests: invests,
 			signer: 0
 		}
 		const result = Blockchain.signtx(tx, myPrivateKey)
-		this.addTx(result)
+		this.addTransaction(result)
 		return result
 	}
 
@@ -789,14 +774,14 @@ class CitizenBlockchain extends Blockchain {
 			version: Blockchain.VERSION,
 			type: Blockchain.TXTYPE.ENGAGE,
 			date: Blockchain.dateToInt(date),
-			source: Blockchain.getPublicFromPrivate(myPrivateKey),
+			source: Blockchain.publicFromPrivate(myPrivateKey),
 			target: targetPublicKey,
 			money: money,
 			invests: [],
 			signer: 0
 		}
 		const result = Blockchain.signtx(tx, myPrivateKey)
-		this.addTx(result)
+		this.addTransaction(result)
 		return result
 	}
 
@@ -821,13 +806,13 @@ class CitizenBlockchain extends Blockchain {
 			date: Blockchain.dateToInt(date),
 			money: money,
 			invests: [],
-			source: Blockchain.getPublicFromPrivate(myPrivateKey),
+			source: Blockchain.publicFromPrivate(myPrivateKey),
 			target: 0,
 			signer: 0
 		}
 
 		const result = Blockchain.signtx(transaction, myPrivateKey)
-		this.addTx(result)
+		this.addTransaction(result)
 		this.removeMoney(money);
 		return transaction
 	}
@@ -863,7 +848,7 @@ class CitizenBlockchain extends Blockchain {
 	 */
 	getLevel () {
 		if (this.isEmpty() && !this.isValidated()) { return 0 }
-		return Math.floor(Math.cbrt(this.blocks[0].total)) + 1
+		return Math.floor(Math.cbrt(this.lastblock.total)) + 1
 	}
 
 	/**
@@ -877,7 +862,7 @@ class CitizenBlockchain extends Blockchain {
 		if (asPercent) {
 			return Math.floor(100 * (1- (this.getMoneyBeforeNextLevel() / Math.pow(level, 3))))
 		}
-		return Math.pow(level, 3) - this.blocks[0].total
+		return Math.pow(level, 3) - this.lastblock.total
 	}
 
 	/**
@@ -885,11 +870,11 @@ class CitizenBlockchain extends Blockchain {
 	 * level up
 	 */
 	hasLevelUpOnLastTx () {
-		const lastTx = this.getLastTx();
+		const lastTx = this.getLastTransaction();
 		if (lastTx === null || lastTx.type != Blockchain.TXTYPE.PAY) {
 			return false
 		}
-		return Math.floor(Math.cbrt(this.blocks[0].total - lastTx.money.length)) + 1 < this.getLevel()
+		return Math.floor(Math.cbrt(this.lastblock.total - lastTx.money.length)) + 1 < this.getLevel()
 	}
 
 	/**
@@ -898,7 +883,7 @@ class CitizenBlockchain extends Blockchain {
 	 */
 	isWaitingValidation () {
 		return this.blocks.length === 1 &&
-			this.blocks[0].previousHash === Blockchain.REF_HASH
+			this.lastblock.previousHash === Blockchain.REF_HASH
 	}
 
 	/**
@@ -914,7 +899,7 @@ class CitizenBlockchain extends Blockchain {
 	 * Return the birthblock based on given informations
 	 */
 	makeBirthBlock (privateKey, birthdate, name, date=new Date()) {
-		const publicKey = secp.getPublicKey(privateKey, true)
+		const publicKey = Blockchain.publicFromPrivate(privateKey)
 		let block = {
 			version: Blockchain.VERSION,
 			closedate: Blockchain.dateToInt(date),
@@ -960,18 +945,18 @@ class CitizenBlockchain extends Blockchain {
 	startBlockchain(name, birthdate, signerPrivateKey, newPrivateKey=null, date=new Date()) {
 		newPrivateKey = newPrivateKey || Blockchain.randomPrivateKey()
 		const birthblock = this.makeBirthBlock(newPrivateKey, birthdate, name, date)
-		this.validateAccount(birthblock, signerPrivateKey, date)
+		this.validateAccount(signerPrivateKey, date)
 		return newPrivateKey
 	}
 
 	/**
-	 * Return a validated Blockchain for given birthblock
+	 * Return a validated Blockchain
 	 */
-	validateAccount (birthblock, privateKey, date=new Date()) {
+	validateAccount (privateKey, date=new Date()) {
 		let initializationBlock = {
 			closedate: Blockchain.dateToInt(date),
-			previousHash: birthblock.hash,
-			signer: secp.getPublicKey(privateKey, true),
+			previousHash: this.lastblock.hash,
+			signer: Blockchain.publicFromPrivate(privateKey),
 			merkleroot: 0,
 			money: [],
 			invests: [],

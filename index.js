@@ -26,6 +26,7 @@ class Blockchain {
 	 *                              CONSTANTS
 	 **********************************************************************/
 	static get REF_HASH () { return 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5' }
+	static get ECOREF_HASH () { return 'ec051c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a1' }
 	static get VERSION () { return 1 }
 
 	static get TXTYPE () {
@@ -34,7 +35,10 @@ class Blockchain {
 			CREATE: 1,
 			PAY: 2,
 			ENGAGE: 3,
-			PAPER: 4
+			PAPER: 4,
+			SETADMIN: 5,
+			SETACTOR: 6,
+			SETPAYER: 7
 		}
 	}
 
@@ -178,6 +182,7 @@ class Blockchain {
 
 	/**
 	 * Return true if given Block is a valid Birth one
+	 * TODO : check transactions of the block
 	 */
 	static isValidBirthBlock (block) {
 		const signature = block.hash
@@ -266,6 +271,36 @@ class Blockchain {
 		this.blocks.unshift(block)
 	}
 
+	/**
+	 * And and return the given transaction as a paper cash
+	 */
+	cashPaper (tx) {
+		if (tx.target !== 0) {
+			throw new InvalidTransactionError('Target is != 0')
+		} else if (! tx.version) {
+			throw new InvalidTransactionError('Missing version ' + tx.hash)
+		} else if (! tx.date > 0) {
+			throw new InvalidTransactionError('Wrong date ' + tx.hash)
+		} else if (! tx.source || tx.source.length !== 66) {
+			throw new InvalidTransactionError('Wrong source format ' + tx.hash)
+		} else if (! tx.money || ! Object.prototype.toString.call(tx.money) == '[object Array]') {
+			throw new InvalidTransactionError('Wrong money format ' + tx.hash)
+		} else if (tx.money.length === 0) {
+			throw new InvalidTransactionError('Empty paper (no money) ' + tx.hash)
+		} else if (! tx.invests 
+			|| ! Object.prototype.toString.call(tx.invests) == '[object Array]'
+			|| tx.invests.length > 0) {
+			throw new InvalidTransactionError('Wrong invests format ' + tx.hash)
+		} else if (tx.type !== Blockchain.TXTYPE.PAPER) {
+			throw new InvalidTransactionError('Wrong transaction type ' + tx.hash)
+		} else if (! Blockchain.isValidTransaction(tx)) {
+			throw new InvalidTransactionError('Wrong signature ' + tx.hash)
+		}
+
+		this.addTransaction(tx)
+		this.lastblock.total += tx.money.length
+		return tx
+	}
 	/**
 	 * Return the level of the blockchain, minus the already engaged
 	 * amount of invest
@@ -630,36 +665,6 @@ class Blockchain {
 
 
 class CitizenBlockchain extends Blockchain {
-	/**
-	 * And and return the given transaction as a paper cash
-	 */
-	cashPaper (tx) {
-		if (tx.target !== 0) {
-			throw new InvalidTransactionError('Target is != 0')
-		} else if (! tx.version) {
-			throw new InvalidTransactionError('Missing version ' + tx.hash)
-		} else if (! tx.date > 0) {
-			throw new InvalidTransactionError('Wrong date ' + tx.hash)
-		} else if (! tx.source || tx.source.length !== 66) {
-			throw new InvalidTransactionError('Wrong source format ' + tx.hash)
-		} else if (! tx.money || ! Object.prototype.toString.call(tx.money) == '[object Array]') {
-			throw new InvalidTransactionError('Wrong money format ' + tx.hash)
-		} else if (tx.money.length === 0) {
-			throw new InvalidTransactionError('Empty paper (no money) ' + tx.hash)
-		} else if (! tx.invests 
-			|| ! Object.prototype.toString.call(tx.invests) == '[object Array]'
-			|| tx.invests.length > 0) {
-			throw new InvalidTransactionError('Wrong invests format ' + tx.hash)
-		} else if (tx.type !== Blockchain.TXTYPE.PAPER) {
-			throw new InvalidTransactionError('Wrong transaction type ' + tx.hash)
-		} else if (! Blockchain.isValidTransaction(tx)) {
-			throw new InvalidTransactionError('Wrong signature ' + tx.hash)
-		}
-
-		this.addTransaction(tx)
-		this.lastblock.total += tx.money.length
-		return tx
-	}
 
 	/**
 	 * Add and return the transaction that creates Money for the Blockchain.
@@ -938,7 +943,7 @@ class CitizenBlockchain extends Blockchain {
 	}
 
 	/**
-	 * Initalize and return a ready to go brand new Blockchain
+	 * Initalize Blockchain and return its private key
 	 * If no newPrivateKey is given, make one
 	 * If no date is given, use today
 	 */
@@ -971,6 +976,97 @@ class CitizenBlockchain extends Blockchain {
 }
 
 class EcosystemBlockchain extends Blockchain {
+	/**
+	 * Return true if the Blockchain has only one Block
+	 * which is a Birth Block
+	 */
+	isWaitingValidation () {
+		return this.blocks.length === 1 &&
+			this.lastblock.previousHash === Blockchain.ECOREF_HASH
+	}
+
+	/**
+	 * Return true if the Blockchain has been validated by
+	 * a referent
+	 */
+	isValidated () {
+		return !this.isEmpty() && this.blocks.length >= 2 &&
+			this.blocks[this.blocks.length - 1].previousHash === Blockchain.ECOREF_HASH
+	}
+
+	/**
+	 * Return the birthblock based on given informations
+	 */
+	makeBirthBlock (privateKey, adminKey, name, date=new Date()) {
+		const publicKey = Blockchain.publicFromPrivate(privateKey)
+		let block = {
+			version: Blockchain.VERSION,
+			closedate: Blockchain.dateToInt(date),
+			previousHash: Blockchain.ECOREF_HASH,
+			signer: publicKey,
+			merkleroot: 0,
+			money: [],
+			invests: [],
+			total: 0,
+			transactions: [
+				Blockchain.signtx({
+					version: Blockchain.VERSION,
+					date: Blockchain.dateToInt(date),
+					source: publicKey,
+					target: name,
+					signer: 0,
+					money: [],
+					invests: [],
+					type: Blockchain.TXTYPE.INIT
+				}, privateKey),
+				Blockchain.signtx({
+					version: Blockchain.VERSION,
+					date: Blockchain.dateToInt(date),
+					source: publicKey,
+					target: adminKey,
+					signer: 0,
+					money: [],
+					invests: [],
+					type: Blockchain.TXTYPE.SETADMIN
+				}, privateKey)
+			]
+		}
+		block =  Blockchain.signblock(block, privateKey)
+		this.addBlock(block)
+		return block
+	}
+
+	/**
+	 * Initalize Blockchain and return its private key
+	 * If no newPrivateKey is given, make one
+	 * If no date is given, use today
+	 */
+	startBlockchain(name, signerPrivateKey, adminKey, newPrivateKey=null, date=new Date()) {
+		newPrivateKey = newPrivateKey || Blockchain.randomPrivateKey()
+		const birthblock = this.makeBirthBlock(newPrivateKey, adminKey, name, date)
+		this.validateAccount(signerPrivateKey, date)
+		return newPrivateKey
+	}
+
+	/**
+	 * Return a validated Blockchain
+	 */
+	validateAccount (privateKey, date=new Date()) {
+		let initializationBlock = {
+			closedate: Blockchain.dateToInt(date),
+			previousHash: this.lastblock.hash,
+			signer: Blockchain.publicFromPrivate(privateKey),
+			merkleroot: 0,
+			money: [],
+			invests: [],
+			total: 0,
+			transactions: [],
+			version: Blockchain.VERSION
+		}
+		initializationBlock = Blockchain.signblock(initializationBlock, privateKey)
+		this.addBlock(initializationBlock)
+		return initializationBlock
+	}
 }
 
 module.exports = { Blockchain, CitizenBlockchain, EcosystemBlockchain, InvalidTransactionError, UnauthorizedError }

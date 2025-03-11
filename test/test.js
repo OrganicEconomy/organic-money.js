@@ -436,6 +436,7 @@ describe('Blockchain', () => {
 	})
 
 	describe('signblock', () => {
+		// TODO : check if there is no Paper in the block that should be signed by someone else
 		it('Should make valid signature.', () => {
 			const block = {
 				version: 1,

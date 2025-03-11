@@ -665,7 +665,6 @@ class Blockchain {
 
 
 class CitizenBlockchain extends Blockchain {
-
 	/**
 	 * Add and return the transaction that creates Money for the Blockchain.
 	 * If date is not given, uses today's date.
@@ -795,6 +794,7 @@ class CitizenBlockchain extends Blockchain {
 	 *
 	 * Throws an error if amount is not affordable
 	 * Throws an error if given date is before last transaction date
+	 * TODO : Should add a target or a signer oO
 	 */
 	generatePaper (myPrivateKey, amount, date=new Date()) {
 		const money = this.getAvailableMoney(amount);

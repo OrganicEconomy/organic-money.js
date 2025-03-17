@@ -182,12 +182,17 @@ class Blockchain {
 
 	/**
 	 * Return true if given Block is a valid Birth one
-	 * TODO : check transactions of the block
 	 */
 	static isValidBirthBlock (block) {
 		const signature = block.hash
 		const messageHash = Blockchain.hashblock(block)
 		const publicKey = block.signer
+
+		for (let t of block.transactions) {
+			if (! Blockchain.isValidTransaction(t)) {
+				return false;
+			}
+		}
 
 		return block.previousHash === Blockchain.REF_HASH &&
 			block.version === Blockchain.VERSION &&
@@ -794,9 +799,8 @@ class CitizenBlockchain extends Blockchain {
 	 *
 	 * Throws an error if amount is not affordable
 	 * Throws an error if given date is before last transaction date
-	 * TODO : Should add a target or a signer oO
 	 */
-	generatePaper (myPrivateKey, amount, date=new Date()) {
+	generatePaper (myPrivateKey, amount, referentPublicKey, date=new Date()) {
 		const money = this.getAvailableMoney(amount);
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')
@@ -813,7 +817,7 @@ class CitizenBlockchain extends Blockchain {
 			invests: [],
 			source: Blockchain.publicFromPrivate(myPrivateKey),
 			target: 0,
-			signer: 0
+			signer: referentPublicKey
 		}
 
 		const result = Blockchain.signtx(transaction, myPrivateKey)

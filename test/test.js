@@ -32,18 +32,18 @@ describe('Blockchain', () => {
 			total: 0,
 			merkleroot: 0,
 			transactions: [
-				{
+				Blockchain.signtx({
 					version: Blockchain.VERSION,
 					date: 19891189,
-					source: 'Gus',
-					target: publicKey1,
+					source: publicKey1,
+					target: 'Gus',
 					money: [],
 					invests: [],
 					type: Blockchain.TXTYPE.INIT,
 					signer: 0,
 					hash: 0
-				},
-				{
+				}, privateKey1),
+				Blockchain.signtx({
 					version: Blockchain.VERSION,
 					date: 20250101,
 					source: publicKey1,
@@ -53,7 +53,7 @@ describe('Blockchain', () => {
 					type: Blockchain.TXTYPE.CREATE,
 					signer: 0,
 					hash: 0
-				}
+				}, privateKey1)
 			]
 		}
 		Blockchain.signblock(res, privateKey1);
@@ -436,7 +436,6 @@ describe('Blockchain', () => {
 	})
 
 	describe('signblock', () => {
-		// TODO : check if there is no Paper in the block that should be signed by someone else
 		it('Should make valid signature.', () => {
 			const block = {
 				version: 1,
@@ -484,6 +483,15 @@ describe('Blockchain', () => {
 			const result = Blockchain.isValidBirthBlock(validBirthBlock())
 
 			assert.isTrue(result)
+		})
+
+		it('Should return false if a transaction is not signed.', () => {
+			const birthblock = validBirthBlock()
+			delete birthblock.transactions[0].hash
+
+			const result = Blockchain.isValidBirthBlock(birthblock)
+
+			assert.isNotOk(result)
 		})
 	})
 
@@ -1738,19 +1746,19 @@ describe('CitizenBlockchain', () => {
 		it('Should throw error if blockchain can t afford the amount.', () => {
 			const bc = new CitizenBlockchain([validInitBlock(), validBirthBlock()])
 
-			assert.throws(() => { bc.generatePaper(privateKey1, 2) }, 'Unsufficient funds')
+			assert.throws(() => { bc.generatePaper(privateKey1, 2, publicKey2) }, 'Unsufficient funds')
 		})
 
 		it('Should throw error if date is already passed in the blockchain.', () => {
 			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
 
-			assert.throws(() => { bc.generatePaper(privateKey1, 2, new Date('2025-01-01')) }, 'Invalid date')
+			assert.throws(() => { bc.generatePaper(privateKey1, 2, publicKey2, new Date('2025-01-01')) }, 'Invalid date')
 		})
 
 		it('Should return a valid transaction.', () => {
 			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
 
-		 	const result = bc.generatePaper(privateKey1, 3, new Date('2025-01-03'))
+		 	const result = bc.generatePaper(privateKey1, 3, publicKey2, new Date('2025-01-03'))
 
 		 	assert.ok(Blockchain.isValidTransaction(result), "invalid signature")
 		 	delete result.hash
@@ -1763,7 +1771,7 @@ describe('CitizenBlockchain', () => {
 		 		invests: [],
 		 		source: publicKey1,
 		 		target: 0,
-				signer: 0
+				signer: publicKey2
 		 	}
 
 			assert.deepEqual(result, expected)
@@ -1772,7 +1780,7 @@ describe('CitizenBlockchain', () => {
 		it('Should add the created transaction to the blockchain.', () => {
 			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
 
-			const tx = bc.generatePaper(privateKey1, 3, new Date('2025-01-03'))
+			const tx = bc.generatePaper(privateKey1, 3, publicKey2, new Date('2025-01-03'))
 
 			const result = bc.lastblock.transactions[0]
 
@@ -1782,7 +1790,7 @@ describe('CitizenBlockchain', () => {
 		it('Should decrease money of the block.', () => {
 			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
 
-			bc.generatePaper(privateKey1, 3, new Date('2025-01-03'))
+			bc.generatePaper(privateKey1, 3, publicKey2, new Date('2025-01-03'))
 
 			const result = bc.lastblock.money
 			const expected = [20250102002, 20250102003]
@@ -2338,7 +2346,6 @@ describe('EcosystemBlockchain', () => {
 			assert.ok(result)
 		})
 	})
-
 
 	describe('makeBirthBlock', () => {
 		it('Should return corectly filled block', () => {

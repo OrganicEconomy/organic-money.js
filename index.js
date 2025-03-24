@@ -65,7 +65,7 @@ class Blockchain {
 	}
 
 	static publicFromPrivate (privateKey) {
-		return secp.getPublicKey(privateKey, true)
+		return toHex(secp.getPublicKey(privateKey, true))
 	}
 
 	static dateToInt(date) {
@@ -654,7 +654,7 @@ class Blockchain {
 			type: Blockchain.TXTYPE.PAY,
 			date: Blockchain.dateToInt(d),
 			money: money,
-			source: secp.getPublicKey(myPrivateKey, true),
+			source: Blockchain.publicFromPrivate(myPrivateKey),
 			invests: [],
 			target: targetPublicKey,
 			signer: 0,
@@ -713,8 +713,8 @@ class CitizenBlockchain extends Blockchain {
 			version: Blockchain.VERSION,
 			type: Blockchain.TXTYPE.CREATE,
 			date: Blockchain.dateToInt(date),
-			source: secp.getPublicKey(privateKey, true),
-			target: secp.getPublicKey(privateKey, true),
+			source: Blockchain.publicFromPrivate(privateKey),
+			target: Blockchain.publicFromPrivate(privateKey),
 			signer: 0,
 			money: moneys,
 			invests: invests,

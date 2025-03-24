@@ -4,7 +4,8 @@
   "description": "The javascript implementation of Organic money cryptography",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "build": "webpack"
   },
   "repository": {
     "type": "git",
@@ -23,6 +24,7 @@
   },
   "homepage": "https://github.com/GuziEconomy/organic-money.js#readme",
   "devDependencies": {
+    "chai": "^5.2.0",
     "eslint": "^7.32.0",
     "eslint-config-standard": "^16.0.3",
     "eslint-plugin-import": "^2.25.2",
@@ -33,7 +35,6 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "chai": "^4.3.4",
     "ethereum-cryptography": "^0.2.0",
     "js-base64": "^3.7.2",
     "msgpack-lite": "^0.1.26"

@@ -1,9 +1,9 @@
 const { describe, it } = require('mocha')
-const { Blockchain, CitizenBlockchain, EcosystemBlockchain, InvalidTransactionError, UnauthorizedError} = require('../index')
+const { Blockchain, CitizenBlockchain, EcosystemBlockchain, InvalidTransactionError, UnauthorizedError} = require('../src/index')
 const { sha256 } = require('ethereum-cryptography/sha256')
 const secp = require('ethereum-cryptography/secp256k1')
 const { hexToBytes, toHex } = require("ethereum-cryptography/utils");
-const assert = require('chai').assert
+const { assert } = require('chai')
 const msgpack = require('msgpack-lite')
 
 /***********************************************************************

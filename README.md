@@ -7,6 +7,12 @@ npm install
 npm test
 ```
 
+## Build
+
+```js
+npm run build
+```
+
 # Usage
 
 Create a brand new Citizen Blockchain :

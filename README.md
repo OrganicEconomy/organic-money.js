@@ -18,7 +18,7 @@ npm run build
 Create a brand new Citizen Blockchain :
 ```
 const myBc = new CitizenBlockchain()
-const myNewPrivateKey = myBc.startBlockchain('Gus', new Date('28/11/1989'), signerPrivateKeyAsHex)
+const myNewPrivateKey = myBc.startBlockchain('Gus', new Date('28/11/1989'))
 ```
 
 Then, each day (or any day, holes will be filled), I can create my money :
@@ -40,7 +40,7 @@ otherBlockchain.income(newTransaction)
 ## Hex or binary ?
 
 Every information in blocks and transactions is in hex format.
-The only moments the format change is :
+The only moments the format changes is :
 * when exporting blockchain to b64 or bytes
 * before importing blockchain from b64 or bytes
 
@@ -52,11 +52,11 @@ For example, the third money unit created on the 6th of november in 2015 would h
 Invest Id has this format : ```YYYYMMDD9XXX```
 For example, the fourth invest unit created on the 12th of november in 2025 would hase id : ```202511129004```
 
-This way, you can always follow the limit date of use and even if its a money or an invest.
+This way, you can always follow the limit date of use and also know if its a money or an invest.
 
 ## Transactions
 
-There are X types of transaction :
+There are 11 types of transaction :
 * INIT: 0, // Initialization transaction
 * CREATE: 1, // Money and Invest creation
 * PAY: 2, // Payment
@@ -75,9 +75,9 @@ A transaction has ALWAYS this content :
   version: 1, // The current version of the protocol
   date: 20120527, // The date of the transaction as an Integer formated as YYYYMMDD
   type: 2, // An Integer representing the type of transaction
-  source: 0, // The public key of source or the transaction
-  target: 0, // The public key of the target of the transaction
-  signer: 0, // Eventually the signer, if it is not the same as the source
+  source: XXXXX, // The public key of source or the transaction
+  target: XXXXX, // The public key of the target of the transaction
+  signer: 0, // The signer, 0 means it is the same as the source
   money: [], // The list of the money ids involved in the transaction
   invests: [], // The list of the invests ids involved in the transaction
   hash: 0 // The signed hash of the transaction
@@ -89,15 +89,15 @@ A transaction has ALWAYS this content :
 A block has ALWAYS this content :
 ```
 {
-  version: 1,
-  closedate: 20120527,
-  previousHash: xxx,
-  signer: xxx,
-  money: [],
-  invests: [],
-  total: 0,
-  merkleroot: xxx,
-  transactions: []
+  version: 1, // The current version of the protocol
+  closedate: 20120527, // The date when the block was sealed
+  previousHash: xxx, // The hash of the previous block
+  signer: xxx, // The public key of the person who signed the block
+  money: [], // The currently available money
+  invests: [], // The currently available invests
+  total: 0, // The currently total (i.e economic experiment)
+  merkleroot: xxx, // The merkle root made of the block's transactions hashes
+  transactions: [] // The list of transactions of the block
 }
 ```
 
@@ -105,7 +105,7 @@ A block has ALWAYS this content :
 
 ## About papers
 
-The organic money always MUST be compatible between numeric and printed paper.
+The organic money always **MUST be compatible between numeric and printed paper**.
 It MUST be possible for someone to use only one or both of those approaches.
 
 When a citizen creates a Paper, he or she defines the 3rd part key in the target of the Paper.

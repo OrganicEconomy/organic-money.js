@@ -6,6 +6,7 @@ const secp = require('ethereum-cryptography/secp256k1')
 const { encrypt, decrypt } = require("ethereum-cryptography/aes");
 const { getRandomBytesSync } = require("ethereum-cryptography/random");
 const msgpack = require('msgpack-lite')
+const { MerkleTree } = require('merkletreejs')
 
 class InvalidTransactionError extends Error {
 	constructor(message) {
@@ -142,8 +143,19 @@ class Blockchain {
 	}
 
 	/**
+	 * Calculate the merkle root of the given block and updates it
+	 * Return the block
+	 */
+	static merkleBlock(block) {
+		const leaves = block.transactions.map(x => x.hash)
+		const tree = new MerkleTree(leaves, sha256)
+		const root = tree.getRoot().toString('hex')
+		block.merkleroot = root
+		return block
+	}
+
+	/**
 	 * Sign the given block with given private key
-	 * TODO : calculate merkle root
 	 */
 	static signblock (block, privateKeyAsHex) {
 		const privateKey = hexToBytes(privateKeyAsHex)
@@ -155,6 +167,7 @@ class Blockchain {
 
 	/**
 	 * Sign the given transaction with given private key
+	 * Return the transaction
 	 */
 	static signtx (transaction, privateKeyAsHex) {
 		const privateKey = hexToBytes(privateKeyAsHex)
@@ -277,7 +290,8 @@ class Blockchain {
 	}
 
 	/**
-	 * And and return the given transaction as a paper cash
+	 * Add the given transaction as a paper cash to the blockchain
+	 * Then return it.
 	 */
 	cashPaper (tx) {
 		if (tx.target !== 0) {

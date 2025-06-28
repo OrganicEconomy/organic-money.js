@@ -5,6 +5,7 @@ const secp = require('ethereum-cryptography/secp256k1')
 const { hexToBytes, toHex } = require("ethereum-cryptography/utils");
 const { assert } = require('chai')
 const msgpack = require('msgpack-lite')
+const { MerkleTree } = require('merkletreejs')
 
 /***********************************************************************
  *                           TESTS TOOLS
@@ -85,32 +86,35 @@ describe('Blockchain', () => {
 			total: 27,
 			version: 1,
 			money: [20250101000, 20250102000, 20250102001, 20250102002, 20250102003],
-			invests: [202501019000, 202501029000, 202501029001, 202501029002, 202501029003],
-			transactions: [
-				{
-					version: Blockchain.VERSION,
-					date: 20250102,
-					source: publicKey1,
-					target: publicKey1,
-					money: [20250102000, 20250102001, 20250102002, 20250102003],
-					invests: [202501029000, 202501029001, 202501029002, 202501029003],
-					type: Blockchain.TXTYPE.CREATE,
-					signer: 0,
-					hash: 0
-				},
-				{
-					version: Blockchain.VERSION,
-					date: 20250102,
-					source: publicKey2,
-					target: publicKey1,
-					money: [20241228000, 20241228001, 20250101002, 20250101003, 20250101004, 20250101005, 20250101006, 20250101007, 20250101008, 20250101009, 20250101010, 20250101011, 20250101012, 20250101013, 20250101014, 20250101015, 20250101016, 20250101017, 20250101018, 20250101019, 20250101020, 20250101021, 20250101022, 20250101023, 20250101024, 20250101025, 20250101026],
-					invests: [],
-					type: Blockchain.TXTYPE.PAY,
-					signer: 0,
-					hash: 0
-				}
-			]
+			invests: [202501019000, 202501029000, 202501029001, 202501029002, 202501029003]
 		}
+
+		const tx1 = {
+			version: Blockchain.VERSION,
+			date: 20250102,
+			source: publicKey1,
+			target: publicKey1,
+			money: [20250102000, 20250102001, 20250102002, 20250102003],
+			invests: [202501029000, 202501029001, 202501029002, 202501029003],
+			type: Blockchain.TXTYPE.CREATE,
+			signer: 0,
+			hash: 0
+		}
+		const tx2 = {
+			version: Blockchain.VERSION,
+			date: 20250102,
+			source: publicKey2,
+			target: publicKey1,
+			money: [20241228000, 20241228001, 20250101002, 20250101003, 20250101004, 20250101005, 20250101006, 20250101007, 20250101008, 20250101009, 20250101010, 20250101011, 20250101012, 20250101013, 20250101014, 20250101015, 20250101016, 20250101017, 20250101018, 20250101019, 20250101020, 20250101021, 20250101022, 20250101023, 20250101024, 20250101025, 20250101026],
+			invests: [],
+			type: Blockchain.TXTYPE.PAY,
+			signer: 0,
+			hash: 0
+		}
+
+		Blockchain.signtx(tx1, privateKey1)
+		Blockchain.signtx(tx2, privateKey1)
+		res.transactions = [tx1, tx2]
 		Blockchain.signblock(res, privateKey1);
 		return res;
 	}
@@ -467,6 +471,35 @@ describe('Blockchain', () => {
 		})
 	})
 
+	describe('merkleBlock', () => {
+		it('Should add the merkle root to the given block.', () => {
+			let block = validCashBlock()
+			const expectedMerkleRoot = '8a044af1b880a376db04243b8926b92c7f180e741182e25a1e044f9899c73d6c'
+
+			block = Blockchain.merkleBlock(block)
+
+			assert.deepEqual(block.merkleroot, expectedMerkleRoot)
+		})
+
+		it('Should make valid merkle root.', () => {
+			let leaf, proof, root, result
+			let block = validCashBlock()
+
+			block = Blockchain.merkleBlock(block)
+			const leaves = block.transactions.map(x => x.hash)
+			const tree = new MerkleTree(leaves, sha256)
+			root = block.merkleroot
+
+			for (let tx of block.transactions) {
+				leaf = tx.hash
+				proof = tree.getProof(leaf)
+				result = tree.verify(proof, leaf, root)
+
+				assert.isTrue(result)
+			}
+		})
+	})
+
 	describe('isValidBlock', () => {
 		it('Should return false if no hash.', () => {
 			const block = validCashBlock()
@@ -772,7 +805,7 @@ describe('Blockchain', () => {
 				invests: [202501029000, 202501029001, 202501029002, 202501029003],
 				type: Blockchain.TXTYPE.CREATE,
 				signer: 0,
-				hash: 0
+				hash: "304402204646b3bb86df2bc60e4614c52a6c00a5b0958c4e16ebcdc89baf99852601057c0220327ee93dcea833015edd38feb1c3175b2d86421aae500844398749299e4c42eb"
 			}
 
 			assert.deepEqual(result, expected)

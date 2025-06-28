@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha",
-    "build": "webpack"
+    "build": "webpack",
+    "watch": "webpack --watch"
   },
   "repository": {
     "type": "git",
@@ -13,11 +14,10 @@
   },
   "keywords": [
     "organic-economy",
-    "money",
     "crypto",
     "money"
   ],
-  "author": "Gus",
+  "author": "suipotryot",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/GuziEconomy/organic-money.js/issues"
@@ -37,6 +37,7 @@
   "dependencies": {
     "ethereum-cryptography": "^0.2.0",
     "js-base64": "^3.7.2",
+    "merkletreejs": "^0.5.2",
     "msgpack-lite": "^0.1.26"
   }
 }

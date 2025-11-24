@@ -65,8 +65,8 @@ There are 11 types of transaction :
 * SETADMIN: 5, // Ecosystem admin set
 * SETACTOR: 6, // Ecosystem actor set
 * SETPAYER: 7, // Ecosystem payer set
-* UNSETPAYER: 8, // Ecosystem admin unset
-* UNSETPAYER: 9, // Ecosystem actor unset
+* UNSETADMIN: 8, // Ecosystem admin unset
+* UNSETACTOR: 9, // Ecosystem actor unset
 * UNSETPAYER: 10, // Ecosystem payer unset
 
 A transaction has ALWAYS this content :

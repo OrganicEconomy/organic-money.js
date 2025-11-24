@@ -1,36 +1,36 @@
-const { Base64 } = require('js-base64')
-const { sha256 } = require('ethereum-cryptography/sha256')
-const { scryptSync } = require("ethereum-cryptography/scrypt");
-const { utf8ToBytes, toHex, hexToBytes } = require("ethereum-cryptography/utils");
-const secp = require('ethereum-cryptography/secp256k1')
-const { encrypt, decrypt } = require("ethereum-cryptography/aes");
-const { getRandomBytesSync } = require("ethereum-cryptography/random");
-const msgpack = require('msgpack-lite')
-const { MerkleTree } = require('merkletreejs')
+import { Base64 } from 'js-base64'
+import { sha256 } from 'ethereum-cryptography/sha256.js'
+import { scryptSync } from 'ethereum-cryptography/scrypt.js'
+import { utf8ToBytes, toHex, hexToBytes } from 'ethereum-cryptography/utils.js'
+import { utils, getPublicKey, signSync, verify } from 'ethereum-cryptography/secp256k1.js'
+import { encrypt, decrypt } from 'ethereum-cryptography/aes.js'
+import { getRandomBytesSync } from 'ethereum-cryptography/random.js'
+import { encode, decode } from 'msgpack-lite'
+import { MerkleTree } from 'merkletreejs'
 
 class InvalidTransactionError extends Error {
 	constructor(message) {
-        super(message);
-        this.name = "InvalidTransactionError";
-    }
+		super(message);
+		this.name = "InvalidTransactionError";
+	}
 }
 
 class UnauthorizedError extends Error {
 	constructor(message) {
-        super(message);
-        this.name = "UnauthorizedError";
-    }
+		super(message);
+		this.name = "UnauthorizedError";
+	}
 }
 
 class Blockchain {
 	/***********************************************************************
 	 *                              CONSTANTS
 	 **********************************************************************/
-	static get REF_HASH () { return 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5' }
-	static get ECOREF_HASH () { return 'ec051c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a1' }
-	static get VERSION () { return 1 }
+	static get REF_HASH() { return 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5' }
+	static get ECOREF_HASH() { return 'ec051c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a1' }
+	static get VERSION() { return 1 }
 
-	static get TXTYPE () {
+	static get TXTYPE() {
 		return {
 			INIT: 0,
 			CREATE: 1,
@@ -46,18 +46,18 @@ class Blockchain {
 	/***********************************************************************
 	 *                           STATIC METHODS
 	 **********************************************************************/
-	static randomPrivateKey () {
-		return toHex(secp.utils.randomPrivateKey())
+	static randomPrivateKey() {
+		return toHex(utils.randomPrivateKey())
 	}
 
-	static async aesEncrypt (msg, pwd) {
+	static async aesEncrypt(msg, pwd) {
 		const key = scryptSync(utf8ToBytes(pwd), utf8ToBytes("salt"), 2048, 8, 1, 16)
 		const iv = getRandomBytesSync(16)
 		msg = await encrypt(msg, key, iv)
 		return { msg, iv, sha: sha256(utf8ToBytes(pwd)) }
 	}
 
-	static async aesDecrypt (encrypted, pwd) {
+	static async aesDecrypt(encrypted, pwd) {
 		if (JSON.stringify(sha256(utf8ToBytes(pwd))) !== JSON.stringify(encrypted.sha)) {
 			throw new Error('Invalid password')
 		}
@@ -65,8 +65,8 @@ class Blockchain {
 		return await decrypt(encrypted.msg, key, encrypted.iv)
 	}
 
-	static publicFromPrivate (privateKey) {
-		return toHex(secp.getPublicKey(privateKey, true))
+	static publicFromPrivate(privateKey) {
+		return toHex(getPublicKey(privateKey, true))
 	}
 
 	static dateToInt(date) {
@@ -75,7 +75,7 @@ class Blockchain {
 
 	static intToDate(dateint) {
 		const datestr = '' + dateint
-		return new Date(datestr.slice(0,4) + '-' + datestr.slice(4,6) + '-' + datestr.slice(6,8))
+		return new Date(datestr.slice(0, 4) + '-' + datestr.slice(4, 6) + '-' + datestr.slice(6, 8))
 	}
 
 	static intToIndex(dateint) {
@@ -84,11 +84,11 @@ class Blockchain {
 	}
 
 	static formatMoneyIndex(date, index) {
-		return +(''+Blockchain.dateToInt(date) + ("00" + index).slice(-3))
+		return +('' + Blockchain.dateToInt(date) + ("00" + index).slice(-3))
 	}
 
 	static formatInvestIndex(date, index) {
-		return +(''+Blockchain.dateToInt(date) + '9' + ("00" + index).slice(-3))
+		return +('' + Blockchain.dateToInt(date) + '9' + ("00" + index).slice(-3))
 	}
 
 	static buildInvestIndexes(date, level) {
@@ -110,7 +110,7 @@ class Blockchain {
 	/**
 	 * Return the hash of given Block
 	 */
-	static hashblock (block) {
+	static hashblock(block) {
 		const b = {
 			v: block.version,
 			d: block.closedate,
@@ -121,14 +121,14 @@ class Blockchain {
 			i: block.invests,
 			t: block.total
 		}
-		const packedblock = msgpack.encode(b)
+		const packedblock = encode(b)
 		return sha256(packedblock)
 	}
 
 	/**
 	 * Return the hash of given Transaction
 	 */
-	static hashtx (transaction) {
+	static hashtx(transaction) {
 		const tx = {
 			d: transaction.date,
 			m: transaction.money,
@@ -138,7 +138,7 @@ class Blockchain {
 			p: transaction.target,
 			v: transaction.version
 		}
-		const packedtx = msgpack.encode(tx)
+		const packedtx = encode(tx)
 		return sha256(packedtx)
 	}
 
@@ -157,10 +157,10 @@ class Blockchain {
 	/**
 	 * Sign the given block with given private key
 	 */
-	static signblock (block, privateKeyAsHex) {
+	static signblock(block, privateKeyAsHex) {
 		const privateKey = hexToBytes(privateKeyAsHex)
 		const hash = Blockchain.hashblock(block)
-		const bytes = secp.signSync(hash, privateKey)
+		const bytes = signSync(hash, privateKey)
 		block.hash = toHex(bytes)
 		return block
 	}
@@ -169,10 +169,10 @@ class Blockchain {
 	 * Sign the given transaction with given private key
 	 * Return the transaction
 	 */
-	static signtx (transaction, privateKeyAsHex) {
+	static signtx(transaction, privateKeyAsHex) {
 		const privateKey = hexToBytes(privateKeyAsHex)
 		const hash = Blockchain.hashtx(transaction)
-		const bytes = secp.signSync(hash, privateKey)
+		const bytes = signSync(hash, privateKey)
 		transaction.hash = toHex(bytes)
 		return transaction
 	}
@@ -181,12 +181,12 @@ class Blockchain {
 	 * Return true if given Block has valid signature
 	 * Return false else
 	 */
-	static isValidBlock (block, pubkey=null) {
+	static isValidBlock(block, pubkey = null) {
 		pubkey = pubkey || block.signer || block.source
 		const hash = this.hashblock(block)
 		const signature = block.hash
-		
-		return secp.verify(
+
+		return verify(
 			signature,
 			hash,
 			pubkey
@@ -196,13 +196,13 @@ class Blockchain {
 	/**
 	 * Return true if given Block is a valid Birth one
 	 */
-	static isValidBirthBlock (block) {
+	static isValidBirthBlock(block) {
 		const signature = block.hash
 		const messageHash = Blockchain.hashblock(block)
 		const publicKey = block.signer
 
 		for (let t of block.transactions) {
-			if (! Blockchain.isValidTransaction(t)) {
+			if (!Blockchain.isValidTransaction(t)) {
 				return false;
 			}
 		}
@@ -214,13 +214,13 @@ class Blockchain {
 			block.money.length === 1 &&
 			block.invests.length === 1 &&
 			block.total === 0 &&
-			secp.verify(signature, messageHash, publicKey)
+			verify(signature, messageHash, publicKey)
 	}
 
 	/**
 	 * Return true if given Block is a valid Birth one
 	 */
-	static isValidInitializationBlock (block) {
+	static isValidInitializationBlock(block) {
 		const signature = block.hash
 		const messageHash = Blockchain.hashblock(block)
 		const publicKey = block.signer
@@ -231,7 +231,7 @@ class Blockchain {
 			block.money.length === 0 &&
 			block.invests.length === 0 &&
 			block.total === 0 &&
-			secp.verify(signature, messageHash, publicKey)
+			verify(signature, messageHash, publicKey)
 	}
 
 	/**
@@ -239,10 +239,10 @@ class Blockchain {
 	 * and is correctly signed
 	 * Return false else
 	 */
-	static isValidTransaction (tx) {
+	static isValidTransaction(tx) {
 		const txHash = Blockchain.hashtx(tx)
 
-		if (! tx.source) {
+		if (!tx.source) {
 			return false
 		}
 
@@ -252,29 +252,29 @@ class Blockchain {
 			Object.prototype.toString.call(tx.money) == '[object Array]' &&
 			Object.prototype.toString.call(tx.invests) == '[object Array]' &&
 			Object.values(Blockchain.TXTYPE).indexOf(tx.type) > -1 &&
-			secp.verify(tx.hash, txHash, tx.source)
+			verify(tx.hash, txHash, tx.source)
 	}
 
 	/***********************************************************************
 	 *                      BASE METHODS AND GETTES
 	 **********************************************************************/
 
-	constructor (blocks = []) {
+	constructor(blocks = []) {
 		if (blocks === null) {
 			blocks = []
 		}
 		this.load(blocks)
 	}
 
-	get blocks () {
+	get blocks() {
 		return this.bks
 	}
 
-	set blocks (b) {
+	set blocks(b) {
 		this.bks = b
 	}
 
-	get lastblock () {
+	get lastblock() {
 		return this.bks[0]
 	}
 
@@ -282,8 +282,8 @@ class Blockchain {
 	 *                            UTILS METHODS
 	 **********************************************************************/
 
-	addBlock (block) {
-		if (! this.isEmpty() && ! Blockchain.isValidBlock(this.lastblock)) {
+	addBlock(block) {
+		if (!this.isEmpty() && !Blockchain.isValidBlock(this.lastblock)) {
 			throw new UnauthorizedError('Cannot add block if previous is not signed.')
 		}
 		this.blocks.unshift(block)
@@ -293,26 +293,26 @@ class Blockchain {
 	 * Add the given transaction as a paper cash to the blockchain
 	 * Then return it.
 	 */
-	cashPaper (tx) {
+	cashPaper(tx) {
 		if (tx.target !== 0) {
 			throw new InvalidTransactionError('Target is != 0')
-		} else if (! tx.version) {
+		} else if (!tx.version) {
 			throw new InvalidTransactionError('Missing version ' + tx.hash)
-		} else if (! tx.date > 0) {
+		} else if (!tx.date > 0) {
 			throw new InvalidTransactionError('Wrong date ' + tx.hash)
-		} else if (! tx.source || tx.source.length !== 66) {
+		} else if (!tx.source || tx.source.length !== 66) {
 			throw new InvalidTransactionError('Wrong source format ' + tx.hash)
-		} else if (! tx.money || ! Object.prototype.toString.call(tx.money) == '[object Array]') {
+		} else if (!tx.money || !Object.prototype.toString.call(tx.money) == '[object Array]') {
 			throw new InvalidTransactionError('Wrong money format ' + tx.hash)
 		} else if (tx.money.length === 0) {
 			throw new InvalidTransactionError('Empty paper (no money) ' + tx.hash)
-		} else if (! tx.invests 
-			|| ! Object.prototype.toString.call(tx.invests) == '[object Array]'
+		} else if (!tx.invests
+			|| !Object.prototype.toString.call(tx.invests) == '[object Array]'
 			|| tx.invests.length > 0) {
 			throw new InvalidTransactionError('Wrong invests format ' + tx.hash)
 		} else if (tx.type !== Blockchain.TXTYPE.PAPER) {
 			throw new InvalidTransactionError('Wrong transaction type ' + tx.hash)
-		} else if (! Blockchain.isValidTransaction(tx)) {
+		} else if (!Blockchain.isValidTransaction(tx)) {
 			throw new InvalidTransactionError('Wrong signature ' + tx.hash)
 		}
 
@@ -324,7 +324,7 @@ class Blockchain {
 	 * Return the level of the blockchain, minus the already engaged
 	 * amount of invest
 	 */
-	getAffordableInvestAmount (date) {
+	getAffordableInvestAmount(date) {
 		const result = this.getLevel() - this.getEngagedInvests(date).length
 		return result
 	}
@@ -333,7 +333,7 @@ class Blockchain {
 	 * Return the amount of Money available in the Blockchain
 	 * If Blockchain is invalid, return 0
 	 */
-	getAvailableMoneyAmount () {
+	getAvailableMoneyAmount() {
 		if (this.isEmpty() || this.isWaitingValidation()) {
 			return 0
 		}
@@ -345,7 +345,7 @@ class Blockchain {
 	 * If amount > 0, return only this amount of Money
 	 * If amount is not affordable, return empty array []
 	 */
-	getAvailableMoney (amount = -1) {
+	getAvailableMoney(amount = -1) {
 		if (amount < 0) {
 			return this.lastblock.money
 		}
@@ -361,7 +361,7 @@ class Blockchain {
 	 * Return the list of invest identifiers already engaged
 	 * If date is given, return those of this day engaged
 	 */
-	getEngagedInvests (date = null) {
+	getEngagedInvests(date = null) {
 		const result = []
 		for (let tx of this.lastblock.transactions) {
 			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
@@ -383,7 +383,7 @@ class Blockchain {
 	 * Return the list of money identifiers already engaged
 	 * If date is given, return those of this day engaged
 	 */
-	getEngagedMoney (date = null) {
+	getEngagedMoney(date = null) {
 		const result = []
 		for (let tx of this.lastblock.transactions) {
 			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
@@ -404,7 +404,7 @@ class Blockchain {
 	/**
 	 * Return the lastly added Transaction
 	 */
-	getLastTransaction () {
+	getLastTransaction() {
 		for (let block of this.blocks) {
 			if (block.transactions.length > 0) {
 				return block.transactions[0];
@@ -416,7 +416,7 @@ class Blockchain {
 	/**
 	 * Return the date of the lastly added transaction
 	 */
-	getLastTransactionDate () {
+	getLastTransactionDate() {
 		const tx = this.getLastTransaction()
 		return Blockchain.intToDate(tx.date)
 	}
@@ -424,11 +424,11 @@ class Blockchain {
 	/**
 	 * Return true if the Blockchain has no block in it
 	 */
-	isEmpty () {
+	isEmpty() {
 		return this.blocks.length === 0
 	}
 
-	isValid () {
+	isValid() {
 		return true
 	}
 
@@ -437,18 +437,18 @@ class Blockchain {
 	 * blocks can be Array of blocks
 	 * or the binary encoded array of blocks
 	 */
-	load (blocks) {
+	load(blocks) {
 		if (Object.prototype.toString.call(blocks) == '[object Array]') {
 			// Here it's directly an Array
 			this.blocks = blocks
 		} else {
 			try {
 				// Here it's binary
-				this.blocks = msgpack.decode(blocks)
+				this.blocks = decode(blocks)
 			} catch (e) {
 				// Here it's binary encoded as B64 (for sending)
 				const binary = Base64.toUint8Array(blocks)
-				this.blocks = msgpack.decode(binary)
+				this.blocks = decode(binary)
 			}
 		}
 		if (this.blocks.length === 0 || this.lastblock.version) {
@@ -485,7 +485,7 @@ class Blockchain {
 	 * Remove given money from the available ones.
 	 * That means those Money have been spended.
 	 */
-	removeMoney (money) {
+	removeMoney(money) {
 		const result = this.lastblock.money.filter(x => !money.includes(x))
 		this.lastblock.money = result;
 		return result
@@ -494,7 +494,7 @@ class Blockchain {
 	/**
 	 * Add given transaction to the Blockchain
 	 */
-	addTransaction (transaction) {
+	addTransaction(transaction) {
 		if (this.lastblock.hash) {
 			this.newBlock()
 		}
@@ -506,8 +506,8 @@ class Blockchain {
 	 * Copy to this new block some transactions :
 	 *   - those with still running engagement
 	 */
-	newBlock () {
-		if (! Blockchain.isValidBlock(this.lastblock)) {
+	newBlock() {
+		if (!Blockchain.isValidBlock(this.lastblock)) {
 			throw new Error('Previous block not signed.')
 		}
 		const block = {
@@ -547,7 +547,7 @@ class Blockchain {
 	 * If there is at least one Paper cashed in the block, raise an error if the block
 	 * signer is not the Paper signer.
 	 */
-	sealLastBlock (privateKey) {
+	sealLastBlock(privateKey) {
 		const myPublicKey = this.getMyPublicKey()
 		for (let tx of this.lastblock.transactions) {
 			if (tx.type === Blockchain.TXTYPE.PAPER && Blockchain.publicFromPrivate(privateKey) !== tx.signer) {
@@ -594,7 +594,7 @@ class Blockchain {
 	/**
 	 * Return the whole history of transactions
 	 */
-	getHistory () {
+	getHistory() {
 		const result = []
 		this.blocks.forEach(block => {
 			if (block.transactions) {
@@ -610,7 +610,7 @@ class Blockchain {
 	 * Return the public key written in the last creation block or in the
 	 * initialization block
 	 */
-	getMyPublicKey () {
+	getMyPublicKey() {
 		for (let block of this.blocks) {
 			if (block.previousHash === Blockchain.REF_HASH) {
 				// Case 1: Birth block
@@ -637,11 +637,11 @@ class Blockchain {
 	 * Throws an error if target is not blockchain owner
 	 * Throws an error if transaction is invalid
 	 */
-	income (transaction) {
+	income(transaction) {
 		const myPublicKey = this.getMyPublicKey()
 		if (transaction.target !== myPublicKey ||
 			transaction.type !== Blockchain.TXTYPE.PAY ||
-			! Blockchain.isValidTransaction(transaction)
+			!Blockchain.isValidTransaction(transaction)
 		) {
 			throw new Error('Invalid transaction')
 		}
@@ -659,7 +659,7 @@ class Blockchain {
 	 *    - given date or today
 	 * Throws an error if Blockchain can't afford it
 	 */
-	pay (myPrivateKey, targetPublicKey, amount, d = new Date()) {
+	pay(myPrivateKey, targetPublicKey, amount, d = new Date()) {
 		const money = this.getAvailableMoney(amount);
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')
@@ -691,7 +691,7 @@ class CitizenBlockchain extends Blockchain {
 	 * if Money has already been created at the given date, create nothing and return null.
 	 * Throw an error if date is in the futur as one cannot create futur money.
 	 */
-	createMoneyAndInvests (privateKey, date = new Date()) {
+	createMoneyAndInvests(privateKey, date = new Date()) {
 		var lastdate = date
 
 		const today = new Date();
@@ -743,7 +743,7 @@ class CitizenBlockchain extends Blockchain {
 	/**
 	 * Add and return the transaction that engage invests of the BLockchain.
 	 */
-	engageInvests (myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
+	engageInvests(myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
 		if (dailyAmount > this.getAffordableInvestAmount(date)) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
@@ -777,7 +777,7 @@ class CitizenBlockchain extends Blockchain {
 	/**
 	 * Add and return the transaction that engage money of the BLockchain.
 	 */
-	engageMoney (myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
+	engageMoney(myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
 		if (dailyAmount > this.getAffordableMoneyAmount(date)) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
@@ -814,7 +814,7 @@ class CitizenBlockchain extends Blockchain {
 	 * Throws an error if amount is not affordable
 	 * Throws an error if given date is before last transaction date
 	 */
-	generatePaper (myPrivateKey, amount, referentPublicKey, date=new Date()) {
+	generatePaper(myPrivateKey, amount, referentPublicKey, date = new Date()) {
 		const money = this.getAvailableMoney(amount);
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')
@@ -844,7 +844,7 @@ class CitizenBlockchain extends Blockchain {
 	 * Return the level of the blockchain, minus the already engaged
 	 * amount of money
 	 */
-	getAffordableMoneyAmount (date) {
+	getAffordableMoneyAmount(date) {
 		const result = this.getLevel() - this.getEngagedMoney(date).length
 		return result
 	}
@@ -853,7 +853,7 @@ class CitizenBlockchain extends Blockchain {
 	 * Return the last transaction in the blockchain that have the
 	 * type CREATE
 	 */
-	getLastCreationTransaction () {
+	getLastCreationTransaction() {
 		for (let block of this.blocks) {
 			for (let tx of block.transactions) {
 				if (tx.type === Blockchain.TXTYPE.CREATE) {
@@ -869,7 +869,7 @@ class CitizenBlockchain extends Blockchain {
 	 * The level is equal to the number of Money (and Boxes) created
 	 * each day
 	 */
-	getLevel () {
+	getLevel() {
 		if (this.isEmpty() && !this.isValidated()) { return 0 }
 		return Math.floor(Math.cbrt(this.lastblock.total)) + 1
 	}
@@ -879,11 +879,11 @@ class CitizenBlockchain extends Blockchain {
 	 * made before the next level.
 	 * If Blockchain is invalid, return 0
 	 */
-	getMoneyBeforeNextLevel (asPercent = false) {
+	getMoneyBeforeNextLevel(asPercent = false) {
 		if (this.isEmpty() || !this.isValidated()) { return 0 }
 		const level = this.getLevel()
 		if (asPercent) {
-			return Math.floor(100 * (1- (this.getMoneyBeforeNextLevel() / Math.pow(level, 3))))
+			return Math.floor(100 * (1 - (this.getMoneyBeforeNextLevel() / Math.pow(level, 3))))
 		}
 		return Math.pow(level, 3) - this.lastblock.total
 	}
@@ -892,7 +892,7 @@ class CitizenBlockchain extends Blockchain {
 	 * Return true if the last Transaction added made the Blockchain
 	 * level up
 	 */
-	hasLevelUpOnLastTx () {
+	hasLevelUpOnLastTx() {
 		const lastTx = this.getLastTransaction();
 		if (lastTx === null || lastTx.type != Blockchain.TXTYPE.PAY) {
 			return false
@@ -904,7 +904,7 @@ class CitizenBlockchain extends Blockchain {
 	 * Return true if the Blockchain has only one Block
 	 * which is a Birth Block
 	 */
-	isWaitingValidation () {
+	isWaitingValidation() {
 		return this.blocks.length === 1 &&
 			this.lastblock.previousHash === Blockchain.REF_HASH
 	}
@@ -913,7 +913,7 @@ class CitizenBlockchain extends Blockchain {
 	 * Return true if the Blockchain has been validated by
 	 * a referent
 	 */
-	isValidated () {
+	isValidated() {
 		return !this.isEmpty() && this.blocks.length >= 2 &&
 			this.blocks[this.blocks.length - 1].previousHash === Blockchain.REF_HASH
 	}
@@ -921,7 +921,7 @@ class CitizenBlockchain extends Blockchain {
 	/**
 	 * Return the birthblock based on given informations
 	 */
-	makeBirthBlock (privateKey, birthdate, name, date=new Date()) {
+	makeBirthBlock(privateKey, birthdate, name, date = new Date()) {
 		const publicKey = Blockchain.publicFromPrivate(privateKey)
 		let block = {
 			version: Blockchain.VERSION,
@@ -955,7 +955,7 @@ class CitizenBlockchain extends Blockchain {
 				}, privateKey)
 			]
 		}
-		block =  Blockchain.signblock(block, privateKey)
+		block = Blockchain.signblock(block, privateKey)
 		this.addBlock(block)
 		return block
 	}
@@ -965,7 +965,7 @@ class CitizenBlockchain extends Blockchain {
 	 * If no newPrivateKey is given, make one
 	 * If no date is given, use today
 	 */
-	startBlockchain(name, birthdate, signerPrivateKey, newPrivateKey=null, date=new Date()) {
+	startBlockchain(name, birthdate, signerPrivateKey, newPrivateKey = null, date = new Date()) {
 		newPrivateKey = newPrivateKey || Blockchain.randomPrivateKey()
 		const birthblock = this.makeBirthBlock(newPrivateKey, birthdate, name, date)
 		this.validateAccount(signerPrivateKey, date)
@@ -975,7 +975,7 @@ class CitizenBlockchain extends Blockchain {
 	/**
 	 * Return a validated Blockchain
 	 */
-	validateAccount (privateKey, date=new Date()) {
+	validateAccount(privateKey, date = new Date()) {
 		let initializationBlock = {
 			closedate: Blockchain.dateToInt(date),
 			previousHash: this.lastblock.hash,
@@ -998,7 +998,7 @@ class EcosystemBlockchain extends Blockchain {
 	 * Return true if the Blockchain has only one Block
 	 * which is a Birth Block
 	 */
-	isWaitingValidation () {
+	isWaitingValidation() {
 		return this.blocks.length === 1 &&
 			this.lastblock.previousHash === Blockchain.ECOREF_HASH
 	}
@@ -1007,7 +1007,7 @@ class EcosystemBlockchain extends Blockchain {
 	 * Return true if the Blockchain has been validated by
 	 * a referent
 	 */
-	isValidated () {
+	isValidated() {
 		return !this.isEmpty() && this.blocks.length >= 2 &&
 			this.blocks[this.blocks.length - 1].previousHash === Blockchain.ECOREF_HASH
 	}
@@ -1015,7 +1015,7 @@ class EcosystemBlockchain extends Blockchain {
 	/**
 	 * Return the birthblock based on given informations
 	 */
-	makeBirthBlock (privateKey, adminKey, name, date=new Date()) {
+	makeBirthBlock(privateKey, adminKey, name, date = new Date()) {
 		const publicKey = Blockchain.publicFromPrivate(privateKey)
 		let block = {
 			version: Blockchain.VERSION,
@@ -1049,7 +1049,7 @@ class EcosystemBlockchain extends Blockchain {
 				}, privateKey)
 			]
 		}
-		block =  Blockchain.signblock(block, privateKey)
+		block = Blockchain.signblock(block, privateKey)
 		this.addBlock(block)
 		return block
 	}
@@ -1059,7 +1059,7 @@ class EcosystemBlockchain extends Blockchain {
 	 * If no newPrivateKey is given, make one
 	 * If no date is given, use today
 	 */
-	startBlockchain(name, signerPrivateKey, adminKey, newPrivateKey=null, date=new Date()) {
+	startBlockchain(name, signerPrivateKey, adminKey, newPrivateKey = null, date = new Date()) {
 		newPrivateKey = newPrivateKey || Blockchain.randomPrivateKey()
 		const birthblock = this.makeBirthBlock(newPrivateKey, adminKey, name, date)
 		this.validateAccount(signerPrivateKey, date)
@@ -1069,7 +1069,7 @@ class EcosystemBlockchain extends Blockchain {
 	/**
 	 * Return a validated Blockchain
 	 */
-	validateAccount (privateKey, date=new Date()) {
+	validateAccount(privateKey, date = new Date()) {
 		let initializationBlock = {
 			closedate: Blockchain.dateToInt(date),
 			previousHash: this.lastblock.hash,
@@ -1087,4 +1087,4 @@ class EcosystemBlockchain extends Blockchain {
 	}
 }
 
-module.exports = { Blockchain, CitizenBlockchain, EcosystemBlockchain, InvalidTransactionError, UnauthorizedError }
+export { Blockchain, CitizenBlockchain, EcosystemBlockchain, InvalidTransactionError, UnauthorizedError }

@@ -1,11 +1,9 @@
-const { describe, it } = require('mocha')
-const { Blockchain, CitizenBlockchain, EcosystemBlockchain, InvalidTransactionError, UnauthorizedError} = require('../src/index')
-const { sha256 } = require('ethereum-cryptography/sha256')
-const secp = require('ethereum-cryptography/secp256k1')
-const { hexToBytes, toHex } = require("ethereum-cryptography/utils");
-const { assert } = require('chai')
-const msgpack = require('msgpack-lite')
-const { MerkleTree } = require('merkletreejs')
+import { describe, it } from 'mocha';
+import { Blockchain, CitizenBlockchain, EcosystemBlockchain, InvalidTransactionError, UnauthorizedError } from '../src/index.js';
+import { sha256 } from 'ethereum-cryptography/sha256.js';
+import { hexToBytes, toHex } from "ethereum-cryptography/utils.js";
+import { assert } from 'chai';
+import { MerkleTree } from 'merkletreejs';
 
 /***********************************************************************
  *                           TESTS TOOLS
@@ -1147,7 +1145,7 @@ describe('Blockchain', () => {
 			const bc = new Blockchain([validPaperdBlock(), validInitBlock(), validBirthBlock()])
 			delete bc.lastblock.hash
 
-			signature = bc.sealLastBlock(privateKey3)
+			const signature = bc.sealLastBlock(privateKey3)
 
 			assert.ok(signature)
 		})

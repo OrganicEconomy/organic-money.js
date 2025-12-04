@@ -1,0 +1,1 @@
+declare module 'organic-money/src/index.js';

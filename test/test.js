@@ -67,8 +67,8 @@ describe('Blockchain', () => {
 			signer: publicKey2,
 			total: 0,
 			version: 1,
-			money: [],
-			invests: [],
+			money: [20250101000],
+			invests: [20250101000],
 			transactions: []
 		}
 		Blockchain.signblock(res, privateKey2);
@@ -951,11 +951,11 @@ describe('Blockchain', () => {
 	})
 
 	describe('getAvailableMoney', () => {
-		it('Should return [] for new Blockchain.', () => {
+		it('Should return first created money for new Blockchain.', () => {
 			const bc = new CitizenBlockchain([validInitBlock(), validBirthBlock()])
 			const result = bc.getAvailableMoney()
 
-			const expected = []
+			const expected = [20250101000]
 
 			assert.deepEqual(result, expected)
 		})
@@ -1355,6 +1355,17 @@ describe('Blockchain', () => {
 			const expected = [20250102002, 20250102003]
 
 			assert.deepEqual(result, expected)
+		})
+
+		it('Should increase total if I m the target.', () => {
+			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
+
+			bc.pay(privateKey1, publicKey1, 3, new Date('2025-01-03'))
+
+			const result = bc.lastblock.money
+			const expected = [20250102002, 20250102003]
+
+			assert.deepEqual(bc.lastblock.total, 30)
 		})
 
 		it('Should throw error if blockchain can t afford it.', () => {
@@ -2097,8 +2108,8 @@ describe('CitizenBlockchain', () => {
 					closedate: 20250201,
 					signer: publicKey2,
 					total: 0,
-					money: [],
-					invests: [],
+					money: [20250201000],
+					invests: [20250201000],
 					version: 1,
 					transactions: [],
 					merkleroot: 0
@@ -2179,8 +2190,8 @@ describe('CitizenBlockchain', () => {
 				closedate: 20250103,
 				signer: publicKey2,
 				total: 0,
-				money: [],
-				invests: [],
+				money: [20250225000],
+				invests: [20250225000],
 				version: 1,
 				transactions: [],
 				merkleroot: 0

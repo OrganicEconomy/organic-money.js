@@ -218,7 +218,7 @@ class Blockchain {
 	}
 
 	/**
-	 * Return true if given Block is a valid Birth one
+	 * Return true if given Block is a valid Initialization one
 	 */
 	static isValidInitializationBlock(block) {
 		const signature = block.hash
@@ -228,8 +228,8 @@ class Blockchain {
 		return block.version === Blockchain.VERSION &&
 			block.transactions.length === 0 &&
 			block.merkleroot === 0 &&
-			block.money.length === 0 &&
-			block.invests.length === 0 &&
+			block.money.length === 1 &&
+			block.invests.length === 1 &&
 			block.total === 0 &&
 			verify(signature, messageHash, publicKey)
 	}
@@ -678,6 +678,9 @@ class Blockchain {
 		const result = Blockchain.signtx(transaction, myPrivateKey)
 		this.addTransaction(result)
 		this.removeMoney(money);
+		if (targetPublicKey === this.getMyPublicKey()) {
+			this.lastblock.total += result.money.length
+		}
 		return result;
 	}
 }
@@ -981,8 +984,8 @@ class CitizenBlockchain extends Blockchain {
 			previousHash: this.lastblock.hash,
 			signer: Blockchain.publicFromPrivate(privateKey),
 			merkleroot: 0,
-			money: [],
-			invests: [],
+			money: this.lastblock.money,
+			invests: this.lastblock.invests,
 			total: 0,
 			transactions: [],
 			version: Blockchain.VERSION

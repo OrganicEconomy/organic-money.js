@@ -1,6 +1,6 @@
 {
   "name": "organic-money",
-  "version": "0.1.10",
+  "version": "0.1.14",
   "description": "The javascript implementation of Organic money cryptography",
   "main": "index.js",
   "type": "module",

@@ -498,6 +498,9 @@ class Blockchain {
 		if (this.lastblock.hash) {
 			this.newBlock()
 		}
+		if (this.getHistory(3).filter(element => element.hash === transaction.hash).length > 0) {
+			throw new InvalidTransactionError('Transaction duplicate ' + transaction.hash)
+		}
 		this.lastblock.transactions.unshift(transaction)
 	}
 
@@ -593,14 +596,20 @@ class Blockchain {
 
 	/**
 	 * Return the whole history of transactions
+	 * @param {number} [limit=0] the max number of blocks to look in
 	 */
-	getHistory() {
+	getHistory(limit=0) {
+		let i = 0
 		const result = []
 		this.blocks.forEach(block => {
 			if (block.transactions) {
 				block.transactions.forEach(tx => {
 					result.push(tx)
 				})
+			}
+			i++
+			if (limit > 0 && i >= limit) {
+				return result
 			}
 		})
 		return result

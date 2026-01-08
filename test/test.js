@@ -1076,14 +1076,56 @@ describe('Blockchain', () => {
 				invests: [],
 				type: Blockchain.TXTYPE.CREATE,
 				signer: 0,
-				hash: 0
+				hash: 1
+			}
+			const tx2 = {
+				version: Blockchain.VERSION,
+				date: 20250103,
+				source: publicKey1,
+				target: publicKey1,
+				money: [],
+				invests: [],
+				type: Blockchain.TXTYPE.CREATE,
+				signer: 0,
+				hash: 2
+			}
+			const tx3 = {
+				version: Blockchain.VERSION,
+				date: 20250103,
+				source: publicKey1,
+				target: publicKey1,
+				money: [],
+				invests: [],
+				type: Blockchain.TXTYPE.CREATE,
+				signer: 0,
+				hash: 3
 			}
 
 			bc.addTransaction(tx)
-			bc.addTransaction(tx)
-			bc.addTransaction(tx)
+			bc.addTransaction(tx2)
+			bc.addTransaction(tx3)
 
 			assert.equal(bc.blocks.length, 2)
+		})
+
+		it('Should throw an error if transaction already is in last block.', () => {
+			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+
+			const tx = {
+				version: Blockchain.VERSION,
+				date: 20250103,
+				source: publicKey1,
+				target: publicKey1,
+				money: [],
+				invests: [],
+				type: Blockchain.TXTYPE.CREATE,
+				signer: 0,
+				hash: 0
+			}
+			Blockchain.signtx(tx, privateKey2)
+			bc.addTransaction(tx)
+
+			assert.throws(() => { bc.addTransaction(tx) }, InvalidTransactionError, 'Transaction duplicate ' + tx.hash)
 		})
 	})
 

@@ -933,8 +933,8 @@ class CitizenBlockchain extends Blockchain {
 	/**
 	 * Return the birthblock based on given informations
 	 */
-	makeBirthBlock(privateKey, birthdate, name, date = new Date()) {
-		const publicKey = Blockchain.publicFromPrivate(privateKey)
+	makeBirthBlock(secretKey, birthdate, name, date = new Date()) {
+		const publicKey = Blockchain.publicFromPrivate(secretKey)
 		let block = {
 			version: Blockchain.VERSION,
 			closedate: Blockchain.dateToInt(date),
@@ -942,7 +942,7 @@ class CitizenBlockchain extends Blockchain {
 			signer: publicKey, // Compressed Signer public key, here the new one created
 			merkleroot: 0,
 			money: [Blockchain.formatMoneyIndex(date, 0)],
-			invests: [Blockchain.formatMoneyIndex(date, 0)],
+			invests: [Blockchain.formatInvestIndex(date, 0)],
 			total: 0,
 			transactions: [
 				Blockchain.signtx({
@@ -954,7 +954,7 @@ class CitizenBlockchain extends Blockchain {
 					money: [],
 					invests: [],
 					type: Blockchain.TXTYPE.INIT
-				}, privateKey),
+				}, secretKey),
 				Blockchain.signtx({
 					version: Blockchain.VERSION,
 					date: Blockchain.dateToInt(date),
@@ -962,12 +962,12 @@ class CitizenBlockchain extends Blockchain {
 					target: publicKey,
 					signer: 0,
 					money: [Blockchain.formatMoneyIndex(date, 0)],
-					invests: [Blockchain.formatMoneyIndex(date, 0)],
+					invests: [Blockchain.formatInvestIndex(date, 0)],
 					type: Blockchain.TXTYPE.CREATE
-				}, privateKey)
+				}, secretKey)
 			]
 		}
-		block = Blockchain.signblock(block, privateKey)
+		block = Blockchain.signblock(block, secretKey)
 		this.addBlock(block)
 		return block
 	}

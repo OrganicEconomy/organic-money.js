@@ -2072,7 +2072,7 @@ describe('CitizenBlockchain', () => {
 				previousHash: Blockchain.REF_HASH,
 				signer: publicKey1,
 				money: [20250225000],
-				invests: [20250225000],
+				invests: [202502259000],
 				total: 0,
 				merkleroot: 0,
 				transactions: [
@@ -2092,7 +2092,7 @@ describe('CitizenBlockchain', () => {
 						source: publicKey1,
 						target: publicKey1,
 						money: [20250225000],
-						invests: [20250225000],
+						invests: [202502259000],
 						type: Blockchain.TXTYPE.CREATE,
 						signer: 0
 					}
@@ -2151,7 +2151,7 @@ describe('CitizenBlockchain', () => {
 					signer: publicKey2,
 					total: 0,
 					money: [20250201000],
-					invests: [20250201000],
+					invests: [202502019000],
 					version: 1,
 					transactions: [],
 					merkleroot: 0
@@ -2161,7 +2161,7 @@ describe('CitizenBlockchain', () => {
 					closedate: Blockchain.dateToInt(today),
 					signer: publicKey1,
 					money: [20250201000],
-					invests: [20250201000],
+					invests: [202502019000],
 					total: 0,
 					merkleroot: 0,
 					transactions: [
@@ -2181,7 +2181,7 @@ describe('CitizenBlockchain', () => {
 							source: publicKey1,
 							target: publicKey1,
 							money: [20250201000],
-							invests: [20250201000],
+							invests: [202502019000],
 							type: Blockchain.TXTYPE.CREATE,
 							signer: 0
 						}
@@ -2233,7 +2233,7 @@ describe('CitizenBlockchain', () => {
 				signer: publicKey2,
 				total: 0,
 				money: [20250225000],
-				invests: [20250225000],
+				invests: [202502259000],
 				version: 1,
 				transactions: [],
 				merkleroot: 0

@@ -181,15 +181,15 @@ class Blockchain {
 	 * Return true if given Block has valid signature
 	 * Return false else
 	 */
-	static isValidBlock(block, pubkey = null) {
-		pubkey = pubkey || block.signer || block.source
+	static isValidBlock(block, pk = null) {
+		pk = pk || block.signer || block.source
 		const hash = this.hashblock(block)
 		const signature = block.hash
 
 		return verify(
 			signature,
 			hash,
-			pubkey
+			pk
 		)
 	}
 
@@ -495,7 +495,7 @@ class Blockchain {
 	 * Add given transaction to the Blockchain
 	 */
 	addTransaction(transaction) {
-		if (this.lastblock.hash) {
+		if (this.lastblock.hash) { // TODO: use isSigned(block)
 			this.newBlock()
 		}
 		if (this.getHistory(3).filter(element => element.hash === transaction.hash).length > 0) {
@@ -549,6 +549,12 @@ class Blockchain {
 	 * Sign the last block of the Blockchain
 	 * If there is at least one Paper cashed in the block, raise an error if the block
 	 * signer is not the Paper signer.
+	 * 
+	 * TODO: throw error if last block is already signed
+	 * TODO: add method "isSigned(block)"
+	 * TODO: add MerkleRoot
+	 * TODO: Add signer (based on privatekey)
+	 * TODO: Add closedate
 	 */
 	sealLastBlock(privateKey) {
 		const myPublicKey = this.getMyPublicKey()

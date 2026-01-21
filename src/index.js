@@ -256,7 +256,7 @@ class Blockchain {
 	}
 
 	/***********************************************************************
-	 *                      BASE METHODS AND GETTES
+	 *                      BASE METHODS AND GETTERS
 	 **********************************************************************/
 
 	constructor(blocks = []) {
@@ -320,6 +320,27 @@ class Blockchain {
 		this.lastblock.total += tx.money.length
 		return tx
 	}
+
+	/**
+	 * 
+	 * @param {*} blocks 
+	 * @returns decoded blocks as json
+	 */
+	decodeBlocks(blocks) {
+		if (Object.prototype.toString.call(blocks) == '[object Array]') {
+			return blocks
+		} else {
+			try {
+				// Here it's binary
+				return decode(blocks)
+			} catch (e) {
+				// Here it's binary encoded as B64 (for sending)
+				const binary = Base64.toUint8Array(blocks)
+				return decode(binary)
+			}
+		}
+	}
+
 	/**
 	 * Return the level of the blockchain, minus the already engaged
 	 * amount of invest
@@ -422,7 +443,7 @@ class Blockchain {
 	}
 
 	/**
-	 * Return true if the Blockchain has no block in it
+	 * @returns true if the Blockchain has no block in it
 	 */
 	isEmpty() {
 		return this.blocks.length === 0
@@ -433,49 +454,55 @@ class Blockchain {
 	}
 
 	/**
+	 * @returns true if blocks are in light format (v instead of version, d instead of closedate, etc)
+	 */
+	isLightBlocks(blocks) {
+		return !(blocks.length === 0 || !!blocks[0].version)
+	}
+
+	/**
 	 * Load the given blocks into the Blockchain
 	 * blocks can be Array of blocks
 	 * or the binary encoded array of blocks
 	 */
 	load(blocks) {
-		if (Object.prototype.toString.call(blocks) == '[object Array]') {
-			// Here it's directly an Array
-			this.blocks = blocks
+		blocks = this.decodeBlocks(blocks)
+
+		if (this.isLightBlocks(blocks)) {
+			this.loadLightBlocks(blocks)
 		} else {
-			try {
-				// Here it's binary
-				this.blocks = decode(blocks)
-			} catch (e) {
-				// Here it's binary encoded as B64 (for sending)
-				const binary = Base64.toUint8Array(blocks)
-				this.blocks = decode(binary)
-			}
+			this.blocks = blocks
 		}
-		if (this.blocks.length === 0 || this.lastblock.version) {
-			return;
-		}
-		for (let i = 0; i < this.blocks.length; i++) {
+	}
+
+	/**
+	 * 
+	 * @param {} blocks
+	 */
+	loadLightBlocks(blocks) {
+		this.blocks = []
+		for (let i = 0; i < blocks.length; i++) {
 			this.blocks[i] = {
-				version: this.blocks[i].v,
-				closedate: this.blocks[i].d,
-				previousHash: this.blocks[i].p,
-				signer: this.blocks[i].s,
-				merkleroot: this.blocks[i].r,
-				total: this.blocks[i].t,
-				money: this.blocks[i].m,
-				invests: this.blocks[i].i,
-				transactions: [] || this.blocks[i].x,
-				hash: this.blocks[i].h
+				version: blocks[i].v,
+				closedate: blocks[i].d,
+				previousHash: blocks[i].p,
+				signer: blocks[i].s,
+				merkleroot: blocks[i].r,
+				total: blocks[i].t,
+				money: blocks[i].m,
+				invests: blocks[i].i,
+				transactions: [] || blocks[i].x,
+				hash: blocks[i].h
 			}
-			for (let j = 0; j < this.blocks[i].transactions; j++) {
+			for (let j = 0; j < blocks[i].transactions; j++) {
 				this.blocks[i].transactions[j] = {
-					version: this.blocks[i].transaction[j].v,
-					type: this.blocks[i].transaction[j].t,
-					date: this.blocks[i].transaction[j].d,
-					signer: this.blocks[i].transaction[j].s,
-					target: this.blocks[i].transaction[j].t,
-					money: this.blocks[i].transaction[j].m,
-					invests: this.blocks[i].transaction[j].i
+					version: blocks[i].transaction[j].v,
+					type: blocks[i].transaction[j].t,
+					date: blocks[i].transaction[j].d,
+					signer: blocks[i].transaction[j].s,
+					target: blocks[i].transaction[j].t,
+					money: blocks[i].transaction[j].m,
+					invests: blocks[i].transaction[j].i
 				}
 			}
 		}
@@ -604,7 +631,7 @@ class Blockchain {
 	 * Return the whole history of transactions
 	 * @param {number} [limit=0] the max number of blocks to look in
 	 */
-	getHistory(limit=0) {
+	getHistory(limit = 0) {
 		let i = 0
 		const result = []
 		this.blocks.forEach(block => {

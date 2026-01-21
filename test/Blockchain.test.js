@@ -324,43 +324,6 @@ describe('Blockchain', () => {
 		})
 	})
 
-	describe('hashtx', () => {
-		// it('Should make valid hash', () => {
-		//   const tx = {
-		//     version: 1,
-		//     type: Blockchain.TXTYPE.CREATE,
-		//     date: '20101221',
-		//     signer: publicKey1,
-		//     target: publicKey1,
-		// 	money: [],
-		// 	invests: []
-		//   }
-
-		//   const expected = hexToBytes('159a659898428e906945a9a18cb983a74a42eb766b4bbdffcbee0a39ea9299d2')
-
-		//   const result = Blockchain.hashtx(tx)
-
-		//   assert.deepEqual(result, expected)
-		// })
-
-		// it('Should ignore existing hash', () => {
-		//   const tx = {
-		//     version: 1,
-		//     total: 0,
-		//     d: '2010-12-21',
-		//     signer: '02e31267fc0e24e6a3da9e40fedb23f98c750bddb3278a1873ab49c601f3bbd66b',
-		//     a: 1,
-		//     h: 12
-		//   }
-
-		//   const expected = hexToBytes('155df9b6196747e744926feb7d4ca84ea6f911ffa5d41d3488e1d72868fd113f')
-
-		//   const result = Blockchain.hashtx(tx)
-
-		//   assert.deepEqual(result, expected)
-		// })
-	})
-
 	describe('signblock', () => {
 		it('Should make valid signature.', () => {
 			const block = {

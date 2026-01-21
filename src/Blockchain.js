@@ -192,6 +192,10 @@ export class Blockchain {
 	}
 
 	get blocks() {
+		const result = []
+		//for (block in this.bks) {
+		//	result.push(block.export())
+		//}
 		return this.bks
 	}
 

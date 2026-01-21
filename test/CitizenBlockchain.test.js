@@ -5,9 +5,7 @@ import { InvalidTransactionError } from '../src/errors.js';
 import { Blockchain } from '../src/Blockchain.js';
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js';
 import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3 } from './testUtils.js'
-import { randomPrivateKey, aesEncrypt, aesDecrypt, publicFromPrivate, 
-	dateToInt, intToDate, intToIndex, formatMoneyIndex, formatInvestIndex,
-	buildInvestIndexes, buildMoneyIndexes } from '../src/crypto.js'
+import { dateToInt } from '../src/crypto.js'
 
 describe('CitizenBlockchain', () => {
 	const validBirthBlock = () => {

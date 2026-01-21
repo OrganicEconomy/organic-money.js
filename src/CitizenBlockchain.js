@@ -1,7 +1,7 @@
 import { Blockchain } from './Blockchain.js'
-import { InvalidTransactionError, UnauthorizedError} from './errors.js'
-import { randomPrivateKey, aesEncrypt, aesDecrypt, publicFromPrivate, 
-	dateToInt, intToDate, intToIndex, formatMoneyIndex, formatInvestIndex,
+import { InvalidTransactionError } from './errors.js'
+import { randomPrivateKey, publicFromPrivate, 
+	dateToInt, intToDate, formatMoneyIndex, formatInvestIndex,
 	buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
 
 export class CitizenBlockchain extends Blockchain {

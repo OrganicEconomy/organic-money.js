@@ -8,9 +8,7 @@ import { hexToBytes } from 'ethereum-cryptography/utils.js';
 import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { Blockchain } from '../src/Blockchain.js';
 import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3 } from './testUtils.js'
-import { randomPrivateKey, aesEncrypt, aesDecrypt, publicFromPrivate, 
-	dateToInt, intToDate, intToIndex, formatMoneyIndex, formatInvestIndex,
-	buildInvestIndexes, buildMoneyIndexes } from '../src/crypto.js'
+import { randomPrivateKey, aesEncrypt, aesDecrypt, dateToInt, intToDate } from '../src/crypto.js'
 
 describe('Blockchain', () => {
 	const validBirthBlock = () => {

@@ -1,16 +1,11 @@
 import { Base64 } from 'js-base64'
 import { sha256 } from 'ethereum-cryptography/sha256.js'
-import { scryptSync } from 'ethereum-cryptography/scrypt.js'
-import { utf8ToBytes, toHex, hexToBytes } from 'ethereum-cryptography/utils.js'
-import { utils, getPublicKey, signSync, verify } from 'ethereum-cryptography/secp256k1.js'
-import { encrypt, decrypt } from 'ethereum-cryptography/aes.js'
-import { getRandomBytesSync } from 'ethereum-cryptography/random.js'
+import { toHex, hexToBytes } from 'ethereum-cryptography/utils.js'
+import { signSync, verify } from 'ethereum-cryptography/secp256k1.js'
 import { encode, decode } from 'msgpack-lite'
 import { MerkleTree } from 'merkletreejs'
-import { InvalidTransactionError, UnauthorizedError} from './errors.js'
-import { randomPrivateKey, aesEncrypt, aesDecrypt, publicFromPrivate, 
-	dateToInt, intToDate, intToIndex, formatMoneyIndex, formatInvestIndex,
-	buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
+import { InvalidTransactionError, UnauthorizedError } from './errors.js'
+import { publicFromPrivate, dateToInt, intToDate } from './crypto.js'
 
 export class Blockchain {
 	/***********************************************************************

@@ -8,6 +8,9 @@ import { getRandomBytesSync } from 'ethereum-cryptography/random.js'
 import { encode, decode } from 'msgpack-lite'
 import { MerkleTree } from 'merkletreejs'
 import { InvalidTransactionError, UnauthorizedError} from './errors.js'
+import { randomPrivateKey, aesEncrypt, aesDecrypt, publicFromPrivate, 
+	dateToInt, intToDate, intToIndex, formatMoneyIndex, formatInvestIndex,
+	buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
 
 export class Blockchain {
 	/***********************************************************************
@@ -33,66 +36,6 @@ export class Blockchain {
 	/***********************************************************************
 	 *                           STATIC METHODS
 	 **********************************************************************/
-	static randomPrivateKey() {
-		return toHex(utils.randomPrivateKey())
-	}
-
-	static async aesEncrypt(msg, pwd) {
-		const key = scryptSync(utf8ToBytes(pwd), utf8ToBytes("salt"), 2048, 8, 1, 16)
-		const iv = getRandomBytesSync(16)
-		msg = await encrypt(msg, key, iv)
-		return { msg, iv, sha: sha256(utf8ToBytes(pwd)) }
-	}
-
-	static async aesDecrypt(encrypted, pwd) {
-		if (JSON.stringify(sha256(utf8ToBytes(pwd))) !== JSON.stringify(encrypted.sha)) {
-			throw new Error('Invalid password')
-		}
-		const key = scryptSync(utf8ToBytes(pwd), utf8ToBytes("salt"), 2048, 8, 1, 16)
-		return await decrypt(encrypted.msg, key, encrypted.iv)
-	}
-
-	static publicFromPrivate(privateKey) {
-		return toHex(getPublicKey(privateKey, true))
-	}
-
-	static dateToInt(date) {
-		return +('' + date.getFullYear() + ("0" + (date.getMonth() + 1)).slice(-2) + ("0" + date.getDate()).slice(-2))
-	}
-
-	static intToDate(dateint) {
-		const datestr = '' + dateint
-		return new Date(datestr.slice(0, 4) + '-' + datestr.slice(4, 6) + '-' + datestr.slice(6, 8))
-	}
-
-	static intToIndex(dateint) {
-		const datestr = '' + dateint
-		return +datestr.slice(-3)
-	}
-
-	static formatMoneyIndex(date, index) {
-		return +('' + Blockchain.dateToInt(date) + ("00" + index).slice(-3))
-	}
-
-	static formatInvestIndex(date, index) {
-		return +('' + Blockchain.dateToInt(date) + '9' + ("00" + index).slice(-3))
-	}
-
-	static buildInvestIndexes(date, level) {
-		const result = []
-		for (let i = 0; i < level; i++) {
-			result.push(Blockchain.formatInvestIndex(date, i))
-		}
-		return result
-	}
-
-	static buildMoneyIndexes(date, level) {
-		const result = []
-		for (let i = 0; i < level; i++) {
-			result.push(Blockchain.formatMoneyIndex(date, i))
-		}
-		return result
-	}
 
 	/**
 	 * Return the hash of given Block
@@ -375,7 +318,7 @@ export class Blockchain {
 			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
 				for (let invest of tx.invests) {
 					if (date !== null) {
-						if (Blockchain.intToDate(invest).getDate() === date.getDate()) {
+						if (intToDate(invest).getDate() === date.getDate()) {
 							result.push(invest)
 						}
 					} else {
@@ -397,7 +340,7 @@ export class Blockchain {
 			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
 				for (let m of tx.money) {
 					if (date !== null) {
-						if (Blockchain.intToDate(m).getDate() === date.getDate()) {
+						if (intToDate(m).getDate() === date.getDate()) {
 							result.push(m)
 						}
 					} else {
@@ -426,7 +369,7 @@ export class Blockchain {
 	 */
 	getLastTransactionDate() {
 		const tx = this.getLastTransaction()
-		return Blockchain.intToDate(tx.date)
+		return intToDate(tx.date)
 	}
 
 	/**
@@ -538,18 +481,18 @@ export class Blockchain {
 			signer: null,
 			transactions: []
 		}
-		const date = Blockchain.intToDate(this.lastblock.closedate)
+		const date = intToDate(this.lastblock.closedate)
 		date.setDate(date.getDate() + 1)
 		for (let tx of this.lastblock.transactions) {
 			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
 				for (let money of tx.money) {
-					if (Blockchain.intToDate(money).getTime() === date.getTime()) {
+					if (intToDate(money).getTime() === date.getTime()) {
 						block.transactions.push(tx)
 						break
 					}
 				}
 				for (let invest of tx.invests) {
-					if (Blockchain.intToDate(invest).getTime() === date.getTime()) {
+					if (intToDate(invest).getTime() === date.getTime()) {
 						block.transactions.push(tx)
 						break
 					}
@@ -573,7 +516,7 @@ export class Blockchain {
 	sealLastBlock(privateKey) {
 		const myPublicKey = this.getMyPublicKey()
 		for (let tx of this.lastblock.transactions) {
-			if (tx.type === Blockchain.TXTYPE.PAPER && Blockchain.publicFromPrivate(privateKey) !== tx.signer) {
+			if (tx.type === Blockchain.TXTYPE.PAPER && publicFromPrivate(privateKey) !== tx.signer) {
 				throw new UnauthorizedError('Only Paper signer can seal a block with it.')
 			}
 		}
@@ -695,9 +638,9 @@ export class Blockchain {
 		}
 		const transaction = {
 			type: Blockchain.TXTYPE.PAY,
-			date: Blockchain.dateToInt(d),
+			date: dateToInt(d),
 			money: money,
-			source: Blockchain.publicFromPrivate(myPrivateKey),
+			source: publicFromPrivate(myPrivateKey),
 			invests: [],
 			target: targetPublicKey,
 			signer: 0,

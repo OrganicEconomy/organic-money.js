@@ -4,6 +4,9 @@ import { assert } from 'chai';
 import { EcosystemBlockchain } from '../src/index.js';
 import { Blockchain } from '../src/Blockchain.js';
 import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3 } from './testUtils.js'
+import { randomPrivateKey, aesEncrypt, aesDecrypt, publicFromPrivate, 
+	dateToInt, intToDate, intToIndex, formatMoneyIndex, formatInvestIndex,
+	buildInvestIndexes, buildMoneyIndexes } from '../src/crypto.js'
 
 describe('EcosystemBlockchain', () => {
 	const validBirthBlock = () => {
@@ -194,7 +197,7 @@ describe('EcosystemBlockchain', () => {
 
 			const expected = {
 				version: Blockchain.VERSION,
-				closedate: Blockchain.dateToInt(today),
+				closedate: dateToInt(today),
 				previousHash: Blockchain.ECOREF_HASH,
 				signer: publicKey1, // The ecosystem signs only this first block
 				money: [],
@@ -204,7 +207,7 @@ describe('EcosystemBlockchain', () => {
 				transactions: [
 					{
 						version: Blockchain.VERSION,
-						date: Blockchain.dateToInt(today),
+						date: dateToInt(today),
 						source: publicKey1, // The ecosystem sets its name
 						target: name,
 						money: [],
@@ -214,7 +217,7 @@ describe('EcosystemBlockchain', () => {
 					},
 					{
 						version: Blockchain.VERSION,
-						date: Blockchain.dateToInt(today),
+						date: dateToInt(today),
 						source: publicKey1, // the ecosystem
 						target: publicKey2, // setting admin id
 						money: [],
@@ -320,7 +323,7 @@ describe('EcosystemBlockchain', () => {
 		it('Should use todays date if none given', () => {
 			const bc = new EcosystemBlockchain()
 			const birthdate = new Date('2002-12-12')
-			const today = Blockchain.dateToInt(new Date())
+			const today = dateToInt(new Date())
 			const name = 'Gus'
 
 			bc.startBlockchain(name, privateKey3, publicKey2, privateKey1)

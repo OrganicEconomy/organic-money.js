@@ -5,13 +5,16 @@ import { InvalidTransactionError } from '../src/errors.js';
 import { Blockchain } from '../src/Blockchain.js';
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js';
 import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3 } from './testUtils.js'
+import { randomPrivateKey, aesEncrypt, aesDecrypt, publicFromPrivate, 
+	dateToInt, intToDate, intToIndex, formatMoneyIndex, formatInvestIndex,
+	buildInvestIndexes, buildMoneyIndexes } from '../src/crypto.js'
 
 describe('CitizenBlockchain', () => {
 	const validBirthBlock = () => {
 		// A valid birth block for someone named Gus,
 		// born the 28/11/1989 and subscribing on
 		// the 01/01/2025.
-		const res =  {
+		const res = {
 			version: Blockchain.VERSION,
 			closedate: 20250101,
 			previousHash: Blockchain.REF_HASH,
@@ -310,7 +313,7 @@ describe('CitizenBlockchain', () => {
 
 		it('Should throw error if daily amount is already engaged.', () => {
 			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
- 			bc.engageInvests(privateKey1, publicKey2, 3, 12) 
+			bc.engageInvests(privateKey1, publicKey2, 3, 12)
 
 			const fn = () => { bc.engageInvests(privateKey1, publicKey2, 2, 12) }
 
@@ -391,7 +394,7 @@ describe('CitizenBlockchain', () => {
 
 		it('Should throw error if daily amount is already engaged.', () => {
 			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
- 			bc.engageMoney(privateKey1, publicKey2, 3, 12) 
+			bc.engageMoney(privateKey1, publicKey2, 3, 12)
 
 			const fn = () => { bc.engageMoney(privateKey1, publicKey2, 2, 12) }
 
@@ -414,7 +417,7 @@ describe('CitizenBlockchain', () => {
 		})
 	})
 
-    describe('getAvailableMoneyAmount', () => {
+	describe('getAvailableMoneyAmount', () => {
 		it('Should return 0 for empty blockchain', () => {
 			const bc = new CitizenBlockchain()
 			const result = bc.getAvailableMoneyAmount()
@@ -454,21 +457,21 @@ describe('CitizenBlockchain', () => {
 		it('Should return a valid transaction.', () => {
 			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
 
-		 	const result = bc.generatePaper(privateKey1, 3, publicKey2, new Date('2025-01-03'))
+			const result = bc.generatePaper(privateKey1, 3, publicKey2, new Date('2025-01-03'))
 
-		 	assert.ok(Blockchain.isValidTransaction(result), "invalid signature")
-		 	delete result.hash
+			assert.ok(Blockchain.isValidTransaction(result), "invalid signature")
+			delete result.hash
 
-		 	const expected = {
-		 		version: Blockchain.VERSION,
-		 		type: Blockchain.TXTYPE.PAPER,
-		 		date: 20250103,
-		 		money: [20250101000, 20250102000, 20250102001],
-		 		invests: [],
-		 		source: publicKey1,
-		 		target: 0,
+			const expected = {
+				version: Blockchain.VERSION,
+				type: Blockchain.TXTYPE.PAPER,
+				date: 20250103,
+				money: [20250101000, 20250102000, 20250102001],
+				invests: [],
+				source: publicKey1,
+				target: 0,
 				signer: publicKey2
-		 	}
+			}
 
 			assert.deepEqual(result, expected)
 		})
@@ -599,9 +602,9 @@ describe('CitizenBlockchain', () => {
 			})
 			bc.lastblock.total += 37;
 
-		  const result = bc.hasLevelUpOnLastTx()
+			const result = bc.hasLevelUpOnLastTx()
 
-		  assert.ok(result)
+			assert.ok(result)
 		})
 	})
 
@@ -680,7 +683,7 @@ describe('CitizenBlockchain', () => {
 
 			const expected = {
 				version: Blockchain.VERSION,
-				closedate: Blockchain.dateToInt(today),
+				closedate: dateToInt(today),
 				previousHash: Blockchain.REF_HASH,
 				signer: publicKey1,
 				money: [20250225000],
@@ -770,7 +773,7 @@ describe('CitizenBlockchain', () => {
 				},
 				{
 					version: Blockchain.VERSION,
-					closedate: Blockchain.dateToInt(today),
+					closedate: dateToInt(today),
 					signer: publicKey1,
 					money: [20250201000],
 					invests: [202502019000],
@@ -807,7 +810,7 @@ describe('CitizenBlockchain', () => {
 		it('Should use todays date if none given', () => {
 			const bc = new CitizenBlockchain()
 			const birthdate = new Date('2002-12-12')
-			const today = Blockchain.dateToInt(new Date())
+			const today = dateToInt(new Date())
 			const name = 'Gus'
 
 			bc.startBlockchain(name, birthdate, privateKey2, privateKey1)

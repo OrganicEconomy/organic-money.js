@@ -8,6 +8,9 @@ import { hexToBytes } from 'ethereum-cryptography/utils.js';
 import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { Blockchain } from '../src/Blockchain.js';
 import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3 } from './testUtils.js'
+import { randomPrivateKey, aesEncrypt, aesDecrypt, publicFromPrivate, 
+	dateToInt, intToDate, intToIndex, formatMoneyIndex, formatInvestIndex,
+	buildInvestIndexes, buildMoneyIndexes } from '../src/crypto.js'
 
 describe('Blockchain', () => {
 	const validBirthBlock = () => {
@@ -281,8 +284,8 @@ describe('Blockchain', () => {
 	 **********************************************************************/
 	describe('aesEncrypt', () => {
 		it('Should encrypt data correctly.', async () => {
-			const msg = Blockchain.randomPrivateKey()
-			const result = await Blockchain.aesEncrypt(msg, 'test_pwd')
+			const msg = randomPrivateKey()
+			const result = await aesEncrypt(msg, 'test_pwd')
 
 			assert.property(result, 'msg')
 			assert.property(result, 'iv')
@@ -292,20 +295,20 @@ describe('Blockchain', () => {
 
 	describe('aesDecrypt', () => {
 		it('Should decrypt data correctly.', async () => {
-			const msg = hexToBytes(Blockchain.randomPrivateKey())
-			const encrypted = await Blockchain.aesEncrypt(msg, 'test_pwd')
-			const result = await Blockchain.aesDecrypt(encrypted, 'test_pwd')
+			const msg = hexToBytes(randomPrivateKey())
+			const encrypted = await aesEncrypt(msg, 'test_pwd')
+			const result = await aesDecrypt(encrypted, 'test_pwd')
 
 			assert.deepEqual(result, msg)
 		})
 
 		it('Should throw error for invalid password.', async () => {
-			const msg = Blockchain.randomPrivateKey()
-			const encrypted = await Blockchain.aesEncrypt(msg, 'test_pwd')
+			const msg = randomPrivateKey()
+			const encrypted = await aesEncrypt(msg, 'test_pwd')
 
 			let error = null
 			try {
-				await Blockchain.aesDecrypt(encrypted, 'wrong_password')
+				await aesDecrypt(encrypted, 'wrong_password')
 			} catch (err) {
 				error = err
 			}
@@ -318,7 +321,7 @@ describe('Blockchain', () => {
 		it('Should return the date in YYYYMMDD format.', () => {
 			const date = new Date('2021-11-15')
 
-			const result = Blockchain.dateToInt(date)
+			const result = dateToInt(date)
 
 			assert.equal(result, 20211115)
 		})
@@ -326,7 +329,7 @@ describe('Blockchain', () => {
 		it('Should work with dates including 1 digit month and day.', () => {
 			const date = new Date('2021-09-05')
 
-			const result = Blockchain.dateToInt(date)
+			const result = dateToInt(date)
 
 			assert.equal(result, 20210905)
 		})
@@ -336,7 +339,7 @@ describe('Blockchain', () => {
 		it('Should return a valid Date object.', () => {
 			const date = new Date('2021-11-15')
 
-			const result = Blockchain.intToDate(20211115)
+			const result = intToDate(20211115)
 
 			assert.equal(result.getTime(), date.getTime())
 		})
@@ -344,7 +347,7 @@ describe('Blockchain', () => {
 		it('Should work with dates including 1 digit month and day.', () => {
 			const date = new Date('2021-09-05')
 
-			const result = Blockchain.intToDate(20210905)
+			const result = intToDate(20210905)
 
 			assert.equal(result.getTime(), date.getTime())
 		})

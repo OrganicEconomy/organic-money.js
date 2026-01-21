@@ -1,5 +1,8 @@
 import { Blockchain } from './Blockchain.js'
 import { InvalidTransactionError, UnauthorizedError} from './errors.js'
+import { randomPrivateKey, aesEncrypt, aesDecrypt, publicFromPrivate, 
+	dateToInt, intToDate, intToIndex, formatMoneyIndex, formatInvestIndex,
+	buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
 
 export class CitizenBlockchain extends Blockchain {
 	/**
@@ -18,7 +21,7 @@ export class CitizenBlockchain extends Blockchain {
 		}
 		const lastCreationTx = this.getLastCreationTransaction();
 		if (lastCreationTx) {
-			lastdate = Blockchain.intToDate(lastCreationTx.date);
+			lastdate = intToDate(lastCreationTx.date);
 			lastdate.setDate(lastdate.getDate() + 1);
 		}
 		if (lastdate > date) {
@@ -30,11 +33,11 @@ export class CitizenBlockchain extends Blockchain {
 		let tmpMoney, tmpInvests, filteredInvests, filteredMoney
 
 		while (lastdate <= date) {
-			tmpInvests = Blockchain.buildInvestIndexes(lastdate, level)
+			tmpInvests = buildInvestIndexes(lastdate, level)
 			filteredInvests = tmpInvests.filter(x => !this.getEngagedInvests(lastdate).includes(x))
 			invests = invests.concat(filteredInvests);
 
-			tmpMoney = Blockchain.buildMoneyIndexes(lastdate, level)
+			tmpMoney = buildMoneyIndexes(lastdate, level)
 			filteredMoney = tmpMoney.filter(x => !this.getEngagedMoney(lastdate).includes(x))
 			moneys = moneys.concat(filteredMoney);
 
@@ -44,9 +47,9 @@ export class CitizenBlockchain extends Blockchain {
 		const transaction = {
 			version: Blockchain.VERSION,
 			type: Blockchain.TXTYPE.CREATE,
-			date: Blockchain.dateToInt(date),
-			source: Blockchain.publicFromPrivate(privateKey),
-			target: Blockchain.publicFromPrivate(privateKey),
+			date: dateToInt(date),
+			source: publicFromPrivate(privateKey),
+			target: publicFromPrivate(privateKey),
 			signer: 0,
 			money: moneys,
 			invests: invests,
@@ -71,7 +74,7 @@ export class CitizenBlockchain extends Blockchain {
 		const dateIndex = new Date(date)
 		let tmpInvests, filteredInvests
 		for (let d = 0; d < days; d++) {
-			tmpInvests = Blockchain.buildInvestIndexes(dateIndex, level)
+			tmpInvests = buildInvestIndexes(dateIndex, level)
 			filteredInvests = tmpInvests.filter(x => !this.getEngagedInvests(dateIndex).includes(x))
 			invests = invests.concat(filteredInvests.slice(0, dailyAmount))
 
@@ -80,8 +83,8 @@ export class CitizenBlockchain extends Blockchain {
 		const tx = {
 			version: Blockchain.VERSION,
 			type: Blockchain.TXTYPE.ENGAGE,
-			date: Blockchain.dateToInt(date),
-			source: Blockchain.publicFromPrivate(myPrivateKey),
+			date: dateToInt(date),
+			source: publicFromPrivate(myPrivateKey),
 			target: targetPublicKey,
 			money: [],
 			invests: invests,
@@ -105,7 +108,7 @@ export class CitizenBlockchain extends Blockchain {
 		const dateIndex = new Date(date)
 		let tmpMoney, filteredMoney
 		for (let d = 0; d < days; d++) {
-			tmpMoney = Blockchain.buildMoneyIndexes(dateIndex, level)
+			tmpMoney = buildMoneyIndexes(dateIndex, level)
 			filteredMoney = tmpMoney.filter(x => !this.getEngagedMoney(dateIndex).includes(x))
 			money = money.concat(filteredMoney.slice(0, dailyAmount))
 
@@ -114,8 +117,8 @@ export class CitizenBlockchain extends Blockchain {
 		const tx = {
 			version: Blockchain.VERSION,
 			type: Blockchain.TXTYPE.ENGAGE,
-			date: Blockchain.dateToInt(date),
-			source: Blockchain.publicFromPrivate(myPrivateKey),
+			date: dateToInt(date),
+			source: publicFromPrivate(myPrivateKey),
 			target: targetPublicKey,
 			money: money,
 			invests: [],
@@ -144,10 +147,10 @@ export class CitizenBlockchain extends Blockchain {
 		const transaction = {
 			version: Blockchain.VERSION,
 			type: Blockchain.TXTYPE.PAPER,
-			date: Blockchain.dateToInt(date),
+			date: dateToInt(date),
 			money: money,
 			invests: [],
-			source: Blockchain.publicFromPrivate(myPrivateKey),
+			source: publicFromPrivate(myPrivateKey),
 			target: 0,
 			signer: referentPublicKey
 		}
@@ -240,20 +243,20 @@ export class CitizenBlockchain extends Blockchain {
 	 * Return the birthblock based on given informations
 	 */
 	makeBirthBlock(secretKey, birthdate, name, date = new Date()) {
-		const publicKey = Blockchain.publicFromPrivate(secretKey)
+		const publicKey = publicFromPrivate(secretKey)
 		let block = {
 			version: Blockchain.VERSION,
-			closedate: Blockchain.dateToInt(date),
+			closedate: dateToInt(date),
 			previousHash: Blockchain.REF_HASH, // Previous hash : here 'random'
 			signer: publicKey, // Compressed Signer public key, here the new one created
 			merkleroot: 0,
-			money: [Blockchain.formatMoneyIndex(date, 0)],
-			invests: [Blockchain.formatInvestIndex(date, 0)],
+			money: [formatMoneyIndex(date, 0)],
+			invests: [formatInvestIndex(date, 0)],
 			total: 0,
 			transactions: [
 				Blockchain.signtx({
 					version: Blockchain.VERSION,
-					date: Blockchain.dateToInt(birthdate),
+					date: dateToInt(birthdate),
 					source: publicKey,
 					target: name,
 					signer: 0,
@@ -263,12 +266,12 @@ export class CitizenBlockchain extends Blockchain {
 				}, secretKey),
 				Blockchain.signtx({
 					version: Blockchain.VERSION,
-					date: Blockchain.dateToInt(date),
+					date: dateToInt(date),
 					source: publicKey,
 					target: publicKey,
 					signer: 0,
-					money: [Blockchain.formatMoneyIndex(date, 0)],
-					invests: [Blockchain.formatInvestIndex(date, 0)],
+					money: [formatMoneyIndex(date, 0)],
+					invests: [formatInvestIndex(date, 0)],
 					type: Blockchain.TXTYPE.CREATE
 				}, secretKey)
 			]
@@ -284,7 +287,7 @@ export class CitizenBlockchain extends Blockchain {
 	 * If no date is given, use today
 	 */
 	startBlockchain(name, birthdate, signerPrivateKey, newPrivateKey = null, date = new Date()) {
-		newPrivateKey = newPrivateKey || Blockchain.randomPrivateKey()
+		newPrivateKey = newPrivateKey || randomPrivateKey()
 		const birthblock = this.makeBirthBlock(newPrivateKey, birthdate, name, date)
 		this.validateAccount(signerPrivateKey, date)
 		return newPrivateKey
@@ -295,9 +298,9 @@ export class CitizenBlockchain extends Blockchain {
 	 */
 	validateAccount(privateKey, date = new Date()) {
 		let initializationBlock = {
-			closedate: Blockchain.dateToInt(date),
+			closedate: dateToInt(date),
 			previousHash: this.lastblock.hash,
-			signer: Blockchain.publicFromPrivate(privateKey),
+			signer: publicFromPrivate(privateKey),
 			merkleroot: 0,
 			money: this.lastblock.money,
 			invests: this.lastblock.invests,

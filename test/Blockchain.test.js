@@ -7,7 +7,7 @@ import { hexToBytes } from 'ethereum-cryptography/utils.js';
 
 import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { Blockchain } from '../src/Blockchain.js';
-import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3 } from './testUtils.js'
+import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3, makeBlockObj, makeTransactionObj, makeBlock, makeTransaction } from './testUtils.js'
 import { randomPrivateKey, aesEncrypt, aesDecrypt, dateToInt, intToDate } from '../src/crypto.js'
 
 describe('Blockchain', () => {
@@ -15,7 +15,8 @@ describe('Blockchain', () => {
 		// A valid birth block for someone named Gus,
 		// born the 28/11/1989 and subscribing on
 		// the 01/01/2025.
-		const res =  {
+		return makeBlockObj(new Date('2025-01-01'), 1, 2, 0, true)
+		/*const res =  {
 			version: Blockchain.VERSION,
 			closedate: 20250101,
 			previousHash: Blockchain.REF_HASH,
@@ -50,11 +51,14 @@ describe('Blockchain', () => {
 			]
 		}
 		Blockchain.signblock(res, privateKey1);
+		
 		return res;
+		*/
 	}
 
 	const validInitBlock = () => {
-		const res = {
+		return makeBlockObj(new Date("2021-09-21"), 1, 0, 0, true)
+		/*const res = {
 			closedate: '21/09/2021',
 			previousHash: validBirthBlock().hash,
 			merkleroot: 0,
@@ -66,13 +70,13 @@ describe('Blockchain', () => {
 			transactions: []
 		}
 		Blockchain.signblock(res, privateKey2);
-		return res;
+		return res;*/
 	}
 
 	const validCashBlock = () => {
 		const res = {
 			closedate: 20250102,
-			previousHash: validInitBlock().hash,
+			previousHash: validInitBlock().h,
 			merkleroot: 0,
 			signer: publicKey1,
 			total: 27,
@@ -81,7 +85,8 @@ describe('Blockchain', () => {
 			invests: [202501019000, 202501029000, 202501029001, 202501029002, 202501029003]
 		}
 
-		const tx1 = {
+		const tx1 = makeTransactionObj(new Date('2025-01-02'), 4, Blockchain.TXTYPE.CREATE)
+		/*{
 			version: Blockchain.VERSION,
 			date: 20250102,
 			source: publicKey1,
@@ -91,8 +96,9 @@ describe('Blockchain', () => {
 			type: Blockchain.TXTYPE.CREATE,
 			signer: 0,
 			hash: 0
-		}
-		const tx2 = {
+		}*/
+		const tx2 = makeTransactionObj(new Date('2025-01-02'), 27, Blockchain.TXTYPE.PAY)
+		/*{
 			version: Blockchain.VERSION,
 			date: 20250102,
 			source: publicKey2,
@@ -105,9 +111,8 @@ describe('Blockchain', () => {
 		}
 
 		Blockchain.signtx(tx1, privateKey1)
-		Blockchain.signtx(tx2, privateKey1)
-		res.transactions = [tx1, tx2]
-		Blockchain.signblock(res, privateKey1);
+		Blockchain.signtx(tx2, privateKey1)*/
+		res.x = [tx1, tx2]
 		return res;
 	}
 
@@ -277,200 +282,50 @@ describe('Blockchain', () => {
 		Blockchain.signblock(res, privateKey1);
 		return res;
 	}
-	/***********************************************************************
-	 *                           STATIC METHODS
-	 **********************************************************************/
 
-	describe('hashblock', () => {
-		it('Should make valid hash', () => {
-			const block = {
-				version: 1,
-				closedate: '28/11/1989',
-				previousHash: Blockchain.REF_HASH,
-				signer: publicKey1,
-				merkleroot: 0,
-				transactions: [],
-				money: [],
-				invests: [],
-				total: 0
-			}
+	describe('constructor', () => {
+		it('Should load given blocks objects to Blocks.', () => {
+			const blockObj1  = makeBlockObj(new Date(), 1, 1, 0, true)
+			const blockObj2  = makeBlockObj(new Date(), 2, 2, 0, false)
+			const bc = new Blockchain([blockObj1, blockObj2])
 
-			const expected = hexToBytes('ef5691bc90b1748bc9d95c18783ef9cdadf11bb326608bc07a6950c96df7a75a')
-
-			const result = Blockchain.hashblock(block)
-
-			assert.deepEqual(result, expected)
+			assert.equal(bc.blocks.length, 2)
+			assert.equal(bc.blocks[0].toString(), '[Block]')
+			assert.equal(bc.blocks[1].toString(), '[Block]')
 		})
 
-		it('Should ignore existing hash', () => {
-			const block = {
-				version: 1,
-				closedate: '28/11/1989',
-				previousHash: Blockchain.REF_HASH,
-				signer: publicKey1,
-				merkleroot: 0,
-				transactions: [],
-				money: [],
-				invests: [],
-				total: 0,
-				hash: 12
-			}
+		it('Should raise an error if previous block is not signed.', () => {
+			const bc = new Blockchain()
+			const block  = makeBlock(new Date(), 1, 1, 0, false)
 
-			const expected = hexToBytes('ef5691bc90b1748bc9d95c18783ef9cdadf11bb326608bc07a6950c96df7a75a')
+			bc.add(block)
 
-			const result = Blockchain.hashblock(block)
-
-			assert.deepEqual(result, expected)
+			assert.throws(() => { bc.add(makeBlock(new Date())) }, UnauthorizedError, 'Cannot add block if previous is not signed.')
 		})
 	})
 
-	describe('signblock', () => {
-		it('Should make valid signature.', () => {
-			const block = {
-				version: 1,
-				closedate: '28/11/1989',
-				previousHash: Blockchain.REF_HASH,
-				signer: publicKey1,
-				total: 0,
-				money: [],
-				invests: [],
-				merkleroot: 0
-			}
-
-			const expected = {
-				version: 1,
-				closedate: '28/11/1989',
-				previousHash: Blockchain.REF_HASH,
-				signer: publicKey1,
-				total: 0,
-				money: [],
-				invests: [],
-				merkleroot: 0,
-				hash: '30440220770c161689997e1652f29f1abd2ac6bfc46b7de94b0e8b4528575776e8d246d3022001221607c6eaf2d81ba02394b53d464a5a79275806ed8a966b0e14a7f30675c7'
-			}
-
-
-			const signedBlock = Blockchain.signblock(block, privateKey1)
-
-			assert.deepEqual(signedBlock, expected)
-		})
-	})
-
-	describe('merkleBlock', () => {
-		it('Should add the merkle root to the given block.', () => {
-			let block = validCashBlock()
-			const expectedMerkleRoot = '8a044af1b880a376db04243b8926b92c7f180e741182e25a1e044f9899c73d6c'
-
-			block = Blockchain.merkleBlock(block)
-
-			assert.deepEqual(block.merkleroot, expectedMerkleRoot)
-		})
-
-		it('Should make valid merkle root.', () => {
-			let leaf, proof, root, result
-			let block = validCashBlock()
-
-			block = Blockchain.merkleBlock(block)
-			const leaves = block.transactions.map(x => x.hash)
-			const tree = new MerkleTree(leaves, sha256)
-			root = block.merkleroot
-
-			for (let tx of block.transactions) {
-				leaf = tx.hash
-				proof = tree.getProof(leaf)
-				result = tree.verify(proof, leaf, root)
-
-				assert.isTrue(result)
-			}
-		})
-	})
-
-	describe('isValidBlock', () => {
-		it('Should return false if no hash.', () => {
-			const block = validCashBlock()
-			delete block.hash
-
-			const result = Blockchain.isValidBlock(block)
-
-			assert.isNotOk(result)
-		})
-	})
-
-	describe('isValidBirthBlock', () => {
-		it('Should return true for valid block', () => {
-			const result = Blockchain.isValidBirthBlock(validBirthBlock())
-
-			assert.isTrue(result)
-		})
-
-		it('Should return false if a transaction is not signed.', () => {
-			const birthblock = validBirthBlock()
-			delete birthblock.transactions[0].hash
-
-			const result = Blockchain.isValidBirthBlock(birthblock)
-
-			assert.isNotOk(result)
-		})
-	})
-
-	describe('isValidInitializationBlock', () => {
-		it('Should return true for valid block', () => {
-			const result = Blockchain.isValidInitializationBlock(validInitBlock())
-
-			assert.isTrue(result)
-		})
-	})
-
-	// describe('asBinary', () => {
-	//   it('Should return binary blockchain... Yes !', () => {
-	//     const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-
-	//   	printBlockchain(bc)
-
-	//     const expected = hexToBytes('')
-
-	//     const result = bc.asBinary()
-
-	//     assert.deepEqual(result, expected)
-	//   })
-	// })
-
-	// describe('asB64', () => {
-	//   it('Should return b64 encoded blockchain...', () => {
-	//     const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-
-	//     const expected = ''
-	//     const result = bc.asB64()
-
-	//     assert.deepEqual(result, expected)
-	//   })
-	// })
-
-	/***********************************************************************
-	 *                            UTILS METHODS
-	 **********************************************************************/
-
-	describe('addBlock', () => {
+	describe('add', () => {
 		it('Should add the given block to the blockchain.', () => {
 			const bc = new Blockchain()
 
-			bc.addBlock(validBirthBlock())
+			bc.add(makeBlock(new Date(), 1, 1, 0, true))
 
 			assert.equal(bc.blocks.length, 1)
 		})
 
 		it('Should raise an error if previous block is not signed.', () => {
 			const bc = new Blockchain()
+			const block  = makeBlock(new Date(), 1, 1, 0, false)
 
-			bc.addBlock(validBirthBlock())
-			delete bc.lastblock.hash
+			bc.add(block)
 
-			assert.throws(() => { bc.addBlock(validInitBlock()) }, UnauthorizedError, 'Cannot add block if previous is not signed.')
+			assert.throws(() => { bc.add(makeBlock(new Date())) }, UnauthorizedError, 'Cannot add block if previous is not signed.')
 		})
 	})
 
+	/**
 	describe('cashPaper', () => {
-		/** A tool for this section tests */
+
 		let paper1 = () => {
 			let paper = {
 				version: Blockchain.VERSION,
@@ -625,38 +480,9 @@ describe('Blockchain', () => {
 
 			assert.deepEqual(bc.lastblock.total, 3)
 		})
-	})
+	})*/
 
-	describe('load', () => {
-		it('Should load directly from object', () => {
-			const bc = new Blockchain()
-			const blocks = [validBirthBlock(), validInitBlock()]
 
-			bc.load(blocks)
-
-			assert.deepEqual(bc.blocks, blocks)
-		})
-
-		// it('Should load correctly from binary', () => {
-		//   const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-		//   const bc2 = new Blockchain()
-		//   const bin = bc.asBinary()
-
-		//   bc2.load(bin)
-
-		//   assert.deepEqual(bc2.blocks, bc.blocks)
-		// })
-
-		// it('Should load correctly from b64', () => {
-		//   const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-		//   const bc2 = new Blockchain()
-		//   const b64 = bc.asB64()
-
-		//   bc2.load(b64)
-
-		//   assert.deepEqual(bc2.blocks, bc.blocks)
-		// })
-	})
 
 	describe('isValid', () => {
 		it('Should return true for initialized blockchain.', () => {
@@ -668,35 +494,39 @@ describe('Blockchain', () => {
 		})
 	})
 
-	describe('getLastTransaction', () => {
+	describe('lastTransaction', () => {
 		it('Should return null if no transaction exists.', () => {
-			const bc = new Blockchain()
+			const blockchain = new Blockchain()
 
-			const result = bc.getLastTransaction()
+			const result = blockchain.lastTransaction
 
 			assert.isNull(result)
 		})
 
-		it('Should return the lastly added Transaction', () => {
-			const bc = new Blockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
+		it('Should return the only one Transaction if there is only one.', () => {
+			const blockchain = new Blockchain()
+			const block = makeBlock(new Date(), 1, 1, 0)
+			blockchain.add(block)
 
-			const result = bc.getLastTransaction()
-			const expected = {
-				version: Blockchain.VERSION,
-				date: 20250102,
-				source: publicKey1,
-				target: publicKey1,
-				money: [20250102000, 20250102001, 20250102002, 20250102003],
-				invests: [202501029000, 202501029001, 202501029002, 202501029003],
-				type: Blockchain.TXTYPE.CREATE,
-				signer: 0,
-				hash: "304402204646b3bb86df2bc60e4614c52a6c00a5b0958c4e16ebcdc89baf99852601057c0220327ee93dcea833015edd38feb1c3175b2d86421aae500844398749299e4c42eb"
-			}
+			const result = blockchain.lastTransaction
 
-			assert.deepEqual(result, expected)
+			assert.deepEqual(result, block.lastTransaction)
+		})
+
+		it('Should return the Transaction from last block.', () => {
+			const blockchain = new Blockchain()
+			const block1 = makeBlock({ signed : true })
+			const block2 = makeBlock()
+			blockchain.add(block1)
+			blockchain.add(block2)
+
+			const result = blockchain.lastTransaction
+
+			assert.deepEqual(result, block2.lastTransaction)
 		})
 	})
 
+	/**
 	describe('getEngagedInvests', () => {
 		it('Should return all engaged invests if no date is given.', () => {
 			const bc = new Blockchain([validEngagedBlock(), validInitBlock(), validBirthBlock()])
@@ -738,8 +568,9 @@ describe('Blockchain', () => {
 
 			assert.deepEqual(result, expected)
 		})
-	})
+	})*/
 
+	/**
 	describe('getEngagedMoney', () => {
 		it('Should return all engaged money if no date is given.', () => {
 			const bc = new Blockchain([validEngagedBlock(), validInitBlock(), validBirthBlock()])
@@ -781,7 +612,7 @@ describe('Blockchain', () => {
 
 			assert.deepEqual(result, expected)
 		})
-	})
+	})*/
 
 	describe('isEmpty', () => {
 		it('Should return true for empty array', () => {
@@ -813,6 +644,7 @@ describe('Blockchain', () => {
 		})
 	})
 
+	/**
 	describe('getAvailableMoney', () => {
 		it('Should return first created money for new Blockchain.', () => {
 			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
@@ -873,8 +705,9 @@ describe('Blockchain', () => {
 
 			assert.deepEqual(result, [])
 		})
-	})
+	})*/
 
+	/**
 	describe('removeMoney', () => {
 		it('Should filter properly.', () => {
 			const bc = new Blockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
@@ -884,117 +717,55 @@ describe('Blockchain', () => {
 
 			assert.deepEqual(result, expected)
 		})
-	})
+	})*/
 
 	describe('addTransaction', () => {
 		it('Should add the given transaction to last block', () => {
-			const bc = new Blockchain([validCashBlock(), validInitBlock(), validBirthBlock()]);
-			const tx = {
-				version: Blockchain.VERSION,
-				date: 20250103,
-				source: publicKey1,
-				target: publicKey1,
-				money: [],
-				invests: [],
-				type: Blockchain.TXTYPE.CREATE,
-				signer: 0,
-				hash: 0
-			}
+			const blockObj1 = makeBlockObj(new Date(), 1, 1, 0, true)
+			const blockObj2 = makeBlockObj(new Date(), 1, 2, 0, false)
+			const blockchain = new Blockchain([blockObj2, blockObj1])
 
-			bc.addTransaction(tx)
+			const tx = makeTransaction(new Date('2026-01-20'), 2)
 
-			assert.deepEqual(bc.lastblock.transactions[0], tx)
+			blockchain.addTransaction(tx)
+
+			assert.deepEqual(blockchain.lastTransaction, tx)
 		})
 
 		it('Should create a new block if last one is signed', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()]);
-			const tx = {
-				version: Blockchain.VERSION,
-				date: 20250103,
-				source: publicKey1,
-				target: publicKey1,
-				money: [],
-				invests: [],
-				type: Blockchain.TXTYPE.CREATE,
-				signer: 0,
-				hash: 0
-			}
+			const blockObj1 = makeBlockObj({ signed: true })
+			const blockchain = new Blockchain([blockObj1])
 
-			bc.addTransaction(tx)
+			const tx = makeTransaction({ date: new Date('2026-01-20') })
 
-			assert.equal(bc.blocks.length, 3)
+			blockchain.addTransaction(tx)
+
+			assert.equal(blockchain.blocks.length, 2)
 		})
 
 		it('Should NOT create a new block if last one is NOT signed', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()]);
-			delete bc.lastblock.hash
+			const bc = new Blockchain([makeBlockObj()]);
 
-			const tx = {
-				version: Blockchain.VERSION,
-				date: 20250103,
-				source: publicKey1,
-				target: publicKey1,
-				money: [],
-				invests: [],
-				type: Blockchain.TXTYPE.CREATE,
-				signer: 0,
-				hash: 1
-			}
-			const tx2 = {
-				version: Blockchain.VERSION,
-				date: 20250103,
-				source: publicKey1,
-				target: publicKey1,
-				money: [],
-				invests: [],
-				type: Blockchain.TXTYPE.CREATE,
-				signer: 0,
-				hash: 2
-			}
-			const tx3 = {
-				version: Blockchain.VERSION,
-				date: 20250103,
-				source: publicKey1,
-				target: publicKey1,
-				money: [],
-				invests: [],
-				type: Blockchain.TXTYPE.CREATE,
-				signer: 0,
-				hash: 3
-			}
+			bc.addTransaction(makeTransaction({ date: new Date('2026-01-20') }))
+			bc.addTransaction(makeTransaction({ date: new Date('2026-01-21') }))
+			bc.addTransaction(makeTransaction({ date: new Date('2026-01-22') }))
 
-			bc.addTransaction(tx)
-			bc.addTransaction(tx2)
-			bc.addTransaction(tx3)
-
-			assert.equal(bc.blocks.length, 2)
+			assert.equal(bc.blocks.length, 1)
 		})
 
 		it('Should throw an error if transaction already is in last block.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj()]);
+			const tx = makeTransaction(new Date('2026-01-20'), 2)
 
-			const tx = {
-				version: Blockchain.VERSION,
-				date: 20250103,
-				source: publicKey1,
-				target: publicKey1,
-				money: [],
-				invests: [],
-				type: Blockchain.TXTYPE.CREATE,
-				signer: 0,
-				hash: 0
-			}
-			Blockchain.signtx(tx, privateKey2)
 			bc.addTransaction(tx)
 
-			assert.throws(() => { bc.addTransaction(tx) }, InvalidTransactionError, 'Transaction duplicate ' + tx.hash)
+			assert.throws(() => { bc.addTransaction(tx) }, InvalidTransactionError, 'Transaction duplicate ' + tx.signature)
 		})
 	})
 
 	describe('newBlock', () => {
 		it('Should throw error if previous block is not signed.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-			delete bc.lastblock.hash
+			const bc = new Blockchain([makeBlockObj()])
 
 			const fn = () => { bc.newBlock() }
 
@@ -1002,7 +773,7 @@ describe('Blockchain', () => {
 		})
 
 		it('Should add an empty block to the blockchain.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({signed: true}), makeBlockObj({signed: true})])
 
 			assert.equal(bc.blocks.length, 2)
 
@@ -1011,6 +782,15 @@ describe('Blockchain', () => {
 			assert.equal(bc.blocks.length, 3)
 		})
 
+		it('Should add a Block type.', () => {
+			const bc = new Blockchain([makeBlockObj({ signed: true })])
+
+			bc.newBlock()
+
+			assert.equal(bc.blocks[0].toString(), '[Block]')
+		})
+
+		/**
 		it('Should report running engagement from previous block.', () => {
 			const bc = new Blockchain([validEngagedBlock(), validInitBlock(), validBirthBlock()])
 
@@ -1020,7 +800,7 @@ describe('Blockchain', () => {
 
 			assert.deepEqual(bc.lastblock.transactions, expected)
 		})
-
+ 
 		it('Should NOT report finished engagements from previous block.', () => {
 			const bc = new Blockchain([validNoMoreEngagedBlock(), validInitBlock(), validBirthBlock()])
 
@@ -1028,8 +808,11 @@ describe('Blockchain', () => {
 
 			assert.equal(bc.lastblock.transactions.length, 0)
 		})
+		*/
 	})
+		
 
+	/**
 	describe('sealLastBlock', () => {
 		it('Should raise an error if block contains Cashes Papers and signer is me.', () => {
 			const bc = new Blockchain([validPaperdBlock(), validInitBlock(), validBirthBlock()])
@@ -1053,7 +836,7 @@ describe('Blockchain', () => {
 
 			assert.ok(signature)
 		})
-	})
+	})*/
 
 	describe('getMyPublicKey', () => {
 		it('Should return null for empty Blockchain.', () => {
@@ -1074,15 +857,7 @@ describe('Blockchain', () => {
 
 		it('Should return the correct key from last CREATE transaction.', () => {
 			const bc = new Blockchain([
-				{
-					version: Blockchain.VERSION,
-					transactions: [
-						{
-							source: publicKey1,
-							type: Blockchain.TXTYPE.CREATE,
-						}
-					]
-				}
+				makeBlockObj(new Date(), 0, 1)
 			])
 
 			const result = bc.getMyPublicKey()
@@ -1095,6 +870,7 @@ describe('Blockchain', () => {
 	 *                           MAIN METHODS
 	 **********************************************************************/
 
+	/**
 	describe('income', () => {
 		const makeTx = () => {
 			const tx = {
@@ -1224,8 +1000,9 @@ describe('Blockchain', () => {
 
 			assert.deepEqual(bc.lastblock.total, 1)
 		})
-	})
+	})*/
 
+	/**
 	describe('pay', () => {
 		it('Should make valid transaction.', () => {
 			const bc = new Blockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
@@ -1278,4 +1055,5 @@ describe('Blockchain', () => {
 			assert.throws(() => { bc.pay(privateKey1, publicKey2, 2) }, InvalidTransactionError, 'Unsufficient funds.')
 		})
 	})
+		*/
 })

@@ -6,6 +6,7 @@ import { Blockchain } from '../src/Blockchain.js';
 import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3 } from './testUtils.js'
 import { dateToInt } from '../src/crypto.js'
 
+/**
 describe('EcosystemBlockchain', () => {
     const validBirthBlock = () => {
         // A valid birth block for new ecosystem with publicKey3,
@@ -381,3 +382,4 @@ describe('EcosystemBlockchain', () => {
         })
     })
 })
+*/

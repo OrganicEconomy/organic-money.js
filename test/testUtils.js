@@ -1,4 +1,5 @@
 import { Blockchain } from "../src/Blockchain.js"
+import { Block } from "../src/Block.js";
 import { Transaction } from "../src/Transaction.js"
 import { buildInvestIndexes, buildMoneyIndexes } from "../src/crypto.js"
 import { dateToInt } from '../src/crypto.js';
@@ -10,40 +11,48 @@ export const publicKey2 = '03cbe4edbfbbc99dfbae83e8c591fafdd6a82d61589be6f60775e
 export const privateKey3 = 'f8a33b8aa0cbf892f1c9e617126711f7304d6e5cead1d592a8b4288c0985b3c5'
 export const publicKey3 = '02f126a536777e95f23b5798b1e357dc2a4f5b1869b739c290b4b2efbc18eca6fd'
 
-export function makeTransactionObj(date=new Date(), moneycount=0, type=Blockchain.TXTYPE.CREATE) {
+export function makeTransactionObj(options = {}) {
+    const date = options.date || new Date()
     const tx = new Transaction({
-        v: 1,
+        v: options.version || 1,
         d: dateToInt(date),
-        p: publicKey1,
-        s: publicKey1,
-        m: buildMoneyIndexes(date, moneycount),
-        i: buildInvestIndexes(date, moneycount),
-        t: type,
-        h: null
+        p: options.target || publicKey1,
+        s: options.signer || publicKey1,
+        m: options.money || buildMoneyIndexes(date, options.moneycount || 0),
+        i: options.invests || buildInvestIndexes(date, options.investscount || 0),
+        t: options.type || Blockchain.TXTYPE.CREATE,
+        h: options.signature || null
     })
-    tx.sign(privateKey1)
+    tx.sign(options.signer || privateKey1)
     return tx.export()
 }
 
-export function makeBlockObj(date=new Date(), moneycount=0, txcount=0, total=0, signed = false, previousHash=0) {
-    const txList = []
-    for (let i = 0; i < txcount; i++) {
-        if (i === 0) {
-            txList.push(makeTransactionObj(date, moneycount, Blockchain.TXTYPE.CREATE))
-        } else {
-            txList.push(makeTransactionObj(date, 1, Blockchain.TXTYPE.PAY))
-        }
-    }
-    return {
-        v: 1,
+export function makeTransaction(options = {}) {
+    return new Transaction(makeTransactionObj(options))
+}
+
+export function makeBlockObj(options = {}) {
+    const date = options.date || new Date()
+    const txList = options.txList || []
+
+    const block = new Block({
+        v: options.version || 1,
         d: dateToInt(date),
-        p: previousHash || Blockchain.REF_HASH,
-        s: publicKey1,
-        r: 'randomMerkleroot',
-        m: buildMoneyIndexes(date, moneycount),
-        i: buildInvestIndexes(date, moneycount),
-        t: total,
-        h: null,
+        p: options.previousHash || Blockchain.REF_HASH,
+        s: options.signer || publicKey1,
+        r: options.root || 'randomMerkleroot',
+        m: options.money || [],
+        i: options.invests || [],
+        t: options.total || 0,
+        h: options.signature || null,
         x: txList
+    })
+    if (options.signed) {
+        block.sign(options.signer || privateKey1)
     }
+    return block.export()
+}
+
+export function makeBlock(options = {}) {
+    return new Block(makeBlockObj(options))
 }

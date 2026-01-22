@@ -40,7 +40,9 @@ describe('Transaction', () => {
 
     describe('hash', () => {
         it('Should make valid hash of the transaction', () => {
-            const tx = new Transaction(makeTransactionObj())
+            const tx = new Transaction(makeTransactionObj({
+                date: new Date('2026-01-21')
+            }))
 
             const expected = 'ff2e15698b1fc418f45ef982f65e2cc0f0de6fe11c174e537277d84626f77680'
 
@@ -50,8 +52,10 @@ describe('Transaction', () => {
         })
 
         it('Should ignore existing hash.', () => {
-            const tx = new Transaction(makeTransactionObj())
-            tx.signature = "titi"
+            const tx = new Transaction(makeTransactionObj({
+                date: new Date('2026-01-21'),
+                signature: "titi"
+            }))
 
             const expected = 'ff2e15698b1fc418f45ef982f65e2cc0f0de6fe11c174e537277d84626f77680'
 
@@ -63,7 +67,9 @@ describe('Transaction', () => {
 
     describe('sign', () => {
         it('Should sign the transaction if all is ok.', () => {
-            const tx = new Transaction(makeTransactionObj(new Date('2025-11-16')))
+            const tx = new Transaction(makeTransactionObj({
+                date: new Date('2025-11-16')
+            }))
 
             const expected = '304402203339b8c65b04cc47e2009b14be785ad89f5607d14e737a88ee6a2eff43de356102206382deb2a5354a5fc7466621215f10a7ee4d0108d4a372bb6a98217bbeede240'
 

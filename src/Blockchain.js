@@ -3,9 +3,11 @@ import { sha256 } from 'ethereum-cryptography/sha256.js'
 import { toHex, hexToBytes } from 'ethereum-cryptography/utils.js'
 import { signSync, verify } from 'ethereum-cryptography/secp256k1.js'
 import { encode, decode } from 'msgpack-lite'
-import { MerkleTree } from 'merkletreejs'
 import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { publicFromPrivate, dateToInt, intToDate } from './crypto.js'
+
+import { Transaction } from './Transaction.js'
+import { Block } from './Block.js'
 
 export class Blockchain {
 	/***********************************************************************
@@ -31,92 +33,6 @@ export class Blockchain {
 	/***********************************************************************
 	 *                           STATIC METHODS
 	 **********************************************************************/
-
-	/**
-	 * Return the hash of given Block
-	 */
-	static hashblock(block) {
-		const b = {
-			v: block.version,
-			d: block.closedate,
-			p: block.previousHash,
-			s: block.signer,
-			r: block.merkleroot,
-			m: block.money,
-			i: block.invests,
-			t: block.total
-		}
-		const packedblock = encode(b)
-		return sha256(packedblock)
-	}
-
-	/**
-	 * Return the hash of given Transaction
-	 */
-	static hashtx(transaction) {
-		const tx = {
-			d: transaction.date,
-			m: transaction.money,
-			i: transaction.invests,
-			s: transaction.signer,
-			t: transaction.type,
-			p: transaction.target,
-			v: transaction.version
-		}
-		const packedtx = encode(tx)
-		return sha256(packedtx)
-	}
-
-	/**
-	 * Calculate the merkle root of the given block and updates it
-	 * Return the block
-	 */
-	static merkleBlock(block) {
-		const leaves = block.transactions.map(x => x.hash)
-		const tree = new MerkleTree(leaves, sha256)
-		const root = tree.getRoot().toString('hex')
-		block.merkleroot = root
-		return block
-	}
-
-	/**
-	 * Sign the given block with given private key
-	 */
-	static signblock(block, privateKeyAsHex) {
-		const privateKey = hexToBytes(privateKeyAsHex)
-		const hash = Blockchain.hashblock(block)
-		const bytes = signSync(hash, privateKey)
-		block.hash = toHex(bytes)
-		return block
-	}
-
-	/**
-	 * Sign the given transaction with given private key
-	 * Return the transaction
-	 */
-	static signtx(transaction, privateKeyAsHex) {
-		const privateKey = hexToBytes(privateKeyAsHex)
-		const hash = Blockchain.hashtx(transaction)
-		const bytes = signSync(hash, privateKey)
-		transaction.hash = toHex(bytes)
-		return transaction
-	}
-
-	/**
-	 * Return true if given Block has valid signature
-	 * Return false else
-	 */
-	static isValidBlock(block, pk = null) {
-		pk = pk || block.signer || block.source
-		const hash = this.hashblock(block)
-		const signature = block.hash
-
-		return verify(
-			signature,
-			hash,
-			pk
-		)
-	}
 
 	/**
 	 * Return true if given Block is a valid Birth one
@@ -185,17 +101,15 @@ export class Blockchain {
 	 **********************************************************************/
 
 	constructor(blocks = []) {
-		if (blocks === null) {
-			blocks = []
+		blocks = blocks || []
+		this.bks = []
+
+		for (let i = 0; i < blocks.length; i++) {
+			this.bks.push(new Block(blocks[i]))
 		}
-		this.load(blocks)
 	}
 
 	get blocks() {
-		const result = []
-		//for (block in this.bks) {
-		//	result.push(block.export())
-		//}
 		return this.bks
 	}
 
@@ -207,12 +121,21 @@ export class Blockchain {
 		return this.bks[0]
 	}
 
+	get lastTransaction() {
+		for (let block of this.blocks) {
+			if (block.hasTransactions()) {
+				return block.lastTransaction
+			}
+		}
+		return null;
+	}
+
 	/***********************************************************************
 	 *                            UTILS METHODS
 	 **********************************************************************/
 
-	addBlock(block) {
-		if (!this.isEmpty() && !Blockchain.isValidBlock(this.lastblock)) {
+	add(block) {
+		if (!this.isEmpty() && !this.lastblock.isSigned()) {
 			throw new UnauthorizedError('Cannot add block if previous is not signed.')
 		}
 		this.blocks.unshift(block)
@@ -248,26 +171,6 @@ export class Blockchain {
 		this.addTransaction(tx)
 		this.lastblock.total += tx.money.length
 		return tx
-	}
-
-	/**
-	 * 
-	 * @param {*} blocks 
-	 * @returns decoded blocks as json
-	 */
-	decodeBlocks(blocks) {
-		if (Object.prototype.toString.call(blocks) == '[object Array]') {
-			return blocks
-		} else {
-			try {
-				// Here it's binary
-				return decode(blocks)
-			} catch (e) {
-				// Here it's binary encoded as B64 (for sending)
-				const binary = Base64.toUint8Array(blocks)
-				return decode(binary)
-			}
-		}
 	}
 
 	/**
@@ -352,18 +255,6 @@ export class Blockchain {
 	}
 
 	/**
-	 * Return the lastly added Transaction
-	 */
-	getLastTransaction() {
-		for (let block of this.blocks) {
-			if (block.transactions.length > 0) {
-				return block.transactions[0];
-			}
-		}
-		return null;
-	}
-
-	/**
 	 * Return the date of the lastly added transaction
 	 */
 	getLastTransactionDate() {
@@ -387,21 +278,6 @@ export class Blockchain {
 	 */
 	isLightBlocks(blocks) {
 		return !(blocks.length === 0 || !!blocks[0].version)
-	}
-
-	/**
-	 * Load the given blocks into the Blockchain
-	 * blocks can be Array of blocks
-	 * or the binary encoded array of blocks
-	 */
-	load(blocks) {
-		blocks = this.decodeBlocks(blocks)
-
-		if (this.isLightBlocks(blocks)) {
-			this.loadLightBlocks(blocks)
-		} else {
-			this.blocks = blocks
-		}
 	}
 
 	/**
@@ -451,13 +327,13 @@ export class Blockchain {
 	 * Add given transaction to the Blockchain
 	 */
 	addTransaction(transaction) {
-		if (this.lastblock.hash) { // TODO: use isSigned(block)
+		if (this.lastblock.isSigned()) {
 			this.newBlock()
 		}
-		if (this.getHistory(3).filter(element => element.hash === transaction.hash).length > 0) {
-			throw new InvalidTransactionError('Transaction duplicate ' + transaction.hash)
+		if (this.getHistory(3).filter(element => element.signature === transaction.signature).length > 0) {
+			throw new InvalidTransactionError('Transaction duplicate ' + transaction.signature)
 		}
-		this.lastblock.transactions.unshift(transaction)
+		this.lastblock.add(transaction)
 	}
 
 	/**
@@ -466,20 +342,21 @@ export class Blockchain {
 	 *   - those with still running engagement
 	 */
 	newBlock() {
-		if (!Blockchain.isValidBlock(this.lastblock)) {
+		if (!this.lastblock.isSigned()) {
 			throw new Error('Previous block not signed.')
 		}
-		const block = {
-			closedate: null,
-			version: Blockchain.VERSION,
-			previousHash: this.lastblock.hash,
-			money: this.lastblock.money,
-			invests: this.lastblock.invests,
-			total: this.lastblock.total,
-			merkleroot: 0,
-			signer: null,
-			transactions: []
-		}
+		const block = new Block ({
+			v: Blockchain.VERSION,
+			d: null,
+			p: this.lastblock.signature,
+			m: this.lastblock.money,
+			i: this.lastblock.invests,
+			t: this.lastblock.total,
+			r: 0,
+			s: null,
+			h: null,
+			x: []
+		})
 		const date = intToDate(this.lastblock.closedate)
 		date.setDate(date.getDate() + 1)
 		for (let tx of this.lastblock.transactions) {
@@ -519,42 +396,8 @@ export class Blockchain {
 				throw new UnauthorizedError('Only Paper signer can seal a block with it.')
 			}
 		}
-		return Blockchain.signblock(this.lastblock, privateKey)
+		return this.lastblock.sign(privateKey)
 	}
-
-	// asLightChain () {
-	// 	const lightchain = [];
-	// 	this.blocks.forEach(block => {
-	// 		lightchain.push({
-	// 			v: block.version,
-	// 			d: block.closedate,
-	// 			p: block.previousHash,
-	// 			s: block.signer,
-	// 			r: block.merkleroot,
-	// 			m: block.money,
-	// 			i: block.invests,
-	// 			t: block.total,
-	// 			h: block.hash
-	// 		})
-	// 	});
-	// 	return lightchain;
-	// }
-
-	/**
-	 * Return the blocks of the Blockchain as an Uint8Array
-	 */
-	// asBinary () {
-	//   const lightchain = this.asLightChain();
-	//   return new Uint8Array(msgpack.encode(lightchain))
-	// }
-
-	/**
-	 * Return the blocks of the Blockchain as a b64 string
-	 */
-	// asB64 () {
-	//   return Base64.fromUint8Array(this.asBinary())
-	// }
-
 
 	/**
 	 * Return the whole history of transactions
@@ -635,7 +478,7 @@ export class Blockchain {
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
-		const transaction = {
+		const transaction = new Transaction ({
 			type: Blockchain.TXTYPE.PAY,
 			date: dateToInt(d),
 			money: money,
@@ -644,9 +487,9 @@ export class Blockchain {
 			target: targetPublicKey,
 			signer: 0,
 			version: Blockchain.VERSION
-		}
+		})
 
-		const result = Blockchain.signtx(transaction, myPrivateKey)
+		const result = transaction.sign(myPrivateKey)
 		this.addTransaction(result)
 		this.removeMoney(money);
 		if (targetPublicKey === this.getMyPublicKey()) {

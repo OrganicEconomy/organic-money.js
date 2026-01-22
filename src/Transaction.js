@@ -18,6 +18,10 @@ export class Transaction {
         this.signature = txObj.h
     }
 
+    toString() {
+        return '[Transaction]'
+    }
+
     hash() {
         const tx = {
             d: dateToInt(this.date),

@@ -5,8 +5,9 @@ import { bytesToHex } from 'ethereum-cryptography/utils.js';
 
 import { Block } from '../src/Block.js';
 import { dateToInt } from '../src/crypto.js';
-import { makeBlockObj, makeBlock, makeTransactionObj, makeTransactions, privateKey1, publicKey1, makeTransaction } from './testUtils.js';
-import { Transaction } from '../src/Transaction.js';
+import { makeBlockObj, makeBlock, makeTransactionObj, makeTransactions, privateKey1, publicKey1, makeTransaction, publicKey3, publicKey2, privateKey2 } from './testUtils.js';
+import { Transaction, TXTYPE } from '../src/Transaction.js';
+import { UnauthorizedError } from '../src/errors.js';
 
 describe('Block', () => {
     describe('constructor', () => {
@@ -73,6 +74,23 @@ describe('Block', () => {
 
             assert.equal(result, expected)
         })
+
+        it('Should throw an error if block contains Cashes Papers and signer is me.', () => {
+            const transaction = makeTransaction({ type: TXTYPE.PAPER, target: publicKey2 })
+            const block = makeBlock({ transactions: [transaction], signed: false })
+
+            assert.throws(() => { block.sign(privateKey1) }, UnauthorizedError, 'Only Paper signer can seal a block with it.')
+        })
+
+        it('Should sign even if it contains Cashes Papers while signer is Paper signer.', () => {
+            const transaction = makeTransaction({ type: TXTYPE.PAPER, target: publicKey2 })
+            const block = makeBlock({ transactions: [transaction], signed: false })
+
+            const signature = block.sign(privateKey2)
+
+            assert.ok(signature)
+        })
+
     })
 
     describe('export', () => {
@@ -131,16 +149,16 @@ describe('Block', () => {
 
             block.merkle()
 
-            assert.equal(block.root, '4b0340c2b3f29fe7efd61de78f6a6e8b257f00fedeb677af02d3d48524755b32')
+            assert.equal(block.root, '5ace17daaa3c8ee199a4941cec7410dd7c6762c91b3f7b05bec69b2367ebb667')
         })
 
         it('Should set the merkle root (with 50 transactions).', () => {
             const transactions = makeTransactions(50, { date: new Date("2026-01-22"), incrementMoney: true })
-            const block = makeBlock({ transactions: transactions})
+            const block = makeBlock({ transactions: transactions })
 
             block.merkle()
 
-            assert.equal(block.root, 'd820b60047aebceb4100f1821c4f0de180760fad24b6b78a47fd7e07ce70577d')
+            assert.equal(block.root, '9d801d600194b677b1afc3b646d31a48bec21be88aa83927ab2884ebf6e9aefa')
         })
     })
 
@@ -221,6 +239,136 @@ describe('Block', () => {
             const result = block.isSigned()
 
             assert.isFalse(result)
+        })
+    })
+
+    describe('containsPaper', () => {
+        it('Should return false if the block has no PaperTransaction in it.', () => {
+            const transactions = [
+                makeTransaction({ type: TXTYPE.CREATE }),
+                makeTransaction({ type: TXTYPE.ENGAGE }),
+                makeTransaction({ type: TXTYPE.INIT }),
+                makeTransaction({ type: TXTYPE.PAY }),
+                makeTransaction({ type: TXTYPE.SETACTOR }),
+                makeTransaction({ type: TXTYPE.SETACTOR }),
+                makeTransaction({ type: TXTYPE.SETPAYER })
+            ]
+            const block = makeBlock({ transactions: transactions})
+
+            const result = block.containsPaper()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return true if only transaction is PaperTransaction.', () => {
+            const transactions = [
+                makeTransaction({ type: TXTYPE.PAPER })
+            ]
+            const block = makeBlock({ transactions: transactions})
+
+            const result = block.containsPaper()
+
+            assert.isTrue(result)
+        })
+
+        it('Should return true if any transaction is PaperTransaction.', () => {
+            const transactions = [
+                makeTransaction({ type: TXTYPE.PAPER }),
+                makeTransaction({ type: TXTYPE.CREATE }),
+                makeTransaction({ type: TXTYPE.ENGAGE }),
+                makeTransaction({ type: TXTYPE.INIT }),
+                makeTransaction({ type: TXTYPE.PAY }),
+                makeTransaction({ type: TXTYPE.SETACTOR }),
+                makeTransaction({ type: TXTYPE.SETACTOR }),
+                makeTransaction({ type: TXTYPE.SETPAYER })
+            ]
+            const block = makeBlock({ transactions: transactions})
+
+            const result = block.containsPaper()
+
+            assert.isTrue(result)
+        })
+
+        it('Should return true if many transactions are PaperTransaction.', () => {
+            const transactions = [
+                makeTransaction({ type: TXTYPE.PAPER }),
+                makeTransaction({ type: TXTYPE.CREATE }),
+                makeTransaction({ type: TXTYPE.PAPER }),
+                makeTransaction({ type: TXTYPE.INIT }),
+                makeTransaction({ type: TXTYPE.PAY }),
+                makeTransaction({ type: TXTYPE.PAPER }),
+                makeTransaction({ type: TXTYPE.SETACTOR }),
+                makeTransaction({ type: TXTYPE.PAPER })
+            ]
+            const block = makeBlock({ transactions: transactions})
+
+            const result = block.containsPaper()
+
+            assert.isTrue(result)
+        })
+    })
+
+    describe('getPapersHandler', () => {
+        it('Should return null if the block has no PaperTransaction in it.', () => {
+            const transactions = [
+                makeTransaction({ type: TXTYPE.CREATE }),
+                makeTransaction({ type: TXTYPE.ENGAGE }),
+                makeTransaction({ type: TXTYPE.INIT }),
+                makeTransaction({ type: TXTYPE.PAY }),
+                makeTransaction({ type: TXTYPE.SETACTOR }),
+                makeTransaction({ type: TXTYPE.SETACTOR }),
+                makeTransaction({ type: TXTYPE.SETPAYER })
+            ]
+            const block = makeBlock({ transactions: transactions})
+
+            const result = block.getPapersHandler()
+
+            assert.isNull(result)
+        })
+
+        it('Should return the holder if only transaction is PaperTransaction.', () => {
+            const transactions = [
+                makeTransaction({ type: TXTYPE.PAPER, target: publicKey3 })
+            ]
+            const block = makeBlock({ transactions: transactions})
+
+            const result = block.getPapersHandler()
+
+            assert.equal(result, publicKey3)
+        })
+
+        it('Should return the holder if any transaction is PaperTransaction.', () => {
+            const transactions = [
+                makeTransaction({ type: TXTYPE.PAPER, target: publicKey3 }),
+                makeTransaction({ type: TXTYPE.CREATE }),
+                makeTransaction({ type: TXTYPE.ENGAGE }),
+                makeTransaction({ type: TXTYPE.INIT }),
+                makeTransaction({ type: TXTYPE.PAY }),
+                makeTransaction({ type: TXTYPE.SETACTOR }),
+                makeTransaction({ type: TXTYPE.SETACTOR }),
+                makeTransaction({ type: TXTYPE.SETPAYER })
+            ]
+            const block = makeBlock({ transactions: transactions})
+
+            const result = block.getPapersHandler()
+
+            assert.equal(result, publicKey3)
+        })
+
+        it('Should throw error if two PaperTransaction have different holder.', () => {
+            const transactions = [
+                makeTransaction({ type: TXTYPE.PAPER, target: publicKey3 }),
+                makeTransaction({ type: TXTYPE.CREATE }),
+                makeTransaction({ type: TXTYPE.PAPER, target: publicKey3 }),
+                makeTransaction({ type: TXTYPE.INIT }),
+                makeTransaction({ type: TXTYPE.PAY }),
+                makeTransaction({ type: TXTYPE.PAPER, target: publicKey2 }),
+                makeTransaction({ type: TXTYPE.SETACTOR }),
+                makeTransaction({ type: TXTYPE.PAPER, target: publicKey3 })
+            ]
+            const block = makeBlock({ transactions: transactions})
+
+            assert.throws(() => { block.getPapersHandler() }, Error, 'Invalid Block : multi-origin Papers are not allowed.')
         })
     })
 })

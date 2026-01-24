@@ -49,8 +49,8 @@ export class CitizenBlockchain extends Blockchain {
 			type: Blockchain.TXTYPE.CREATE,
 			date: dateToInt(date),
 			source: publicFromPrivate(privateKey),
-			target: publicFromPrivate(privateKey),
-			signer: 0,
+			target: publicFromPrivate(privateKey), // TODO: if target is null, then target is source
+			signer: 0,  // TODO: inverse : signer must never me null; if source is null, then source is signer.
 			money: moneys,
 			invests: invests,
 		}
@@ -152,7 +152,7 @@ export class CitizenBlockchain extends Blockchain {
 			invests: [],
 			source: publicFromPrivate(myPrivateKey),
 			target: 0,
-			signer: referentPublicKey
+			signer: referentPublicKey // TODO: signer is me; referentPublicKey must be the target
 		}
 
 		const result = Blockchain.signtx(transaction, myPrivateKey)

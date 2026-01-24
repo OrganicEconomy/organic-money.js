@@ -810,33 +810,6 @@ describe('Blockchain', () => {
 		})
 		*/
 	})
-		
-
-	/**
-	describe('sealLastBlock', () => {
-		it('Should raise an error if block contains Cashes Papers and signer is me.', () => {
-			const bc = new Blockchain([validPaperdBlock(), validInitBlock(), validBirthBlock()])
-			delete bc.lastblock.hash
-
-			assert.throws(() => { bc.sealLastBlock(privateKey1) }, UnauthorizedError, 'Only Paper signer can seal a block with it.')
-		})
-
-		it('Should raise an error if block contains Cashes Papers and signer is not Paper signer.', () => {
-			const bc = new Blockchain([validPaperdBlock(), validInitBlock(), validBirthBlock()])
-			delete bc.lastblock.hash
-
-			assert.throws(() => { bc.sealLastBlock(privateKey2) }, UnauthorizedError, 'Only Paper signer can seal a block with it.')
-		})
-
-		it('Should sign the last block even if it contains Cashes Papers while signer is Paper signer.', () => {
-			const bc = new Blockchain([validPaperdBlock(), validInitBlock(), validBirthBlock()])
-			delete bc.lastblock.hash
-
-			const signature = bc.sealLastBlock(privateKey3)
-
-			assert.ok(signature)
-		})
-	})*/
 
 	describe('getMyPublicKey', () => {
 		it('Should return null for empty Blockchain.', () => {

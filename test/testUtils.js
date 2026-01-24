@@ -1,6 +1,6 @@
 import { Blockchain } from "../src/Blockchain.js"
 import { Block } from "../src/Block.js";
-import { Transaction } from "../src/Transaction.js"
+import { Transaction, TXTYPE, TransactionMaker } from "../src/Transaction.js"
 import { buildInvestIndexes, buildMoneyIndexes } from "../src/crypto.js"
 import { dateToInt } from '../src/crypto.js';
 
@@ -12,23 +12,26 @@ export const privateKey3 = 'f8a33b8aa0cbf892f1c9e617126711f7304d6e5cead1d592a8b4
 export const publicKey3 = '02f126a536777e95f23b5798b1e357dc2a4f5b1869b739c290b4b2efbc18eca6fd'
 
 export function makeTransactionObj(options = {}) {
+    return makeTransaction(options).export()
+}
+
+export function makeTransaction(options = {}) {
+
     const date = options.date || new Date()
-    const tx = new Transaction({
+    const tx = TransactionMaker.make({
         v: options.version || 1,
         d: dateToInt(date),
         p: options.target || publicKey1,
         s: options.signer || publicKey1,
         m: options.money || buildMoneyIndexes(date, options.moneycount || 0),
         i: options.invests || buildInvestIndexes(date, options.investscount || 0),
-        t: options.type || Blockchain.TXTYPE.CREATE,
-        h: options.signature || null
-    })    
-    tx.sign(options.signer || privateKey1)
-    return tx.export()
-}
-
-export function makeTransaction(options = {}) {
-    return new Transaction(makeTransactionObj(options))
+        t: options.type || TXTYPE.CREATE,
+        h: options.signature || 'notsetyet'
+    })   
+    if (tx.signature === 'notsetyet') {
+        tx.sign(options.sk || privateKey1)
+    } 
+    return tx
 }
 
 export function makeTransactions(count, options = {}) {
@@ -43,6 +46,10 @@ export function makeTransactions(count, options = {}) {
 }
 
 export function makeBlockObj(options = {}) {
+    return makeBlock(options).export()
+}
+
+export function makeBlock(options = {}) {
     const date = options.date || new Date()
     const transactions = options.transactions || []
 
@@ -61,9 +68,5 @@ export function makeBlockObj(options = {}) {
     if (options.signed) {
         block.sign(options.signer || privateKey1)
     }
-    return block.export()
-}
-
-export function makeBlock(options = {}) {
-    return new Block(makeBlockObj(options))
+    return block
 }

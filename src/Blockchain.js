@@ -17,19 +17,6 @@ export class Blockchain {
 	static get ECOREF_HASH() { return 'ec051c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a1' }
 	static get VERSION() { return 1 }
 
-	static get TXTYPE() {
-		return {
-			INIT: 0,
-			CREATE: 1,
-			PAY: 2,
-			ENGAGE: 3,
-			PAPER: 4,
-			SETADMIN: 5,
-			SETACTOR: 6,
-			SETPAYER: 7
-		}
-	}
-
 	/***********************************************************************
 	 *                           STATIC METHODS
 	 **********************************************************************/

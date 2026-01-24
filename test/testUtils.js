@@ -22,7 +22,7 @@ export function makeTransactionObj(options = {}) {
         i: options.invests || buildInvestIndexes(date, options.investscount || 0),
         t: options.type || Blockchain.TXTYPE.CREATE,
         h: options.signature || null
-    })
+    })    
     tx.sign(options.signer || privateKey1)
     return tx.export()
 }
@@ -31,9 +31,20 @@ export function makeTransaction(options = {}) {
     return new Transaction(makeTransactionObj(options))
 }
 
+export function makeTransactions(count, options = {}) {
+    const result = []
+    for (let i = 0; i < count; i++) {
+        if (options.incrementMoney) {
+            options.moneycount = i
+        }
+        result.push(makeTransaction(options))
+    }
+    return result
+}
+
 export function makeBlockObj(options = {}) {
     const date = options.date || new Date()
-    const txList = options.txList || []
+    const transactions = options.transactions || []
 
     const block = new Block({
         v: options.version || 1,
@@ -45,7 +56,7 @@ export function makeBlockObj(options = {}) {
         i: options.invests || [],
         t: options.total || 0,
         h: options.signature || null,
-        x: txList
+        x: transactions.map(x => x.export())
     })
     if (options.signed) {
         block.sign(options.signer || privateKey1)

@@ -5,7 +5,7 @@ import { bytesToHex } from 'ethereum-cryptography/utils.js';
 
 import { Block } from '../src/Block.js';
 import { dateToInt } from '../src/crypto.js';
-import { makeBlockObj, makeTransactionObj, privateKey1, publicKey1 } from './testUtils.js';
+import { makeBlockObj, makeBlock, makeTransactionObj, makeTransactions, privateKey1, publicKey1, makeTransaction } from './testUtils.js';
 import { Transaction } from '../src/Transaction.js';
 
 describe('Block', () => {
@@ -42,7 +42,7 @@ describe('Block', () => {
 
     describe('hash', () => {
         it('Should make valid hash of the transaction', () => {
-            const block = new Block(makeBlockObj(new Date('2026-01-21')))
+            const block = makeBlock({ date: new Date('2026-01-21') })
 
             const expected = '8bdc8f1436a86f07fdb4fad2d10a5d02499dd14e49d385aae6ac6b9a714c8d5c'
 
@@ -52,7 +52,7 @@ describe('Block', () => {
         })
 
         it('Should ignore existing hash.', () => {
-            const block = new Block(makeBlockObj(new Date('2026-01-21')))
+            const block = makeBlock({ date: new Date('2026-01-21') })
             block.signature = "titi"
 
             const expected = '8bdc8f1436a86f07fdb4fad2d10a5d02499dd14e49d385aae6ac6b9a714c8d5c'
@@ -65,7 +65,7 @@ describe('Block', () => {
 
     describe('sign', () => {
         it('Should sign the block if all is ok.', () => {
-            const block = new Block(makeBlockObj(new Date('2026-01-21')))
+            const block = makeBlock({ date: new Date('2026-01-21') })
 
             const expected = '30450221008ffc34f99a568b27dd3728c3edc04ba0f0af2bf676c411e62523ca9adc85e33a02200480b52a326655c6a8fc83bde1bf39daee657b559666a96141ed17f8bc07b087'
 
@@ -99,8 +99,8 @@ describe('Block', () => {
 
     describe('add', () => {
         it('Should add the given transaction in its array.', () => {
-            const block = new Block(makeBlockObj())
-            const transaction = new Transaction(makeTransactionObj())
+            const block = makeBlock()
+            const transaction = makeTransaction()
 
             block.add(transaction)
 
@@ -108,9 +108,9 @@ describe('Block', () => {
         })
 
         it('Should add the given transaction in first place.', () => {
-            const block = new Block(makeBlockObj())
-            const tx1 = new Transaction(makeTransactionObj(new Date(), 1))
-            const tx2 = new Transaction(makeTransactionObj(new Date(), 3))
+            const block = makeBlock()
+            const tx1 = makeTransaction({ moneycount: 1 })
+            const tx2 = makeTransaction({ moneycount: 2 })
 
             assert.notDeepEqual(tx1, tx2)
 
@@ -123,40 +123,38 @@ describe('Block', () => {
 
     describe('merkle', () => {
         it('Should set the merkle root based on its transactions.', () => {
-            const block = new Block(makeBlockObj())
-            const tx1 = new Transaction(makeTransactionObj(new Date("2026-01-22"), 1))
-            const tx2 = new Transaction(makeTransactionObj(new Date("2026-01-22"), 3))
+            const block = makeBlock()
+            const tx1 = makeTransaction({ date: new Date("2026-01-22"), moneycount: 1 })
+            const tx2 = makeTransaction({ date: new Date("2026-01-22"), moneycount: 3 })
             block.add(tx1)
             block.add(tx2)
 
             block.merkle()
 
-            assert.equal(block.root, 'e33e254c7307e9ad30e5c52c3f4526061971ba273d0b0e42e12135666f242649')
+            assert.equal(block.root, '4b0340c2b3f29fe7efd61de78f6a6e8b257f00fedeb677af02d3d48524755b32')
         })
 
         it('Should set the merkle root (with 50 transactions).', () => {
-            const block = new Block(makeBlockObj())
-            for (let i = 0; i < 50; i++) {
-                block.add(new Transaction(makeTransactionObj(new Date("2026-01-22"), i)))
-            }
+            const transactions = makeTransactions(50, { date: new Date("2026-01-22"), incrementMoney: true })
+            const block = makeBlock({ transactions: transactions})
 
             block.merkle()
 
-            assert.equal(block.root, '41edbced15c773e5b1aa989ff9f14386f0d187b23e65ebf5a487526967fb5513')
+            assert.equal(block.root, 'd820b60047aebceb4100f1821c4f0de180760fad24b6b78a47fd7e07ce70577d')
         })
     })
 
     describe('hasTransactions', () => {
         it('Should return false if no transaction in the block.', () => {
-            const block = new Block(makeBlockObj())
+            const block = makeBlock()
 
             const result = block.hasTransactions()
 
-            assert.isNotOk(result)
+            assert.isFalse(result)
         })
 
         it('Should return true if block has 1 transaction.', () => {
-            const block = new Block(makeBlockObj(new Date(), 0, 1))
+            const block = makeBlock({ transactions: [makeTransaction()] })
 
             const result = block.hasTransactions()
 
@@ -164,7 +162,7 @@ describe('Block', () => {
         })
 
         it('Should return true if block has multiple transactions.', () => {
-            const block = new Block(makeBlockObj(new Date(), 0, 12))
+            const block = makeBlock({ transactions: makeTransactions(12) })
 
             const result = block.hasTransactions()
 
@@ -174,7 +172,7 @@ describe('Block', () => {
 
     describe('lastTransaction', () => {
         it('Should return null if no transaction in the block.', () => {
-            const block = new Block(makeBlockObj())
+            const block = makeBlock()
 
             const result = block.lastTransaction
 
@@ -182,7 +180,7 @@ describe('Block', () => {
         })
 
         it('Should return the only transaction if block has 1.', () => {
-            const block = new Block(makeBlockObj(new Date(), 0, 1))
+            const block = makeBlock({ transactions: [makeTransaction()] })
 
             const result = block.lastTransaction
 
@@ -190,7 +188,7 @@ describe('Block', () => {
         })
 
         it('Should return first transaction if block has multiple transactions.', () => {
-            const block = new Block(makeBlockObj(new Date(), 0, 12))
+            const block = makeBlock({ transactions: makeTransactions(12) })
 
             const result = block.lastTransaction
 

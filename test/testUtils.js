@@ -17,17 +17,23 @@ export function makeTransactionObj(options = {}) {
 
 export function makeTransaction(options = {}) {
 
-    const date = options.date || new Date()
+    const date = "date" in options ? options.date : new Date()
     const tx = TransactionMaker.make({
-        v: options.version || 1,
+        v: "version" in options ? options.version : 1,
         d: dateToInt(date),
-        p: options.target || publicKey1,
-        s: options.signer || publicKey1,
-        m: options.money || buildMoneyIndexes(date, options.moneycount || 0),
-        i: options.invests || buildInvestIndexes(date, options.investscount || 0),
-        t: options.type || TXTYPE.CREATE,
-        h: options.signature || 'notsetyet'
-    })   
+        p: "target" in options ? options.target : publicKey1,
+        s: "signer" in options ? options.signer : publicKey1,
+        m: "money" in options ? options.money : [],
+        i: "invests" in options ? options.invests : [],
+        t: "type" in options ? options.type : TXTYPE.CREATE,
+        h: "signature" in options ? options.signature : 'notsetyet'
+    })
+    if (options.moneycount) {
+        tx.money = buildMoneyIndexes(date, options.moneycount || 0)
+    }
+    if (options.investscount) {
+        tx.invests = buildInvestIndexes(date, options.investscount || 0)
+    }
     if (tx.signature === 'notsetyet') {
         tx.sign(options.sk || privateKey1)
     } 

@@ -2,7 +2,7 @@ import { describe, it } from 'mocha';
 import { assert } from 'chai';
 
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TransactionMaker, TXTYPE } from '../src/Transaction.js';
-import { makeTransactionObj, privateKey1, publicKey1 } from './testUtils.js';
+import { makeTransactionObj, makeTransaction, privateKey1, publicKey1, publicKey3 } from './testUtils.js';
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
 
 describe('Transaction', () => {
@@ -165,6 +165,77 @@ describe('Transaction', () => {
             assert.deepEqual(result, bareTx)
         })
     })
+
+    describe('isValid', () => {
+        it('Should return false for invalid signature.', () => {
+            const tx = new Transaction(makeTransactionObj({
+                type: TXTYPE.INIT,
+                signature: 'anything but ok'
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if there is no signer.', () => {
+            const tx = new Transaction(makeTransactionObj({ type: TXTYPE.INIT }))
+            delete tx.signer
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if signer is invalid.', () => {
+            const tx = new Transaction(makeTransactionObj({ type: TXTYPE.INIT, signer: 'lapin' }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if date is invalid.', () => {
+            const tx = new Transaction(makeTransactionObj({ type: TXTYPE.INIT }))
+            tx.date = 'lapin'
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if date is future.', () => {
+            const tx = new Transaction(makeTransactionObj({ type: TXTYPE.INIT, date: new Date('2200-12-25')}))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if money is NOT an array.', () => {
+            const tx = new Transaction(makeTransactionObj({ type: TXTYPE.INIT, money: 12 }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if invests is NOT an array.', () => {
+            const tx = new Transaction(makeTransactionObj({ type: TXTYPE.INIT, invests: 12 }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return true if all is fine.', () => {
+            const tx = new Transaction(makeTransactionObj())
+
+            const result = tx.isValid()
+
+            assert.isTrue(result)
+        })
+    })
 })
 
 describe('TransactionMaker', () => {
@@ -221,6 +292,376 @@ describe('TransactionMaker', () => {
             const tx = TransactionMaker.make(makeTransactionObj({ type: TXTYPE.SETPAYER }))
 
             assert.isTrue(tx instanceof SetPayerTransaction)
+        })
+    })
+})
+
+describe('InitTransaction', () => {
+    describe('isValid', () => {
+
+        it('Should return false if money is NOT an empty array.', () => {
+            const tx = new InitTransaction(makeTransactionObj({ type: TXTYPE.INIT, money: ['A']}))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if invests is NOT an empty array.', () => {
+            const tx = new InitTransaction(makeTransactionObj({ type: TXTYPE.INIT, invests: ['A']}))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if type is NOT TXTYPE.INIT.', () => {
+            const tx = new InitTransaction(makeTransactionObj({ type: TXTYPE.CREATE }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is empty.', () => {
+            const tx = new InitTransaction(makeTransactionObj({ type: TXTYPE.INIT }))
+            delete tx.target
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return true if all is fine.', () => {
+            const tx = new InitTransaction(makeTransactionObj({ type: TXTYPE.INIT }))
+
+            const result = tx.isValid()
+
+            assert.isTrue(result)
+        })
+    })
+})
+
+describe('CreateTransaction', () => {
+    describe('isValid', () => {
+
+        it('Should return false if money is an empty array.', () => {
+            const tx = new CreateTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                target: "",
+                moneycount: 0,
+                investscount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if invests is an empty array.', () => {
+            const tx = new CreateTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                target: "",
+                moneycount: 1,
+                investscount: 0
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if type is NOT TXTYPE.CREATE.', () => {
+            const tx = new CreateTransaction(makeTransactionObj({
+                type: TXTYPE.INIT,
+                target: "",
+                moneycount: 1,
+                investscount: 1
+        }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is NOT empty (because creation is for myself only).', () => {
+            const tx = new CreateTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                target: publicKey1,
+                moneycount: 1,
+                investscount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if money count and invests count are differents.', () => {
+            const tx = new CreateTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                target: "",
+                moneycount: 1,
+                investscount: 2
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return true if all is fine.', () => {
+            const tx = new CreateTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                target: "",
+                moneycount: 1,
+                investscount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isTrue(result)
+        })
+    })
+})
+
+describe('PayTransaction', () => {
+    describe('isValid', () => {
+
+        it('Should return false if money is an empty array.', () => {
+            const tx = new PayTransaction(makeTransactionObj({
+                type: TXTYPE.PAY,
+                moneycount: 0
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if invests is NOT an empty array.', () => {
+            const tx = new PayTransaction(makeTransactionObj({
+                type: TXTYPE.PAY,
+                moneycount: 1,
+                investscount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if type is NOT TXTYPE.PAY.', () => {
+            const tx = new PayTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                moneycount: 1
+        }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is empty.', () => {
+            const tx = new PayTransaction(makeTransactionObj({
+                type: TXTYPE.PAY,
+                target: "",
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is NOT 66 char length.', () => {
+            const tx = new PayTransaction(makeTransactionObj({
+                type: TXTYPE.PAY,
+                target: "123",
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return true if all is fine.', () => {
+            const tx = new PayTransaction(makeTransactionObj({
+                type: TXTYPE.PAY,
+                target: publicKey3,
+                moneycount: 1,
+                investscount: 0
+            }))
+
+            const result = tx.isValid()
+
+            assert.isTrue(result)
+        })
+    })
+})
+
+describe('EngageTransaction', () => {
+    describe('isValid', () => {
+
+        it('Should return false if money AND invests are both empty arrays.', () => {
+            const tx = new EngageTransaction(makeTransactionObj({
+                type: TXTYPE.ENGAGE,
+                moneycount: 0,
+                investscount: 0
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if money AND invests are both NOT empty arrays.', () => {
+            const tx = new EngageTransaction(makeTransactionObj({
+                type: TXTYPE.ENGAGE,
+                moneycount: 1,
+                investscount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if type is NOT TXTYPE.ENGAGE.', () => {
+            const tx = new EngageTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                moneycount: 1
+        }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is empty.', () => {
+            const tx = new EngageTransaction(makeTransactionObj({
+                type: TXTYPE.ENGAGE,
+                target: "",
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is NOT 66 char length.', () => {
+            const tx = new EngageTransaction(makeTransactionObj({
+                type: TXTYPE.ENGAGE,
+                target: "123",
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return true if all is fine (money engaged).', () => {
+            const tx = new EngageTransaction(makeTransactionObj({
+                type: TXTYPE.ENGAGE,
+                target: publicKey3,
+                moneycount: 12,
+                investscount: 0
+            }))
+
+            const result = tx.isValid()
+
+            assert.isTrue(result)
+        })
+
+        it('Should return true if all is fine (invests engaged).', () => {
+            const tx = new EngageTransaction(makeTransactionObj({
+                type: TXTYPE.ENGAGE,
+                target: publicKey3,
+                moneycount: 0,
+                investscount: 12
+            }))
+
+            const result = tx.isValid()
+
+            assert.isTrue(result)
+        })
+    })
+})
+
+describe('PaperTransaction', () => {
+    describe('isValid', () => {
+
+        it('Should return false if money is an empty array.', () => {
+            const tx = new PaperTransaction(makeTransactionObj({
+                type: TXTYPE.PAPER,
+                moneycount: 0
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if invests is NOT an empty array.', () => {
+            const tx = new PaperTransaction(makeTransactionObj({
+                type: TXTYPE.PAPER,
+                moneycount: 1,
+                investscount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if type is NOT TXTYPE.PAPER.', () => {
+            const tx = new PaperTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                moneycount: 1
+        }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is empty.', () => {
+            const tx = new PaperTransaction(makeTransactionObj({
+                type: TXTYPE.PAPER,
+                target: "",
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is NOT 66 char length.', () => {
+            const tx = new PaperTransaction(makeTransactionObj({
+                type: TXTYPE.PAPER,
+                target: "123",
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return true if all is fine.', () => {
+            const tx = new PaperTransaction(makeTransactionObj({
+                type: TXTYPE.PAPER,
+                moneycount: 12,
+                investscount: 0
+            }))
+
+            const result = tx.isValid()
+
+            assert.isTrue(result)
         })
     })
 })

@@ -73,6 +73,15 @@ export class Block {
 
     // TODO : cashPaper must throw error if signer is different from another paper in the block
 
+    /**
+     * TODO: throw error if last block is already signed
+	 * TODO: add method "isSigned(block)"
+	 * TODO: add MerkleRoot
+	 * TODO: Add signer (based on privatekey)
+	 * TODO: Add closedate
+     * @param {*} sk 
+     * @returns 
+     */
     sign(sk) {
 /*
         const myPublicKey = this.getMyPublicKey()

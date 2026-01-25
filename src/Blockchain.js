@@ -367,22 +367,8 @@ export class Blockchain {
 
 	/**
 	 * Sign the last block of the Blockchain
-	 * If there is at least one Paper cashed in the block, raise an error if the block
-	 * signer is not the Paper signer.
-	 * 
-	 * TODO: throw error if last block is already signed
-	 * TODO: add method "isSigned(block)"
-	 * TODO: add MerkleRoot
-	 * TODO: Add signer (based on privatekey)
-	 * TODO: Add closedate
 	 */
 	sealLastBlock(privateKey) {
-		const myPublicKey = this.getMyPublicKey()
-		for (let tx of this.lastblock.transactions) {
-			if (tx.type === Blockchain.TXTYPE.PAPER && publicFromPrivate(privateKey) !== tx.signer) {
-				throw new UnauthorizedError('Only Paper signer can seal a block with it.')
-			}
-		}
 		return this.lastblock.sign(privateKey)
 	}
 

@@ -3,7 +3,7 @@ import { sha256 } from 'ethereum-cryptography/sha256.js'
 
 import { dateToInt, intToDate } from "./crypto.js"
 import { hexToBytes, toHex } from 'ethereum-cryptography/utils.js'
-import { signSync } from 'ethereum-cryptography/secp256k1.js'
+import { signSync, verify } from 'ethereum-cryptography/secp256k1.js'
 
 export const TXTYPE = {
     INIT: 1,
@@ -36,14 +36,14 @@ export class TransactionMaker {
             case TXTYPE.SETPAYER:
                 return new SetPayerTransaction(txObj)
             default:
-                throw new Error(`Invalid transaction type ${ txObj.t }. Allowed are ${JSON.stringify(TXTYPE) }`)
+                throw new Error(`Invalid transaction type ${txObj.t}. Allowed are ${JSON.stringify(TXTYPE)}`)
         }
     }
 }
 export class Transaction {
 
     constructor(txObj) {
-        if (!txObj.v || !txObj.d || !txObj.s || !txObj.p || !txObj.m || !txObj.i || !txObj.t || !txObj.h) {
+        if (!("v" in txObj && "d" in txObj && "s" in txObj && "p" in txObj && "m" in txObj && "i" in txObj && "t" in txObj && "h" in txObj)) {
             throw new Error('Fields "v" (Version), "d" (date), "s" (signer), "p" (target), "m" (money), "i" (invests), "t" (type) and "h" (signature) are mandatory.')
         }
         this.version = txObj.v
@@ -98,31 +98,76 @@ export class Transaction {
     isPaper() {
         return this.type === TXTYPE.PAPER
     }
+
+    isValid() {
+        return !!this.signer &&
+            this.signer.length === 66 &&
+            this.date instanceof Date &&
+            this.date <= new Date() &&
+            Object.prototype.toString.call(this.money) == '[object Array]' &&
+            Object.prototype.toString.call(this.invests) == '[object Array]' &&
+            verify(this.signature, this.hash(), this.signer)
+    }
 }
 
 export class InitTransaction extends Transaction {
-
+    isValid() {
+        return super.isValid() &&
+            !!this.target &&
+            this.target.length >= 0 &&
+            this.money.length === 0 &&
+            this.invests.length === 0 &&
+            this.type === TXTYPE.INIT
+    }
 }
 
 export class CreateTransaction extends Transaction {
-    
+    isValid() {
+        return super.isValid() &&
+        this.invests.length > 0 &&
+        this.money.length > 0 &&
+        this.money.length === this.invests.length &&
+        this.type === TXTYPE.CREATE &&
+        this.target === ""
+    }
 }
 
 export class PayTransaction extends Transaction {
-    
+    isValid() {
+        return super.isValid() &&
+        this.invests.length === 0 &&
+        this.money.length > 0 &&
+        this.type === TXTYPE.PAY &&
+        !! this.target &&
+        this.target.length === 66
+    }
 }
 export class EngageTransaction extends Transaction {
-    
+    isValid() {
+        return super.isValid() &&
+        !(this.invests.length > 0 && this.money.length > 0) &&
+        !(this.invests.length === 0 && this.money.length === 0) &&
+        this.type == TXTYPE.ENGAGE &&
+        !! this.target &&
+        this.target.length === 66
+    }
 }
 export class PaperTransaction extends Transaction {
-    
+    isValid() {
+        return super.isValid() &&
+        this.type == TXTYPE.PAPER &&
+        this.money.length > 0 &&
+        this .invests.length === 0 &&
+        !! this.target &&
+        this.target.length === 66
+    }
 }
 export class SetAdminTransaction extends Transaction {
-    
+
 }
 export class SetActorTransaction extends Transaction {
-    
+
 }
 export class SetPayerTransaction extends Transaction {
-    
+
 }

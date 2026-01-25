@@ -665,3 +665,219 @@ describe('PaperTransaction', () => {
         })
     })
 })
+
+describe('SetAdminTransaction', () => {
+    describe('isValid', () => {
+
+        it('Should return false if money is NOT an empty array.', () => {
+            const tx = new SetAdminTransaction(makeTransactionObj({
+                type: TXTYPE.SETADMIN,
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if invests is NOT an empty array.', () => {
+            const tx = new SetAdminTransaction(makeTransactionObj({
+                type: TXTYPE.SETADMIN,
+                investscount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if type is NOT TXTYPE.SETADMIN.', () => {
+            const tx = new SetAdminTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                moneycount: 1
+        }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is empty.', () => {
+            const tx = new SetAdminTransaction(makeTransactionObj({
+                type: TXTYPE.SETADMIN,
+                target: ""
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is NOT 66 char length.', () => {
+            const tx = new SetAdminTransaction(makeTransactionObj({
+                type: TXTYPE.SETADMIN,
+                target: "123"
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return true if all is fine.', () => {
+            const tx = new SetAdminTransaction(makeTransactionObj({
+                type: TXTYPE.SETADMIN,
+                moneycount: 0,
+                investscount: 0
+            }))
+
+            const result = tx.isValid()
+
+            assert.isTrue(result)
+        })
+    })
+})
+
+describe('SetActorTransaction', () => {
+    describe('isValid', () => {
+
+        it('Should return false if money is NOT an empty array.', () => {
+            const tx = new SetActorTransaction(makeTransactionObj({
+                type: TXTYPE.SETACTOR,
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if invests is NOT an empty array.', () => {
+            const tx = new SetActorTransaction(makeTransactionObj({
+                type: TXTYPE.SETACTOR,
+                investscount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if type is NOT TXTYPE.SETACTOR.', () => {
+            const tx = new SetActorTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                moneycount: 1
+        }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is empty.', () => {
+            const tx = new SetActorTransaction(makeTransactionObj({
+                type: TXTYPE.SETACTOR,
+                target: ""
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is NOT 66 char length.', () => {
+            const tx = new SetActorTransaction(makeTransactionObj({
+                type: TXTYPE.SETACTOR,
+                target: "123"
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return true if all is fine.', () => {
+            const tx = new SetActorTransaction(makeTransactionObj({
+                type: TXTYPE.SETACTOR,
+                moneycount: 0,
+                investscount: 0
+            }))
+
+            const result = tx.isValid()
+
+            assert.isTrue(result)
+        })
+    })
+})
+
+describe('SetPayerTransaction', () => {
+    describe('isValid', () => {
+
+        it('Should return false if money is NOT an empty array.', () => {
+            const tx = new SetPayerTransaction(makeTransactionObj({
+                type: TXTYPE.SETPAYER,
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if invests is NOT an empty array.', () => {
+            const tx = new SetPayerTransaction(makeTransactionObj({
+                type: TXTYPE.SETPAYER,
+                investscount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if type is NOT TXTYPE.SETPAYER.', () => {
+            const tx = new SetPayerTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                moneycount: 1
+        }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is empty.', () => {
+            const tx = new SetPayerTransaction(makeTransactionObj({
+                type: TXTYPE.SETPAYER,
+                target: ""
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is NOT 66 char length.', () => {
+            const tx = new SetPayerTransaction(makeTransactionObj({
+                type: TXTYPE.SETPAYER,
+                target: "123"
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return true if all is fine.', () => {
+            const tx = new SetPayerTransaction(makeTransactionObj({
+                type: TXTYPE.SETPAYER,
+                moneycount: 0,
+                investscount: 0
+            }))
+
+            const result = tx.isValid()
+
+            assert.isTrue(result)
+        })
+    })
+})

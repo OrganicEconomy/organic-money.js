@@ -163,11 +163,32 @@ export class PaperTransaction extends Transaction {
     }
 }
 export class SetAdminTransaction extends Transaction {
-
+    isValid() {
+        return super.isValid() &&
+        this.type == TXTYPE.SETADMIN &&
+        this.money.length === 0 &&
+        this .invests.length === 0 &&
+        !! this.target &&
+        this.target.length === 66
+    }
 }
 export class SetActorTransaction extends Transaction {
-
+    isValid() {
+        return super.isValid() &&
+        this.type == TXTYPE.SETACTOR &&
+        this.money.length === 0 &&
+        this .invests.length === 0 &&
+        !! this.target &&
+        this.target.length === 66
+    }
 }
 export class SetPayerTransaction extends Transaction {
-
+    isValid() {
+        return super.isValid() &&
+        this.type == TXTYPE.SETPAYER &&
+        this.money.length === 0 &&
+        this .invests.length === 0 &&
+        !! this.target &&
+        this.target.length === 66
+    }
 }

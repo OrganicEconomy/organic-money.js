@@ -6,7 +6,7 @@ import { encode, decode } from 'msgpack-lite'
 import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { publicFromPrivate, dateToInt, intToDate } from './crypto.js'
 
-import { Transaction } from './Transaction.js'
+import { CreateTransaction, PayTransaction, Transaction, TXTYPE } from './Transaction.js'
 import { Block } from './Block.js'
 
 export class Blockchain {
@@ -121,7 +121,7 @@ export class Blockchain {
 	 *                            UTILS METHODS
 	 **********************************************************************/
 
-	add(block) {
+	addBlock(block) {
 		if (!this.isEmpty() && !this.lastblock.isSigned()) {
 			throw new UnauthorizedError('Cannot add block if previous is not signed.')
 		}
@@ -396,6 +396,7 @@ export class Blockchain {
 	/**
 	 * Return the public key written in the last creation block or in the
 	 * initialization block
+	 * TODO: call block.getMyPublicKey()
 	 */
 	getMyPublicKey() {
 		for (let block of this.blocks) {
@@ -405,8 +406,8 @@ export class Blockchain {
 			} else if (block.transactions.length > 0) {
 				// Case 2: Standard block => look in transactions
 				for (let tx of block.transactions) {
-					if (tx.type === Blockchain.TXTYPE.CREATE) {
-						return tx.source
+					if (tx instanceof CreateTransaction) {
+						return tx.signer
 					}
 				}
 			}
@@ -427,12 +428,13 @@ export class Blockchain {
 	income(transaction) {
 		const myPublicKey = this.getMyPublicKey()
 		if (transaction.target !== myPublicKey ||
-			transaction.type !== Blockchain.TXTYPE.PAY ||
-			!Blockchain.isValidTransaction(transaction)
+			transaction.type !== TXTYPE.PAY ||
+			!transaction.isValid()
 		) {
 			throw new Error('Invalid transaction')
 		}
 		this.addTransaction(transaction)
+		console.log(transaction.money.length)
 		this.lastblock.total += transaction.money.length
 
 		return transaction
@@ -451,23 +453,14 @@ export class Blockchain {
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
-		const transaction = new Transaction ({
-			type: Blockchain.TXTYPE.PAY,
-			date: dateToInt(d),
-			money: money,
-			source: publicFromPrivate(myPrivateKey),
-			invests: [],
-			target: targetPublicKey,
-			signer: 0,
-			version: Blockchain.VERSION
-		})
+		const transaction = new PayTransaction (myPrivateKey, targetPublicKey, d, money)
 
-		const result = transaction.sign(myPrivateKey)
-		this.addTransaction(result)
-		this.removeMoney(money);
+		this.addTransaction(transaction)
+		this.removeMoney(money)
+
 		if (targetPublicKey === this.getMyPublicKey()) {
-			this.lastblock.total += result.money.length
+			this.lastblock.total += transaction.money.length
 		}
-		return result;
+		return transaction
 	}
 }

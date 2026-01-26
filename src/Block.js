@@ -5,7 +5,7 @@ import { MerkleTree } from 'merkletreejs'
 import { signSync, verify } from 'ethereum-cryptography/secp256k1.js'
 
 import { dateToInt, intToDate, publicFromPrivate } from "./crypto.js"
-import { PaperTransaction, Transaction, TXTYPE } from './Transaction.js'
+import { PaperTransaction, Transaction, TransactionMaker, TXTYPE } from './Transaction.js'
 import { UnauthorizedError } from './errors.js'
 
 export class Block {
@@ -20,7 +20,7 @@ export class Block {
         this.invests = blockObj.i
         this.total = blockObj.t
         this.signature = blockObj.h
-        this.transactions = blockObj.x.map(tx => new Transaction(tx))
+        this.transactions = blockObj.x.map(tx => TransactionMaker.make(tx))
     }
 
     toString() {

@@ -56,21 +56,27 @@ export function makeBlockObj(options = {}) {
 }
 
 export function makeBlock(options = {}) {
-    const date = options.date || new Date()
-    const transactions = options.transactions || []
+    const date = "date" in options ? options.date : new Date()
+    const transactions = "transactions" in options ? options.transactions : []
 
     const block = new Block({
-        v: options.version || 1,
+        v: "version" in options ? options.version : 1,
         d: dateToInt(date),
-        p: options.previousHash || Blockchain.REF_HASH,
-        s: options.signer || publicKey1,
-        r: options.root || 'randomMerkleroot',
-        m: options.money || [],
-        i: options.invests || [],
-        t: options.total || 0,
-        h: options.signature || null,
+        p: "previousHash" in options ? options.previousHash : "",
+        s: "signer" in options ? options.signer : publicKey1,
+        r: "root" in options ? options.root : 'randomMerkleroot',
+        m: "money" in options ? options.money : [],
+        i: "invests" in options ? options.invests : [],
+        t: "total" in options ? options.total : 0,
+        h: "signature" in options ? options.signature : "",
         x: transactions.map(x => x.export())
     })
+    if (options.moneycount) {
+        block.money = buildMoneyIndexes(date, options.moneycount || 0)
+    }
+    if (options.investscount) {
+        block.invests = buildInvestIndexes(date, options.investscount || 0)
+    }
     if (options.signed) {
         block.sign(options.signer || privateKey1)
     }

@@ -2,8 +2,10 @@ import { describe, it } from 'mocha';
 import { assert } from 'chai';
 
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TransactionMaker, TXTYPE } from '../src/Transaction.js';
-import { makeTransactionObj, makeTransaction, privateKey1, publicKey1, publicKey3 } from './testUtils.js';
+import { makeTransactionObj, makeTransaction, privateKey1, publicKey1, publicKey3, publicKey2, privateKey2 } from './testUtils.js';
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
+import { buildMoneyIndexes } from '../src/crypto.js';
+import { Blockchain } from '../src/Blockchain.js';
 
 describe('Transaction', () => {
     describe('constructor', () => {
@@ -426,6 +428,42 @@ describe('CreateTransaction', () => {
 })
 
 describe('PayTransaction', () => {
+
+    describe('constructor', () => {
+        it('Should accept an object as unique parameter.', () => {
+            const tx = new PayTransaction(makeTransactionObj({
+                type: TXTYPE.PAY,
+                moneycount: 1,
+                date: new Date("2026-01-26"),
+                investscount: 3,
+                signer: publicKey3,
+                target: publicKey2,
+                version: 12
+            }))
+
+            assert.equal(tx.type, TXTYPE.PAY)
+            assert.equal(tx.money.length, 1)
+            assert.equal(tx.invests.length, 3)
+            assert.equal(tx.date.getDate(), new Date("2026-01-26").getDate())
+            assert.equal(tx.signer, publicKey3)
+            assert.equal(tx.target, publicKey2)
+            assert.equal(tx.version, 12)
+        })
+
+        it('Should accept 4 parameters : signer sk, target pk, date and money.', () => {
+            const tx = new PayTransaction(privateKey2, publicKey3, new Date("2026-01-26"), buildMoneyIndexes(new Date("2026-01-24"), 4))
+
+            assert.equal(tx.type, TXTYPE.PAY)
+            assert.equal(tx.money.length, 4)
+            assert.equal(tx.invests.length, 0)
+            assert.equal(tx.date.getDate(), new Date("2026-01-26").getDate())
+            assert.equal(tx.signer, publicKey2)
+            assert.equal(tx.target, publicKey3)
+            assert.equal(tx.version, Blockchain.VERSION)
+            assert.isTrue(tx.isValid())
+        })
+    })
+
     describe('isValid', () => {
 
         it('Should return false if money is an empty array.', () => {
@@ -740,7 +778,6 @@ describe('SetAdminTransaction', () => {
 
 describe('SetActorTransaction', () => {
     describe('isValid', () => {
-
         it('Should return false if money is NOT an empty array.', () => {
             const tx = new SetActorTransaction(makeTransactionObj({
                 type: TXTYPE.SETACTOR,
@@ -812,7 +849,6 @@ describe('SetActorTransaction', () => {
 
 describe('SetPayerTransaction', () => {
     describe('isValid', () => {
-
         it('Should return false if money is NOT an empty array.', () => {
             const tx = new SetPayerTransaction(makeTransactionObj({
                 type: TXTYPE.SETPAYER,

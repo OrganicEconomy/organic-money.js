@@ -1,9 +1,10 @@
 import { encode, decode } from 'msgpack-lite'
 import { sha256 } from 'ethereum-cryptography/sha256.js'
 
-import { dateToInt, intToDate } from "./crypto.js"
+import { dateToInt, intToDate, publicFromPrivate } from "./crypto.js"
 import { hexToBytes, toHex } from 'ethereum-cryptography/utils.js'
 import { signSync, verify } from 'ethereum-cryptography/secp256k1.js'
+import { Blockchain } from './Blockchain.js'
 
 export const TXTYPE = {
     INIT: 1,
@@ -133,6 +134,24 @@ export class CreateTransaction extends Transaction {
 }
 
 export class PayTransaction extends Transaction {
+    constructor(objOrSk, targetPk=null, date=null, money=[]) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.PAY,
+                m: money,
+                i: [],
+                d: dateToInt(date),
+                s: publicFromPrivate(objOrSk),
+                p: targetPk,
+                h: ""
+            })
+            this.sign(objOrSk)
+        }
+    }
+
     isValid() {
         return super.isValid() &&
         this.invests.length === 0 &&
@@ -142,6 +161,7 @@ export class PayTransaction extends Transaction {
         this.target.length === 66
     }
 }
+
 export class EngageTransaction extends Transaction {
     isValid() {
         return super.isValid() &&
@@ -152,6 +172,7 @@ export class EngageTransaction extends Transaction {
         this.target.length === 66
     }
 }
+
 export class PaperTransaction extends Transaction {
     isValid() {
         return super.isValid() &&
@@ -162,6 +183,7 @@ export class PaperTransaction extends Transaction {
         this.target.length === 66
     }
 }
+
 export class SetAdminTransaction extends Transaction {
     isValid() {
         return super.isValid() &&
@@ -172,6 +194,7 @@ export class SetAdminTransaction extends Transaction {
         this.target.length === 66
     }
 }
+
 export class SetActorTransaction extends Transaction {
     isValid() {
         return super.isValid() &&
@@ -182,6 +205,7 @@ export class SetActorTransaction extends Transaction {
         this.target.length === 66
     }
 }
+
 export class SetPayerTransaction extends Transaction {
     isValid() {
         return super.isValid() &&

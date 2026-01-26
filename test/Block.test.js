@@ -6,8 +6,9 @@ import { bytesToHex } from 'ethereum-cryptography/utils.js';
 import { Block } from '../src/Block.js';
 import { dateToInt } from '../src/crypto.js';
 import { makeBlockObj, makeBlock, makeTransactionObj, makeTransactions, privateKey1, publicKey1, makeTransaction, publicKey3, publicKey2, privateKey2 } from './testUtils.js';
-import { Transaction, TXTYPE } from '../src/Transaction.js';
+import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
 import { UnauthorizedError } from '../src/errors.js';
+import { Blockchain } from '../src/Blockchain.js';
 
 describe('Block', () => {
     describe('constructor', () => {
@@ -39,11 +40,38 @@ describe('Block', () => {
             assert.equal(block.signature, 'signature')
             assert.deepEqual(block.transactions, [])
         })
+
+        it('Should make correct instance belonging on types.', () => {
+            const txCreate = makeTransaction({ type: TXTYPE.CREATE })
+            const txPay = makeTransaction({ type: TXTYPE.PAY })
+            const txPaper = makeTransaction({ type: TXTYPE.PAPER })
+            const txEngage = makeTransaction({ type: TXTYPE.ENGAGE })
+            const txInit = makeTransaction({ type: TXTYPE.INIT })
+            const txSetActor = makeTransaction({ type: TXTYPE.SETACTOR })
+            const txSetAdmin = makeTransaction({ type: TXTYPE.SETADMIN })
+            const txSetPayer = makeTransaction({ type: TXTYPE.SETPAYER })
+
+            const block = new Block(makeBlockObj({
+                transactions: [txCreate, txPay, txPaper, txEngage, txInit, txSetActor, txSetAdmin, txSetPayer]
+            }))
+
+            assert.isTrue(block.transactions[0] instanceof CreateTransaction)
+            assert.isTrue(block.transactions[1] instanceof PayTransaction)
+            assert.isTrue(block.transactions[2] instanceof PaperTransaction)
+            assert.isTrue(block.transactions[3] instanceof EngageTransaction)
+            assert.isTrue(block.transactions[4] instanceof InitTransaction)
+            assert.isTrue(block.transactions[5] instanceof SetActorTransaction)
+            assert.isTrue(block.transactions[6] instanceof SetAdminTransaction)
+            assert.isTrue(block.transactions[7] instanceof SetPayerTransaction)
+        })
     })
 
     describe('hash', () => {
         it('Should make valid hash of the transaction', () => {
-            const block = makeBlock({ date: new Date('2026-01-21') })
+            const block = makeBlock({
+                date: new Date('2026-01-21'),
+                previousHash: Blockchain.REF_HASH
+            })
 
             const expected = '8bdc8f1436a86f07fdb4fad2d10a5d02499dd14e49d385aae6ac6b9a714c8d5c'
 
@@ -53,7 +81,10 @@ describe('Block', () => {
         })
 
         it('Should ignore existing hash.', () => {
-            const block = makeBlock({ date: new Date('2026-01-21') })
+            const block = makeBlock({
+                date: new Date('2026-01-21'),
+                previousHash: Blockchain.REF_HASH
+            })
             block.signature = "titi"
 
             const expected = '8bdc8f1436a86f07fdb4fad2d10a5d02499dd14e49d385aae6ac6b9a714c8d5c'
@@ -66,7 +97,10 @@ describe('Block', () => {
 
     describe('sign', () => {
         it('Should sign the block if all is ok.', () => {
-            const block = makeBlock({ date: new Date('2026-01-21') })
+            const block = makeBlock({
+                date: new Date('2026-01-21'),
+                previousHash: Blockchain.REF_HASH
+            })
 
             const expected = '30450221008ffc34f99a568b27dd3728c3edc04ba0f0af2bf676c411e62523ca9adc85e33a02200480b52a326655c6a8fc83bde1bf39daee657b559666a96141ed17f8bc07b087'
 

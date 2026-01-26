@@ -1,14 +1,13 @@
 import { describe, it } from 'mocha';
 import { assert } from 'chai';
-import { sha256 } from 'ethereum-cryptography/sha256.js'
-import { MerkleTree } from 'merkletreejs'
-import { hexToBytes } from 'ethereum-cryptography/utils.js';
+import nodeassert from 'node:assert';
 
 
 import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { Blockchain } from '../src/Blockchain.js';
 import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3, makeBlockObj, makeTransactionObj, makeBlock, makeTransaction } from './testUtils.js'
-import { randomPrivateKey, aesEncrypt, aesDecrypt, dateToInt, intToDate } from '../src/crypto.js'
+import { TXTYPE } from '../src/Transaction.js';
+import { sign } from 'node:crypto';
 
 describe('Blockchain', () => {
 	const validBirthBlock = () => {
@@ -285,8 +284,8 @@ describe('Blockchain', () => {
 
 	describe('constructor', () => {
 		it('Should load given blocks objects to Blocks.', () => {
-			const blockObj1  = makeBlockObj(new Date(), 1, 1, 0, true)
-			const blockObj2  = makeBlockObj(new Date(), 2, 2, 0, false)
+			const blockObj1 = makeBlockObj(new Date(), 1, 1, 0, true)
+			const blockObj2 = makeBlockObj(new Date(), 2, 2, 0, false)
 			const bc = new Blockchain([blockObj1, blockObj2])
 
 			assert.equal(bc.blocks.length, 2)
@@ -296,30 +295,30 @@ describe('Blockchain', () => {
 
 		it('Should raise an error if previous block is not signed.', () => {
 			const bc = new Blockchain()
-			const block  = makeBlock(new Date(), 1, 1, 0, false)
+			const block = makeBlock()
 
-			bc.add(block)
+			bc.addBlock(block)
 
-			assert.throws(() => { bc.add(makeBlock(new Date())) }, UnauthorizedError, 'Cannot add block if previous is not signed.')
+			assert.throws(() => { bc.addBlock(makeBlock()) }, UnauthorizedError, 'Cannot add block if previous is not signed.')
 		})
 	})
 
-	describe('add', () => {
+	describe('addBlock', () => {
 		it('Should add the given block to the blockchain.', () => {
 			const bc = new Blockchain()
 
-			bc.add(makeBlock(new Date(), 1, 1, 0, true))
+			bc.addBlock(makeBlock(new Date(), 1, 1, 0, true))
 
 			assert.equal(bc.blocks.length, 1)
 		})
 
 		it('Should raise an error if previous block is not signed.', () => {
 			const bc = new Blockchain()
-			const block  = makeBlock(new Date(), 1, 1, 0, false)
+			const block = makeBlock(new Date(), 1, 1, 0, false)
 
-			bc.add(block)
+			bc.addBlock(block)
 
-			assert.throws(() => { bc.add(makeBlock(new Date())) }, UnauthorizedError, 'Cannot add block if previous is not signed.')
+			assert.throws(() => { bc.addBlock(makeBlock(new Date())) }, UnauthorizedError, 'Cannot add block if previous is not signed.')
 		})
 	})
 
@@ -482,8 +481,6 @@ describe('Blockchain', () => {
 		})
 	})*/
 
-
-
 	describe('isValid', () => {
 		it('Should return true for initialized blockchain.', () => {
 			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
@@ -506,7 +503,7 @@ describe('Blockchain', () => {
 		it('Should return the only one Transaction if there is only one.', () => {
 			const blockchain = new Blockchain()
 			const block = makeBlock(new Date(), 1, 1, 0)
-			blockchain.add(block)
+			blockchain.addBlock(block)
 
 			const result = blockchain.lastTransaction
 
@@ -515,10 +512,10 @@ describe('Blockchain', () => {
 
 		it('Should return the Transaction from last block.', () => {
 			const blockchain = new Blockchain()
-			const block1 = makeBlock({ signed : true })
+			const block1 = makeBlock({ signed: true })
 			const block2 = makeBlock()
-			blockchain.add(block1)
-			blockchain.add(block2)
+			blockchain.addBlock(block1)
+			blockchain.addBlock(block2)
 
 			const result = blockchain.lastTransaction
 
@@ -725,7 +722,7 @@ describe('Blockchain', () => {
 			const blockObj2 = makeBlockObj(new Date(), 1, 2, 0, false)
 			const blockchain = new Blockchain([blockObj2, blockObj1])
 
-			const tx = makeTransaction(new Date('2026-01-20'), 2)
+			const tx = makeTransaction()
 
 			blockchain.addTransaction(tx)
 
@@ -773,7 +770,7 @@ describe('Blockchain', () => {
 		})
 
 		it('Should add an empty block to the blockchain.', () => {
-			const bc = new Blockchain([makeBlockObj({signed: true}), makeBlockObj({signed: true})])
+			const bc = new Blockchain([makeBlockObj({ signed: true }), makeBlockObj({ signed: true })])
 
 			assert.equal(bc.blocks.length, 2)
 
@@ -788,6 +785,14 @@ describe('Blockchain', () => {
 			bc.newBlock()
 
 			assert.equal(bc.blocks[0].toString(), '[Block]')
+		})
+
+		it('Should report total.', () => {
+			const bc = new Blockchain([makeBlockObj({ signed: true, total: 12 })])
+
+			bc.newBlock()
+
+			assert.equal(bc.lastblock.total, 12)
 		})
 
 		/**
@@ -821,212 +826,293 @@ describe('Blockchain', () => {
 		})
 
 		it('Should return the correct key from birth block.', () => {
-			const bc = new Blockchain([validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({
+				previousHash: Blockchain.REF_HASH,
+				signer: publicKey2
+			})])
 
 			const result = bc.getMyPublicKey()
 
-			assert.equal(result, publicKey1)
+			assert.equal(result, publicKey2)
 		})
 
 		it('Should return the correct key from last CREATE transaction.', () => {
 			const bc = new Blockchain([
-				makeBlockObj(new Date(), 0, 1)
+				makeBlockObj({
+					transactions: [
+						makeTransaction({
+							type: TXTYPE.CREATE,
+							signer: publicKey2
+						})
+					]
+				})
 			])
 
 			const result = bc.getMyPublicKey()
 
-			assert.equal(result, publicKey1)
+			assert.equal(result, publicKey2)
 		})
 	})
 
-	/***********************************************************************
-	 *                           MAIN METHODS
-	 **********************************************************************/
-
-	/**
 	describe('income', () => {
-		const makeTx = () => {
-			const tx = {
-				version: Blockchain.VERSION,
-				date: 20250101,
-				source: publicKey2,
-				target: publicKey1,
-				money: [20250101000],
-				invests: [20250101000],
-				type: Blockchain.TXTYPE.PAY,
-				signer: 0
-			}
-			return Blockchain.signtx(tx, privateKey2)
-		}
-		it('Should throw an error if target is not blockchain owner.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
 
-			const tx = makeTx()
+		it('Should throw an error if target is not blockchain owner.', () => {
+			const bc = new Blockchain([makeBlockObj({
+				transactions: [makeTransaction({
+					type: TXTYPE.CREATE,
+					signer: publicKey1
+				})]
+			})])
+
+			const tx = makeTransaction()
 			tx.target = publicKey2
 
 			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
 		})
-		
-		it('Should throw an error if transaction is not signed.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
 
-			const tx = makeTx()
-			delete tx.hash
+		it('Should throw an error if transaction is not signed.', () => {
+			const bc = new Blockchain([makeBlockObj({
+				transactions: [makeTransaction({
+					type: TXTYPE.CREATE,
+					signer: publicKey1
+				})]
+			})])
+
+			const tx = makeTransaction()
+			delete tx.signature
 
 			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
 		})
 
 		it('Should throw an error if transaction has no version.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({
+				transactions: [makeTransaction({
+					type: TXTYPE.CREATE,
+					signer: publicKey1
+				})]
+			})])
 
-			const tx = makeTx()
+			const tx = makeTransaction()
 			delete tx.version
-			Blockchain.signtx(tx, privateKey2)
+			tx.sign(privateKey2)
 
 			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
 		})
 
 		it('Should throw an error if transaction has no date.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({
+				transactions: [makeTransaction({
+					type: TXTYPE.CREATE,
+					signer: publicKey1
+				})]
+			})])
 
-			const tx = makeTx()
+			const tx = makeTransaction()
 			delete tx.date
-			Blockchain.signtx(tx, privateKey2)
 
 			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
 		})
 
 		it('Should throw an error if transaction has no source.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({
+				transactions: [makeTransaction({
+					type: TXTYPE.CREATE,
+					signer: publicKey1
+				})]
+			})])
 
-			const tx = makeTx()
+			const tx = makeTransaction()
 			delete tx.source
-			Blockchain.signtx(tx, privateKey2)
+			tx.sign(privateKey2)
 
 			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
 		})
 
 		it('Should throw an error if transaction has no target.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({
+				transactions: [makeTransaction({
+					type: TXTYPE.CREATE,
+					signer: publicKey1
+				})]
+			})])
 
-			const tx = makeTx()
+			const tx = makeTransaction()
 			delete tx.target
-			Blockchain.signtx(tx, privateKey2)
+			tx.sign(privateKey2)
 
 			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
 		})
 
 		it('Should throw an error if transaction has no money.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({
+				transactions: [makeTransaction({
+					type: TXTYPE.CREATE,
+					signer: publicKey1
+				})]
+			})])
 
-			const tx = makeTx()
+			const tx = makeTransaction()
 			delete tx.money
-			Blockchain.signtx(tx, privateKey2)
+			tx.sign(privateKey2)
 
 			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
 		})
 
 		it('Should throw an error if transaction has no invests.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({
+				transactions: [makeTransaction({
+					type: TXTYPE.CREATE,
+					signer: publicKey1
+				})]
+			})])
 
-			const tx = makeTx()
+			const tx = makeTransaction()
 			delete tx.invests
-			Blockchain.signtx(tx, privateKey2)
+			tx.sign(privateKey2)
 
 			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
 		})
 
 		it('Should throw an error if transaction has no type.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({
+				transactions: [makeTransaction({
+					type: TXTYPE.CREATE,
+					signer: publicKey1
+				})]
+			})])
 
-			const tx = makeTx()
+			const tx = makeTransaction()
 			delete tx.type
-			Blockchain.signtx(tx, privateKey2)
+			tx.sign(privateKey2)
 
 			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
 		})
 
 		it('Should throw an error if transaction type is != PAY.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({
+				transactions: [makeTransaction({
+					type: TXTYPE.CREATE,
+					signer: publicKey1
+				})]
+			})])
 
-			const tx = makeTx()
-			tx.type = Blockchain.TXTYPE.CREATE
-			Blockchain.signtx(tx, privateKey2)
+			const tx = makeTransaction()
+			tx.type = TXTYPE.CREATE
+			tx.sign(privateKey2)
 
 			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
 		})
 
 		it('Should add the transaction to last block.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({
+				transactions: [makeTransaction({
+					type: TXTYPE.CREATE,
+					signer: publicKey1
+				})]
+			})])
 
-			const tx = makeTx()
+			const tx = makeTransaction({
+				type: TXTYPE.PAY,
+				target: publicKey1,
+				moneycount: 1
+			})
+
 			bc.income(tx)
 
-			assert.deepEqual(bc.lastblock.transactions[0], tx)
+			assert.deepEqual(bc.lastblock.lastTransaction, tx)
 		})
 
 		it('Should increase the blockchain total.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({
+				transactions: [makeTransaction({
+					type: TXTYPE.CREATE,
+					signer: publicKey1
+				})],
+				total: 3
+			})])
 
-			const tx = makeTx()
+			const tx = makeTransaction({
+				type: TXTYPE.PAY,
+				signer: publicKey2,
+				sk: privateKey2,
+				target: publicKey1,
+				moneycount: 4
+			})
+
 			bc.income(tx)
 
-			assert.deepEqual(bc.lastblock.total, 1)
+			assert.deepEqual(bc.lastblock.total, 7)
 		})
-	})*/
+	})
 
-	/**
 	describe('pay', () => {
+
 		it('Should make valid transaction.', () => {
-			const bc = new Blockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({
+				date: new Date('2025-01-01'),
+				moneycount: 3
+			})])
 
 			bc.pay(privateKey1, publicKey2, 3, new Date('2025-01-03'))
-			const result = bc.lastblock.transactions[0]
+			const transaction = bc.lastblock.lastTransaction
 
-			assert.ok(Blockchain.isValidTransaction(result))
-			delete result.hash
+			assert.isTrue(transaction.isValid())
 
 			const expected = {
 				version: Blockchain.VERSION,
-				type: Blockchain.TXTYPE.PAY,
-				date: 20250103,
-				money: [20250101000, 20250102000, 20250102001],
+				type: TXTYPE.PAY,
+				date: new Date('2025-01-03'),
+				money: [20250101000, 20250101001, 20250101002],
 				invests: [],
-				source: publicKey1,
 				target: publicKey2,
-				signer: 0
+				signer: publicKey1
 			}
 
-			assert.deepEqual(result, expected)
+			nodeassert.partialDeepStrictEqual(transaction, expected)
 		})
 
 		it('Should decrease money of the block.', () => {
-			const bc = new Blockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({
+				date: new Date('2025-01-03'),
+				moneycount: 5,
+				type: TXTYPE.CREATE
+			})])
+
+			assert.equal(bc.lastblock.money.length, 5)
 
 			bc.pay(privateKey1, publicKey2, 3, new Date('2025-01-03'))
 
 			const result = bc.lastblock.money
-			const expected = [20250102002, 20250102003]
+			const expected = [20250103003, 20250103004]
 
+			assert.equal(bc.lastblock.money.length, 2)
 			assert.deepEqual(result, expected)
 		})
 
-		it('Should increase total if I m the target.', () => {
-			const bc = new Blockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
+		it('Should increase total if I am the target.', () => {
+			const bc = new Blockchain([makeBlockObj({
+				date: new Date('2025-01-03'),
+				moneycount: 4,
+				total: 26,
+				type: TXTYPE.CREATE,
+				transactions: [makeTransaction({
+					type: TXTYPE.CREATE,
+					signer: publicKey1
+				})]
+			})])
 
-			bc.pay(privateKey1, publicKey1, 3, new Date('2025-01-03'))
+			bc.pay(privateKey1, publicKey1, 4, new Date('2025-01-03'))
 
 			const result = bc.lastblock.money
-			const expected = [20250102002, 20250102003]
 
 			assert.deepEqual(bc.lastblock.total, 30)
 		})
 
 		it('Should throw error if blockchain can t afford it.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj()])
 
 			assert.throws(() => { bc.pay(privateKey1, publicKey2, 2) }, InvalidTransactionError, 'Unsufficient funds.')
 		})
 	})
-		*/
+
 })

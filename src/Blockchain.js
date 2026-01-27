@@ -434,7 +434,6 @@ export class Blockchain {
 			throw new Error('Invalid transaction')
 		}
 		this.addTransaction(transaction)
-		console.log(transaction.money.length)
 		this.lastblock.total += transaction.money.length
 
 		return transaction

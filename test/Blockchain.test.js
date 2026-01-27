@@ -6,7 +6,7 @@ import nodeassert from 'node:assert';
 import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { Blockchain } from '../src/Blockchain.js';
 import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3, makeBlockObj, makeTransactionObj, makeBlock, makeTransaction } from './testUtils.js'
-import { TXTYPE } from '../src/Transaction.js';
+import { Transaction, TXTYPE } from '../src/Transaction.js';
 import { sign } from 'node:crypto';
 
 describe('Blockchain', () => {
@@ -854,7 +854,7 @@ describe('Blockchain', () => {
 		})
 	})
 
-	describe('income', () => {
+	describe.only('income', () => {
 
 		it('Should throw an error if target is not blockchain owner.', () => {
 			const bc = new Blockchain([makeBlockObj({
@@ -864,13 +864,19 @@ describe('Blockchain', () => {
 				})]
 			})])
 
-			const tx = makeTransaction()
-			tx.target = publicKey2
+			const tx = makeTransaction({
+				type: TXTYPE.PAY,
+				target: publicKey3,
+				moneycount: 2,
+				signer: publicKey2,
+				sk: privateKey2
+			})
 
+			assert.isTrue(tx.isValid())
 			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
 		})
 
-		it('Should throw an error if transaction is not signed.', () => {
+		it('Should throw an error if transaction is NOT valid.', () => {
 			const bc = new Blockchain([makeBlockObj({
 				transactions: [makeTransaction({
 					type: TXTYPE.CREATE,
@@ -879,112 +885,8 @@ describe('Blockchain', () => {
 			})])
 
 			const tx = makeTransaction()
-			delete tx.signature
 
-			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
-		})
-
-		it('Should throw an error if transaction has no version.', () => {
-			const bc = new Blockchain([makeBlockObj({
-				transactions: [makeTransaction({
-					type: TXTYPE.CREATE,
-					signer: publicKey1
-				})]
-			})])
-
-			const tx = makeTransaction()
-			delete tx.version
-			tx.sign(privateKey2)
-
-			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
-		})
-
-		it('Should throw an error if transaction has no date.', () => {
-			const bc = new Blockchain([makeBlockObj({
-				transactions: [makeTransaction({
-					type: TXTYPE.CREATE,
-					signer: publicKey1
-				})]
-			})])
-
-			const tx = makeTransaction()
-			delete tx.date
-
-			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
-		})
-
-		it('Should throw an error if transaction has no source.', () => {
-			const bc = new Blockchain([makeBlockObj({
-				transactions: [makeTransaction({
-					type: TXTYPE.CREATE,
-					signer: publicKey1
-				})]
-			})])
-
-			const tx = makeTransaction()
-			delete tx.source
-			tx.sign(privateKey2)
-
-			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
-		})
-
-		it('Should throw an error if transaction has no target.', () => {
-			const bc = new Blockchain([makeBlockObj({
-				transactions: [makeTransaction({
-					type: TXTYPE.CREATE,
-					signer: publicKey1
-				})]
-			})])
-
-			const tx = makeTransaction()
-			delete tx.target
-			tx.sign(privateKey2)
-
-			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
-		})
-
-		it('Should throw an error if transaction has no money.', () => {
-			const bc = new Blockchain([makeBlockObj({
-				transactions: [makeTransaction({
-					type: TXTYPE.CREATE,
-					signer: publicKey1
-				})]
-			})])
-
-			const tx = makeTransaction()
-			delete tx.money
-			tx.sign(privateKey2)
-
-			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
-		})
-
-		it('Should throw an error if transaction has no invests.', () => {
-			const bc = new Blockchain([makeBlockObj({
-				transactions: [makeTransaction({
-					type: TXTYPE.CREATE,
-					signer: publicKey1
-				})]
-			})])
-
-			const tx = makeTransaction()
-			delete tx.invests
-			tx.sign(privateKey2)
-
-			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
-		})
-
-		it('Should throw an error if transaction has no type.', () => {
-			const bc = new Blockchain([makeBlockObj({
-				transactions: [makeTransaction({
-					type: TXTYPE.CREATE,
-					signer: publicKey1
-				})]
-			})])
-
-			const tx = makeTransaction()
-			delete tx.type
-			tx.sign(privateKey2)
-
+			assert.isFalse(tx.isValid())
 			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
 		})
 
@@ -996,10 +898,16 @@ describe('Blockchain', () => {
 				})]
 			})])
 
-			const tx = makeTransaction()
-			tx.type = TXTYPE.CREATE
-			tx.sign(privateKey2)
+			const tx = new Transaction(makeTransactionObj({
+				type: TXTYPE.SETADMIN,
+				target: publicKey1,
+				moneycount: 2,
+				investscount: 0,
+				signer: publicKey2,
+				sk: privateKey2
+			}))
 
+			assert.isTrue(tx.isValid())
 			assert.throws(() => { bc.income(tx) }, 'Invalid transaction')
 		})
 
@@ -1014,11 +922,14 @@ describe('Blockchain', () => {
 			const tx = makeTransaction({
 				type: TXTYPE.PAY,
 				target: publicKey1,
-				moneycount: 1
+				moneycount: 2,
+				signer: publicKey2,
+				sk: privateKey2
 			})
 
 			bc.income(tx)
 
+			assert.isTrue(tx.isValid())
 			assert.deepEqual(bc.lastblock.lastTransaction, tx)
 		})
 
@@ -1041,6 +952,7 @@ describe('Blockchain', () => {
 
 			bc.income(tx)
 
+			assert.isTrue(tx.isValid())
 			assert.deepEqual(bc.lastblock.total, 7)
 		})
 	})

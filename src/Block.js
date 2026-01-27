@@ -12,7 +12,7 @@ export class Block {
 
     constructor(blockObj) {
         this.version = blockObj.v
-        this.closedate = intToDate(blockObj.d)
+        this.closedate = "d" in blockObj ? intToDate(blockObj.d) : null
         this.previousHash = blockObj.p
         this.signer = blockObj.s
         this.root = blockObj.r
@@ -74,28 +74,38 @@ export class Block {
     // TODO : cashPaper must throw error if signer is different from another paper in the block
 
     /**
-     * TODO: throw error if last block is already signed
-	 * TODO: add method "isSigned(block)"
-	 * TODO: add MerkleRoot
-	 * TODO: Add signer (based on privatekey)
-	 * TODO: Add closedate
      * @param {*} sk 
      * @returns 
      */
     sign(sk) {
-        const pk = publicFromPrivate(sk)
-        if (this.containsPaper()) {
-            const paperHandler = this.getPapersHandler()
-            if (pk !== paperHandler) {
-                throw new UnauthorizedError('Only Paper signer can seal a block with it.')
-            }
+        if (this.isSigned()) {
+            throw new UnauthorizedError('Block is already signed.')
         }
+
+        const pk = publicFromPrivate(sk)
+        if (!this.canBeSignedBy(pk)) {
+            throw new UnauthorizedError('Only Paper signer can seal a block with it.')
+        }
+
+        this.merkle()
+        this.signer = pk
+        this.closedate = new Date()
 
         const hash = this.hash()
         sk = hexToBytes(sk)
         const bytes = signSync(hash, sk)
         this.signature = toHex(bytes)
         return this.signature
+    }
+
+    canBeSignedBy(pk) {
+        if (this.containsPaper()) {
+            const paperHandler = this.getPapersHandler()
+            if (pk !== paperHandler) {
+                return false
+            }
+        }
+        return true
     }
 
     export() {
@@ -141,21 +151,21 @@ export class Block {
     }
 
     /**
-	 * Return the list of all available Money
-	 * If amount > 0, return only this amount of Money
-	 * If amount is not affordable, return empty array []
-	 */
-	getAvailableMoney(amount = -1) {
-		if (amount < 0) {
-			return this.money
-		}
+     * Return the list of all available Money
+     * If amount > 0, return only this amount of Money
+     * If amount is not affordable, return empty array []
+     */
+    getAvailableMoney(amount = -1) {
+        if (amount < 0) {
+            return this.money
+        }
 
-		if (amount > this.money.length) {
-			return []
-		}
+        if (amount > this.money.length) {
+            return []
+        }
 
-		return this.money.slice(0, amount)
-	}
+        return this.money.slice(0, amount)
+    }
 
     getAvailableMoneyAmount() {
         return this.getAvailableMoney().length

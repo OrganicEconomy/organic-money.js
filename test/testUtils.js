@@ -61,7 +61,7 @@ export function makeBlock(options = {}) {
 
     const block = new Block({
         v: "version" in options ? options.version : 1,
-        d: dateToInt(date),
+        d: "date" in options ? dateToInt(options.date) : null,
         p: "previousHash" in options ? options.previousHash : "",
         s: "signer" in options ? options.signer : publicKey1,
         r: "root" in options ? options.root : 'randomMerkleroot',

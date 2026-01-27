@@ -102,11 +102,52 @@ describe('Block', () => {
                 previousHash: Blockchain.REF_HASH
             })
 
-            const expected = '30450221008ffc34f99a568b27dd3728c3edc04ba0f0af2bf676c411e62523ca9adc85e33a02200480b52a326655c6a8fc83bde1bf39daee657b559666a96141ed17f8bc07b087'
+            const expected = '3045022100a02d662e6a11a78baae34d6178da56741380130a6ff0ad4b9e32e2a1f87f7755022000d987c221ede1ca9535432aa2c89ce6664d2545b455dfdd0da8a54e1440e2ca'
 
             const result = block.sign(privateKey1)
 
             assert.equal(result, expected)
+        })
+
+        it('Should set the merkleroot before signing.', () => {
+            const block = makeBlock({
+                date: new Date('2026-01-21'),
+                previousHash: Blockchain.REF_HASH,
+                transactions: [new CreateTransaction(privateKey1, 1, new Date('2026-01-22'))]
+            })
+
+            const expected = '304502210088927c127b2c9f291b4f86adb0e69a50ffc080dccd359269def8a494be13571d02203f6904fdc34b047ac0f2bed3d71f1406dd70dd50b8d751fca639fb8492320717'
+
+            block.sign(privateKey1)
+            const result = block.root
+
+            assert.equal(result, expected)
+        })
+
+        it('Should set the signer before signing.', () => {
+            const block = makeBlock({
+                date: new Date('2026-01-21'),
+                previousHash: Blockchain.REF_HASH,
+                transactions: [new CreateTransaction(privateKey1, 1, new Date('2026-01-22'))],
+                signed: false,
+                signer: ""
+            })
+
+            block.sign(privateKey1)
+            const result = block.signer
+
+            assert.equal(result, publicKey1)
+        })
+
+        it('Should set the closedate to today before signing.', () => {
+            const block = makeBlock({
+                signed: false
+            })
+
+            block.sign(privateKey1)
+            const result = block.closedate
+
+            assert.equal(result.getDate(), new Date().getDate())
         })
 
         it('Should throw an error if block contains Cashes Papers and signer is me.', () => {
@@ -124,6 +165,12 @@ describe('Block', () => {
 
             assert.ok(signature)
         })
+
+		it('Should throw an error if block is already signed.', () => {
+			const block = makeBlock({ signed: true })
+
+			assert.throws(() => { block.sign(privateKey1) }, UnauthorizedError, 'Block is already signed.')
+		})
 
     })
 

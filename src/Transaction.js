@@ -1,7 +1,7 @@
 import { encode, decode } from 'msgpack-lite'
 import { sha256 } from 'ethereum-cryptography/sha256.js'
 
-import { dateToInt, intToDate, publicFromPrivate } from "./crypto.js"
+import { buildInvestIndexes, buildMoneyIndexes, dateToInt, intToDate, publicFromPrivate } from "./crypto.js"
 import { hexToBytes, toHex } from 'ethereum-cryptography/utils.js'
 import { signSync, verify } from 'ethereum-cryptography/secp256k1.js'
 import { Blockchain } from './Blockchain.js'
@@ -123,6 +123,25 @@ export class InitTransaction extends Transaction {
 }
 
 export class CreateTransaction extends Transaction {
+    constructor(objOrSk, level=0, date=null) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+        } else {
+            date = date || new Date()
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.CREATE,
+                m: buildMoneyIndexes(date, level),
+                i: buildInvestIndexes(date, level),
+                d: dateToInt(date),
+                s: publicFromPrivate(objOrSk),
+                p: "",
+                h: ""
+            })
+            this.sign(objOrSk)
+        }
+    }
+
     isValid() {
         return super.isValid() &&
         this.invests.length > 0 &&

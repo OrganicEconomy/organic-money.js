@@ -345,6 +345,55 @@ describe('InitTransaction', () => {
 })
 
 describe('CreateTransaction', () => {
+    
+    describe('constructor', () => {
+        it('Should accept an object as unique parameter.', () => {
+            const tx = makeTransaction({
+                type: TXTYPE.CREATE,
+                date: new Date("2026-01-26"),
+                moneycount: 1,
+                investscount: 3,
+                signer: publicKey3,
+                target: publicKey2,
+                version: 12
+            })
+
+            assert.equal(tx.type, TXTYPE.CREATE)
+            assert.equal(tx.date.getTime(), new Date("2026-01-26").getTime())
+            assert.equal(tx.money.length, 1)
+            assert.equal(tx.invests.length, 3)
+            assert.equal(tx.signer, publicKey3)
+            assert.equal(tx.target, publicKey2)
+            assert.equal(tx.version, 12)
+        })
+
+        it('Should accept 2 parameters : signer sk and level.', () => {
+            const tx = new CreateTransaction(privateKey2, 3)
+
+            assert.equal(tx.type, TXTYPE.CREATE)
+            assert.equal(tx.money.length, 3)
+            assert.equal(tx.invests.length, 3)
+            assert.equal(tx.date.getDate(), new Date().getDate())
+            assert.equal(tx.signer, publicKey2)
+            assert.equal(tx.target, "")
+            assert.equal(tx.version, Blockchain.VERSION)
+            assert.isTrue(tx.isValid())
+        })
+
+        it('Should accept 3 parameters : signer sk, level and date.', () => {
+            const tx = new CreateTransaction(privateKey2, 3, new Date("2026-01-12"))
+
+            assert.equal(tx.type, TXTYPE.CREATE)
+            assert.equal(tx.money.length, 3)
+            assert.equal(tx.invests.length, 3)
+            assert.equal(tx.date.getTime(), new Date("2026-01-12").getTime())
+            assert.equal(tx.signer, publicKey2)
+            assert.equal(tx.target, "")
+            assert.equal(tx.version, Blockchain.VERSION)
+            assert.isTrue(tx.isValid())
+        })
+    })
+    
     describe('isValid', () => {
 
         it('Should return false if money is an empty array.', () => {

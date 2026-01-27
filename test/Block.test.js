@@ -116,7 +116,7 @@ describe('Block', () => {
             assert.throws(() => { block.sign(privateKey1) }, UnauthorizedError, 'Only Paper signer can seal a block with it.')
         })
 
-        it('Should sign even if it contains Cashes Papers while signer is Paper signer.', () => {
+        it('Should sign even if it contains Cashes Papers while signer is Papers signer.', () => {
             const transaction = makeTransaction({ type: TXTYPE.PAPER, target: publicKey2 })
             const block = makeBlock({ transactions: [transaction], signed: false })
 
@@ -161,8 +161,8 @@ describe('Block', () => {
 
         it('Should add the given transaction in first place.', () => {
             const block = makeBlock()
-            const tx1 = makeTransaction({ moneycount: 1 })
-            const tx2 = makeTransaction({ moneycount: 2 })
+            const tx1 = makeTransaction({ moneycount: 1, investscount: 1 })
+            const tx2 = makeTransaction({ moneycount: 2, investscount: 2 })
 
             assert.notDeepEqual(tx1, tx2)
 
@@ -170,6 +170,29 @@ describe('Block', () => {
             block.add(tx2)
 
             assert.deepEqual(block.transactions[0], tx2)
+        })
+
+        it('Should add the CREATE transaction\'s money to the block.', () => {
+            const block = makeBlock()
+            const tx = new CreateTransaction(privateKey1, 2)
+
+            assert.isTrue(tx.isValid())
+
+            block.add(tx)
+
+            assert.deepEqual(block.money, tx.money)
+        })
+
+        it('Should NOT add the money to the block for other types of transaction.', () => {
+            const block = makeBlock()
+            const tx1 = new PayTransaction(privateKey1, publicKey2, new Date(), [20260101000])
+            // TODO: add all others types of transaction
+
+            assert.isTrue(tx1.isValid())
+
+            block.add(tx1)
+
+            assert.deepEqual(block.money, [])
         })
     })
 
@@ -287,7 +310,7 @@ describe('Block', () => {
                 makeTransaction({ type: TXTYPE.SETACTOR }),
                 makeTransaction({ type: TXTYPE.SETPAYER })
             ]
-            const block = makeBlock({ transactions: transactions})
+            const block = makeBlock({ transactions: transactions })
 
             const result = block.containsPaper()
 
@@ -298,7 +321,7 @@ describe('Block', () => {
             const transactions = [
                 makeTransaction({ type: TXTYPE.PAPER })
             ]
-            const block = makeBlock({ transactions: transactions})
+            const block = makeBlock({ transactions: transactions })
 
             const result = block.containsPaper()
 
@@ -316,7 +339,7 @@ describe('Block', () => {
                 makeTransaction({ type: TXTYPE.SETACTOR }),
                 makeTransaction({ type: TXTYPE.SETPAYER })
             ]
-            const block = makeBlock({ transactions: transactions})
+            const block = makeBlock({ transactions: transactions })
 
             const result = block.containsPaper()
 
@@ -334,7 +357,7 @@ describe('Block', () => {
                 makeTransaction({ type: TXTYPE.SETACTOR }),
                 makeTransaction({ type: TXTYPE.PAPER })
             ]
-            const block = makeBlock({ transactions: transactions})
+            const block = makeBlock({ transactions: transactions })
 
             const result = block.containsPaper()
 
@@ -353,7 +376,7 @@ describe('Block', () => {
                 makeTransaction({ type: TXTYPE.SETACTOR }),
                 makeTransaction({ type: TXTYPE.SETPAYER })
             ]
-            const block = makeBlock({ transactions: transactions})
+            const block = makeBlock({ transactions: transactions })
 
             const result = block.getPapersHandler()
 
@@ -364,7 +387,7 @@ describe('Block', () => {
             const transactions = [
                 makeTransaction({ type: TXTYPE.PAPER, target: publicKey3 })
             ]
-            const block = makeBlock({ transactions: transactions})
+            const block = makeBlock({ transactions: transactions })
 
             const result = block.getPapersHandler()
 
@@ -382,7 +405,7 @@ describe('Block', () => {
                 makeTransaction({ type: TXTYPE.SETACTOR }),
                 makeTransaction({ type: TXTYPE.SETPAYER })
             ]
-            const block = makeBlock({ transactions: transactions})
+            const block = makeBlock({ transactions: transactions })
 
             const result = block.getPapersHandler()
 
@@ -400,9 +423,113 @@ describe('Block', () => {
                 makeTransaction({ type: TXTYPE.SETACTOR }),
                 makeTransaction({ type: TXTYPE.PAPER, target: publicKey3 })
             ]
-            const block = makeBlock({ transactions: transactions})
+            const block = makeBlock({ transactions: transactions })
 
             assert.throws(() => { block.getPapersHandler() }, Error, 'Invalid Block : multi-origin Papers are not allowed.')
+        })
+    })
+
+    describe('getAvailableMoney', () => {
+        it('Should return first created money for new Blockchain.', () => {
+            const block = makeBlock({
+                money: [20250101000]
+            })
+
+            const result = block.getAvailableMoney()
+
+            const expected = [20250101000]
+
+            assert.deepEqual(result, expected)
+        })
+
+        it('Should return each index.', () => {
+            const block = makeBlock({
+                money: [20250101000, 20250102000, 20250102001, 20250102002, 20250102003]
+            })
+
+            const result = block.getAvailableMoney()
+
+            const expected = [20250101000, 20250102000, 20250102001, 20250102002, 20250102003]
+
+            assert.deepEqual(result, expected)
+        })
+
+        it('Should return only given amount if given.', () => {
+            const block = makeBlock({
+                money: [20250101000, 20250102000, 20250102001, 20250102002, 20250102003]
+            })
+
+            const result = block.getAvailableMoney(2)
+
+            const expected = [20250101000, 20250102000]
+
+            assert.deepEqual(result, expected)
+        })
+
+        it('Should return only given amount for complexe cases.', () => {
+            const block = makeBlock({
+                money: [
+                    20250101000, 20250101001, 20250101002,
+                    20250101003, 20250101004, 20250103000,
+                    20250103001, 20250103002, 20250103003
+                ]
+            })
+
+            const result = block.getAvailableMoney(7)
+
+            const expected = [20250101000, 20250101001, 20250101002,
+                20250101003, 20250101004, 20250103000, 20250103001]
+
+            assert.deepEqual(result, expected)
+        })
+
+        it('Should return [] if amount is too big (1).', () => {
+            const block = makeBlock({
+                money: [20250101000]
+            })
+
+
+            const result = block.getAvailableMoney(2)
+
+            assert.deepEqual(result, [])
+        })
+
+        it('Should return [] if amount is too big (2).', () => {
+            const block = makeBlock({
+                money: [
+                    20250101000, 20250101001, 20250101002,
+                    20250101003, 20250101004, 20250103000,
+                    20250103001, 20250103002, 20250103003
+                ]
+            })
+
+            const result = block.getAvailableMoney(12)
+
+            assert.deepEqual(result, [])
+        })
+    })
+
+    describe('getAvailableMoneyAmount', () => {
+        it('Should return total money available on the block 1.', () => {
+            const block = makeBlock({
+                money: [20250101000]
+            })
+
+            const result = block.getAvailableMoneyAmount()
+
+            assert.deepEqual(result, 1)
+        })
+
+        it('Should return total money available on the block 2.', () => {
+            const block = makeBlock({
+                money: [20250101000, 20250101001,
+                    20250102000, 20250102001, 20250102003
+                ]
+            })
+
+            const result = block.getAvailableMoneyAmount()
+
+            assert.deepEqual(result, 5)
         })
     })
 })

@@ -6,281 +6,9 @@ import nodeassert from 'node:assert';
 import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { Blockchain } from '../src/Blockchain.js';
 import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3, makeBlockObj, makeTransactionObj, makeBlock, makeTransaction } from './testUtils.js'
-import { Transaction, TXTYPE } from '../src/Transaction.js';
-import { sign } from 'node:crypto';
+import { CreateTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
 
 describe('Blockchain', () => {
-	const validBirthBlock = () => {
-		// A valid birth block for someone named Gus,
-		// born the 28/11/1989 and subscribing on
-		// the 01/01/2025.
-		return makeBlockObj(new Date('2025-01-01'), 1, 2, 0, true)
-		/*const res =  {
-			version: Blockchain.VERSION,
-			closedate: 20250101,
-			previousHash: Blockchain.REF_HASH,
-			signer: publicKey1,
-			money: [20250101000],
-			invests: [20250101000],
-			total: 0,
-			merkleroot: 0,
-			transactions: [
-				Blockchain.signtx({
-					version: Blockchain.VERSION,
-					date: 19891189,
-					source: publicKey1,
-					target: 'Gus',
-					money: [],
-					invests: [],
-					type: Blockchain.TXTYPE.INIT,
-					signer: 0,
-					hash: 0
-				}, privateKey1),
-				Blockchain.signtx({
-					version: Blockchain.VERSION,
-					date: 20250101,
-					source: publicKey1,
-					target: publicKey1,
-					money: [20250101000],
-					invests: [20250101000],
-					type: Blockchain.TXTYPE.CREATE,
-					signer: 0,
-					hash: 0
-				}, privateKey1)
-			]
-		}
-		Blockchain.signblock(res, privateKey1);
-		
-		return res;
-		*/
-	}
-
-	const validInitBlock = () => {
-		return makeBlockObj(new Date("2021-09-21"), 1, 0, 0, true)
-		/*const res = {
-			closedate: '21/09/2021',
-			previousHash: validBirthBlock().hash,
-			merkleroot: 0,
-			signer: publicKey2,
-			total: 0,
-			version: 1,
-			money: [20250101000],
-			invests: [20250101000],
-			transactions: []
-		}
-		Blockchain.signblock(res, privateKey2);
-		return res;*/
-	}
-
-	const validCashBlock = () => {
-		const res = {
-			closedate: 20250102,
-			previousHash: validInitBlock().h,
-			merkleroot: 0,
-			signer: publicKey1,
-			total: 27,
-			version: 1,
-			money: [20250101000, 20250102000, 20250102001, 20250102002, 20250102003],
-			invests: [202501019000, 202501029000, 202501029001, 202501029002, 202501029003]
-		}
-
-		const tx1 = makeTransactionObj(new Date('2025-01-02'), 4, Blockchain.TXTYPE.CREATE)
-		/*{
-			version: Blockchain.VERSION,
-			date: 20250102,
-			source: publicKey1,
-			target: publicKey1,
-			money: [20250102000, 20250102001, 20250102002, 20250102003],
-			invests: [202501029000, 202501029001, 202501029002, 202501029003],
-			type: Blockchain.TXTYPE.CREATE,
-			signer: 0,
-			hash: 0
-		}*/
-		const tx2 = makeTransactionObj(new Date('2025-01-02'), 27, Blockchain.TXTYPE.PAY)
-		/*{
-			version: Blockchain.VERSION,
-			date: 20250102,
-			source: publicKey2,
-			target: publicKey1,
-			money: [20241228000, 20241228001, 20250101002, 20250101003, 20250101004, 20250101005, 20250101006, 20250101007, 20250101008, 20250101009, 20250101010, 20250101011, 20250101012, 20250101013, 20250101014, 20250101015, 20250101016, 20250101017, 20250101018, 20250101019, 20250101020, 20250101021, 20250101022, 20250101023, 20250101024, 20250101025, 20250101026],
-			invests: [],
-			type: Blockchain.TXTYPE.PAY,
-			signer: 0,
-			hash: 0
-		}
-
-		Blockchain.signtx(tx1, privateKey1)
-		Blockchain.signtx(tx2, privateKey1)*/
-		res.x = [tx1, tx2]
-		return res;
-	}
-
-	const validPaperdBlock = () => {
-		const res = {
-			closedate: 20250102,
-			previousHash: validInitBlock().hash,
-			merkleroot: 0,
-			signer: publicKey1,
-			total: 27,
-			version: 1,
-			money: [20250101000],
-			invests: [20250101000],
-			transactions: [
-				{
-					version: Blockchain.VERSION,
-					date: 20250102,
-					source: publicKey2,
-					target: 0,
-					money: [20241228000, 20241228001, 20250101002, 20250101003],
-					invests: [],
-					type: Blockchain.TXTYPE.PAPER,
-					signer: publicKey3,
-					hash: 0
-				}
-			]
-		}
-		Blockchain.signblock(res, privateKey3);
-		return res;
-	}
-
-	const validEngagedBlock = () => {
-		const res = {
-			closedate: 20250102,
-			previousHash: validInitBlock().hash,
-			merkleroot: 0,
-			signer: publicKey1,
-			total: 27,
-			version: 1,
-			money: [20250101000],
-			invests: [20250101000],
-			transactions: [
-				{
-					version: Blockchain.VERSION,
-					date: 20250102,
-					source: publicKey1,
-					target: 0,
-					money: [20250102002, 20250102003, 20250103000, 20250103001, 20250104000, 20250104001],
-					invests: [],
-					type: Blockchain.TXTYPE.ENGAGE,
-					signer: publicKey1,
-					hash: 0
-				},
-				{
-					version: Blockchain.VERSION,
-					date: 20250102,
-					source: publicKey1,
-					target: 0,
-					money: [],
-					invests: [202501029002, 202501029003, 202501039000, 202501039001, 202501049000, 202501049001],
-					type: Blockchain.TXTYPE.ENGAGE,
-					signer: publicKey1,
-					hash: 0
-				}
-			]
-		}
-		Blockchain.signblock(res, privateKey1);
-		return res;
-	}
-
-	const validEngagedBlock2 = () => {
-		const res = {
-			closedate: 20250102,
-			previousHash: validPaperdBlock().hash,
-			merkleroot: 0,
-			signer: publicKey1,
-			total: 27,
-			version: 1,
-			money: [20250101000],
-			invests: [20250101000],
-			transactions: [
-				{
-					version: Blockchain.VERSION,
-					date: 20250103,
-					source: publicKey1,
-					target: 0,
-					money: [20250103002, 20250103003, 20250104002, 20250104003, 20250105000, 20250105001],
-					invests: [],
-					type: Blockchain.TXTYPE.ENGAGE,
-					signer: publicKey1,
-					hash: 0
-				},
-				{
-					version: Blockchain.VERSION,
-					date: 20250103,
-					source: publicKey1,
-					target: 0,
-					money: [],
-					invests: [202501039002, 202501039003, 202501049002, 202501049003, 202501059000, 202501059001],
-					type: Blockchain.TXTYPE.ENGAGE,
-					signer: publicKey1,
-					hash: 0
-				},
-				{
-					version: Blockchain.VERSION,
-					date: 20250102,
-					source: publicKey1,
-					target: 0,
-					money: [20250102002, 20250102003, 20250103000, 20250103001, 20250104000, 20250104001],
-					invests: [],
-					type: Blockchain.TXTYPE.ENGAGE,
-					signer: publicKey1,
-					hash: 0
-				},
-				{
-					version: Blockchain.VERSION,
-					date: 20250102,
-					source: publicKey1,
-					target: 0,
-					money: [],
-					invests: [202501029002, 202501029003, 202501039000, 202501039001, 202501049000, 202501049001],
-					type: Blockchain.TXTYPE.ENGAGE,
-					signer: publicKey1,
-					hash: 0
-				}
-			]
-		}
-		Blockchain.signblock(res, privateKey3);
-		return res;
-	}
-
-	const validNoMoreEngagedBlock = () => {
-		const res = {
-			closedate: 20250102,
-			previousHash: validInitBlock().hash,
-			merkleroot: 0,
-			signer: publicKey1,
-			total: 27,
-			version: 1,
-			money: [20250101000],
-			invests: [20250101000],
-			transactions: [
-				{
-					version: Blockchain.VERSION,
-					date: 20250102,
-					source: publicKey1,
-					target: 0,
-					money: [20250102002, 20250102003],
-					invests: [],
-					type: Blockchain.TXTYPE.ENGAGE,
-					signer: publicKey1,
-					hash: 0
-				},
-				{
-					version: Blockchain.VERSION,
-					date: 20250102,
-					source: publicKey1,
-					target: 0,
-					money: [],
-					invests: [202501029002, 202501029003],
-					type: Blockchain.TXTYPE.ENGAGE,
-					signer: publicKey1,
-					hash: 0
-				}
-			]
-		}
-		Blockchain.signblock(res, privateKey1);
-		return res;
-	}
 
 	describe('constructor', () => {
 		it('Should load given blocks objects to Blocks.', () => {
@@ -482,8 +210,8 @@ describe('Blockchain', () => {
 	})*/
 
 	describe('isValid', () => {
-		it('Should return true for initialized blockchain.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+		it('Should return true for empty blockchain.', () => {
+			const bc = new Blockchain()
 
 			const result = bc.isValid()
 
@@ -634,92 +362,40 @@ describe('Blockchain', () => {
 		})
 
 		it('Should return false else', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj()])
 			const result = bc.isEmpty()
 
 			assert.isNotOk(result)
 		})
 	})
 
-	/**
-	describe('getAvailableMoney', () => {
-		it('Should return first created money for new Blockchain.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-			const result = bc.getAvailableMoney()
+	
 
-			const expected = [20250101000]
-
-			assert.deepEqual(result, expected)
-		})
-
-		it('Should return each index.', () => {
-			const bc = new Blockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
-			const result = bc.getAvailableMoney()
-
-			const expected =  [20250101000, 20250102000, 20250102001, 20250102002, 20250102003] 
-
-			assert.deepEqual(result, expected)
-		})
-
-		it('Should return only given amount if given.', () => {
-			const bc = new Blockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
-			const result = bc.getAvailableMoney(2)
-
-			const expected = [20250101000, 20250102000]
-
-			assert.deepEqual(result, expected)
-		})
-
-		it('Should return only given amount for complexe cases.', () => {
-			const bc = new Blockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
-			bc.lastblock.money = [
-				20250101000, 20250101001, 20250101002, 20250101003, 20250101004,
-				20250103000, 20250103001, 20250103002, 20250103003
-			]
-			const result = bc.getAvailableMoney(7)
-
-			const expected = [
-				20250101000, 20250101001, 20250101002, 20250101003, 20250101004,
-				20250103000, 20250103001,
-			]
-
-			assert.deepEqual(result, expected)
-		})
-
-		it('Should return [] if amount is too big (1).', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-
-			const result = bc.getAvailableMoney(2)
-
-			assert.deepEqual(result, [])
-		})
-
-		it('Should return [] if amount is too big (2).', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-			bc.lastblock.total = 27
-
-			const result = bc.getAvailableMoney(3)
-
-			assert.deepEqual(result, [])
-		})
-	})*/
-
-	/**
 	describe('removeMoney', () => {
 		it('Should filter properly.', () => {
-			const bc = new Blockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
+			const tx1 = makeTransaction({
+				date: new Date("2025-01-01"),
+				moneycount: 1
+			})
+			const tx2 = makeTransaction({
+				date: new Date("2025-01-02"),
+				moneycount: 4
+			})
+			const bc = new Blockchain([makeBlockObj()])
+			bc.addTransaction(tx1)
+			bc.addTransaction(tx2)
 
 			const result = bc.removeMoney([20250101000, 20250102000]);
 			const expected = [20250102001, 20250102002, 20250102003];
 
 			assert.deepEqual(result, expected)
 		})
-	})*/
+	})
 
 	describe('addTransaction', () => {
 		it('Should add the given transaction to last block', () => {
-			const blockObj1 = makeBlockObj(new Date(), 1, 1, 0, true)
-			const blockObj2 = makeBlockObj(new Date(), 1, 2, 0, false)
+			const blockObj1 = makeBlockObj({ signed: true })
+			const blockObj2 = makeBlockObj({ signed: false })
 			const blockchain = new Blockchain([blockObj2, blockObj1])
 
 			const tx = makeTransaction()
@@ -854,7 +530,7 @@ describe('Blockchain', () => {
 		})
 	})
 
-	describe.only('income', () => {
+	describe('income', () => {
 
 		it('Should throw an error if target is not blockchain owner.', () => {
 			const bc = new Blockchain([makeBlockObj({

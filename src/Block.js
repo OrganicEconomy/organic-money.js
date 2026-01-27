@@ -83,14 +83,6 @@ export class Block {
      * @returns 
      */
     sign(sk) {
-/*
-        const myPublicKey = this.getMyPublicKey()
-        for (let tx of this.lastblock.transactions) {
-            if (tx.type === Blockchain.TXTYPE.PAPER && publicFromPrivate(privateKey) !== tx.signer) {
-                throw new UnauthorizedError('Only Paper signer can seal a block with it.')
-            }
-        }
-*/
         const pk = publicFromPrivate(sk)
         if (this.containsPaper()) {
             const paperHandler = this.getPapersHandler()
@@ -123,6 +115,9 @@ export class Block {
 
     add(transaction) {
         this.transactions.unshift(transaction)
+        if (transaction.type === TXTYPE.CREATE) {
+            this.money = this.money.concat(transaction.money)
+        }
     }
 
     merkle() {
@@ -143,5 +138,26 @@ export class Block {
             this.hash(),
             this.signer
         )
+    }
+
+    /**
+	 * Return the list of all available Money
+	 * If amount > 0, return only this amount of Money
+	 * If amount is not affordable, return empty array []
+	 */
+	getAvailableMoney(amount = -1) {
+		if (amount < 0) {
+			return this.money
+		}
+
+		if (amount > this.money.length) {
+			return []
+		}
+
+		return this.money.slice(0, amount)
+	}
+
+    getAvailableMoneyAmount() {
+        return this.getAvailableMoney().length
     }
 }

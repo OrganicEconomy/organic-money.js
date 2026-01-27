@@ -177,24 +177,11 @@ export class Blockchain {
 		if (this.isEmpty() || this.isWaitingValidation()) {
 			return 0
 		}
-		return this.lastblock.money.length;
+		return this.lastblock.getAvailableMoneyAmount()
 	}
 
-	/**
-	 * Return the list of all available Money
-	 * If amount > 0, return only this amount of Money
-	 * If amount is not affordable, return empty array []
-	 */
 	getAvailableMoney(amount = -1) {
-		if (amount < 0) {
-			return this.lastblock.money
-		}
-
-		if (amount > this.lastblock.money.length) {
-			return []
-		}
-
-		return this.lastblock.money.slice(0, amount)
+		return this.lastblock.getAvailableMoney(amount)
 	}
 
 	/**
@@ -245,7 +232,7 @@ export class Blockchain {
 	 * Return the date of the lastly added transaction
 	 */
 	getLastTransactionDate() {
-		const tx = this.getLastTransaction()
+		const tx = this.lastTransaction
 		return intToDate(tx.date)
 	}
 
@@ -258,46 +245,6 @@ export class Blockchain {
 
 	isValid() {
 		return true
-	}
-
-	/**
-	 * @returns true if blocks are in light format (v instead of version, d instead of closedate, etc)
-	 */
-	isLightBlocks(blocks) {
-		return !(blocks.length === 0 || !!blocks[0].version)
-	}
-
-	/**
-	 * 
-	 * @param {} blocks
-	 */
-	loadLightBlocks(blocks) {
-		this.blocks = []
-		for (let i = 0; i < blocks.length; i++) {
-			this.blocks[i] = {
-				version: blocks[i].v,
-				closedate: blocks[i].d,
-				previousHash: blocks[i].p,
-				signer: blocks[i].s,
-				merkleroot: blocks[i].r,
-				total: blocks[i].t,
-				money: blocks[i].m,
-				invests: blocks[i].i,
-				transactions: [] || blocks[i].x,
-				hash: blocks[i].h
-			}
-			for (let j = 0; j < blocks[i].transactions; j++) {
-				this.blocks[i].transactions[j] = {
-					version: blocks[i].transaction[j].v,
-					type: blocks[i].transaction[j].t,
-					date: blocks[i].transaction[j].d,
-					signer: blocks[i].transaction[j].s,
-					target: blocks[i].transaction[j].t,
-					money: blocks[i].transaction[j].m,
-					invests: blocks[i].transaction[j].i
-				}
-			}
-		}
 	}
 
 	/**

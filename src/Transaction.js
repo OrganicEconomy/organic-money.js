@@ -121,6 +121,24 @@ export class Transaction {
 }
 
 export class InitTransaction extends Transaction {
+    constructor(objOrSk, name = "", birthdate = null) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.INIT,
+                m: [],
+                i: [],
+                d: dateToInt(birthdate),
+                s: publicFromPrivate(objOrSk),
+                p: name,
+                h: ""
+            })
+            this.sign(objOrSk)
+        }
+    }
+    
     isValid() {
         return super.isValid() &&
             !!this.target &&

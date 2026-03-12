@@ -232,12 +232,10 @@ describe('Block', () => {
 
         it('Should NOT add the money to the block for other types of transaction.', () => {
             const block = makeBlock()
-            const tx1 = new PayTransaction(privateKey1, publicKey2, new Date(), [20260101000])
-            // TODO: add all others types of transaction
-
-            assert.isTrue(tx1.isValid())
-
-            block.add(tx1)
+            block.add(new PayTransaction(privateKey1, publicKey2, new Date(), [20260101000]))
+            block.add(makeTransaction({ type: TXTYPE.ENGAGE, moneycount: 2 }))
+            block.add(makeTransaction({ type: TXTYPE.INIT, moneycount: 2 }))
+            block.add(makeTransaction({ type: TXTYPE.PAPER, moneycount: 2 }))
 
             assert.deepEqual(block.money, [])
         })

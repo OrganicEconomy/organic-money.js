@@ -4,9 +4,12 @@ import { hexToBytes, toHex } from 'ethereum-cryptography/utils.js'
 import { MerkleTree } from 'merkletreejs'
 import { signSync, verify } from 'ethereum-cryptography/secp256k1.js'
 
-import { dateToInt, intToDate, publicFromPrivate } from "./crypto.js"
-import { PaperTransaction, Transaction, TransactionMaker, TXTYPE } from './Transaction.js'
+import { dateToInt, formatInvestIndex, formatMoneyIndex, intToDate, publicFromPrivate } from "./crypto.js"
+import { CreateTransaction, InitTransaction, PaperTransaction, Transaction, TransactionMaker, TXTYPE } from './Transaction.js'
 import { UnauthorizedError } from './errors.js'
+import { Blockchain } from './Blockchain.js'
+
+const REF_HASH = 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5'
 
 export class Block {
 
@@ -167,5 +170,25 @@ export class Block {
 
     getAvailableMoneyAmount() {
         return this.getAvailableMoney().length
+    }
+}
+
+export class BirthBlock extends Block {
+    constructor(sk, birthdate, name, date = new Date()) {
+        super({
+            v: Blockchain.VERSION,
+            d: dateToInt(date),
+            p: REF_HASH,
+            s: publicFromPrivate(sk),
+            r: 0,
+            m: [formatMoneyIndex(date, 0)],
+            i: [formatInvestIndex(date, 0)],
+            t: 0,
+            h: null,
+            x: []
+        })
+        
+        this.add(new InitTransaction(sk, name, birthdate))
+        this.add(new CreateTransaction(sk, 1, date))
     }
 }

@@ -154,7 +154,7 @@ export class Blockchain {
 	getEngagedInvests(date = null) {
 		const result = []
 		for (let tx of this.lastblock.transactions) {
-			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
+			if (tx.type === TXTYPE.ENGAGE) {
 				for (let invest of tx.invests) {
 					if (date !== null) {
 						if (intToDate(invest).getDate() === date.getDate()) {
@@ -176,7 +176,7 @@ export class Blockchain {
 	getEngagedMoney(date = null) {
 		const result = []
 		for (let tx of this.lastblock.transactions) {
-			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
+			if (tx.type === TXTYPE.ENGAGE) {
 				for (let m of tx.money) {
 					if (date !== null) {
 						if (intToDate(m).getDate() === date.getDate()) {

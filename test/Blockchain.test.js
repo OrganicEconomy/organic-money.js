@@ -6,6 +6,7 @@ import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { Blockchain } from '../src/Blockchain.js';
 import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3, makeBlockObj, makeTransactionObj, makeBlock, makeTransaction } from './testUtils.js'
 import { CreateTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
+import { dateToInt, intToDate } from '../src/crypto.js';
 
 describe('Blockchain', () => {
 
@@ -162,93 +163,171 @@ describe('Blockchain', () => {
 		})
 	})
 
-	/**
 	describe('getEngagedInvests', () => {
 		it('Should return all engaged invests if no date is given.', () => {
-			const bc = new Blockchain([validEngagedBlock(), validInitBlock(), validBirthBlock()])
+			const transactions = [
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250102),
+					investscount: 2
+				}),
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250103),
+					investscount: 1
+				}),
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250104),
+					investscount: 4
+				})
+			]
+			const bc = new Blockchain([makeBlockObj({
+				transactions: transactions
+			})])
 
 			const result = bc.getEngagedInvests()
 
-			const expected = [202501029002, 202501029003, 202501039000, 202501039001, 202501049000, 202501049001]
+			const expected = [202501029000, 202501029001, 202501039000, 202501049000, 202501049001, 202501049002, 202501049003]
 
 			assert.deepEqual(result, expected)
 		})
 
-		it('Should return engaged invests of given date if given.', () => {
-			const bc = new Blockchain([validEngagedBlock(), validInitBlock(), validBirthBlock()])
+		it('Should return engaged invests of given date.', () => {
+			const transactions = [
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250102),
+					investscount: 2
+				}),
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250103),
+					investscount: 3
+				})
+			]
+			const bc = new Blockchain([makeBlockObj({
+				transactions: transactions
+			})])
 
 			const result = bc.getEngagedInvests(new Date('2025-01-03'))
 
-			const expected = [202501039000, 202501039001]
+			const expected = [202501039000, 202501039001, 202501039002]
 
 			assert.deepEqual(result, expected)
 		})
 
-		it('Should return engaged invests from every transactions.', () => {
-			const bc = new Blockchain([validEngagedBlock2(), validInitBlock(), validBirthBlock()])
+		it('Should return engaged invests of given date even from multiple transactions.', () => {
+			const transactions = [
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250102),
+					invests: [202501029000, 202501029001]
+				}),
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250102),
+					invests: [202501029002, 202501029003, 202501029004]
+				}),
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250103),
+					invests: [202501039000, 202501039001]
+				})
+			]
+			const bc = new Blockchain([makeBlockObj({
+				transactions: transactions
+			})])
+			const result = bc.getEngagedInvests(new Date('2025-01-02'))
 
-			const result = bc.getEngagedInvests()
-
-			const expected = [202501039002, 202501039003, 202501049002, 202501049003, 202501059000, 202501059001,
-				202501029002, 202501029003, 202501039000, 202501039001, 202501049000, 202501049001]
+			const expected = [202501029000, 202501029001, 202501029002, 202501029003, 202501029004]
 
 			assert.deepEqual(result, expected)
 		})
+	})
 
-		it('Should return engaged invests of given date if given from every transactions.', () => {
-			const bc = new Blockchain([validEngagedBlock2(), validInitBlock(), validBirthBlock()])
-
-			const result = bc.getEngagedInvests(new Date('2025-01-03'))
-
-			const expected = [202501039002, 202501039003, 202501039000, 202501039001]
-
-			assert.deepEqual(result, expected)
-		})
-	})*/
-
-	/**
 	describe('getEngagedMoney', () => {
 		it('Should return all engaged money if no date is given.', () => {
-			const bc = new Blockchain([validEngagedBlock(), validInitBlock(), validBirthBlock()])
+			const transactions = [
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250102),
+					moneycount: 2
+				}),
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250103),
+					moneycount: 1
+				}),
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250104),
+					moneycount: 4
+				})
+			]
+			const bc = new Blockchain([makeBlockObj({
+				transactions: transactions
+			})])
 
 			const result = bc.getEngagedMoney()
 
-			const expected = [20250102002, 20250102003, 20250103000, 20250103001, 20250104000, 20250104001]
+			const expected = [20250102000, 20250102001, 20250103000, 20250104000, 20250104001, 20250104002, 20250104003]
 
 			assert.deepEqual(result, expected)
 		})
 
-		it('Should return engaged money of given date if given.', () => {
-			const bc = new Blockchain([validEngagedBlock(), validInitBlock(), validBirthBlock()])
+		it('Should return engaged money of given date.', () => {
+			const transactions = [
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250102),
+					moneycount: 2
+				}),
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250103),
+					moneycount: 3
+				})
+			]
+			const bc = new Blockchain([makeBlockObj({
+				transactions: transactions
+			})])
 
 			const result = bc.getEngagedMoney(new Date('2025-01-03'))
 
-			const expected = [20250103000, 20250103001]
-
-			assert.deepEqual(result, expected)
-		})
-
-		it('Should return engaged money from every transactions.', () => {
-			const bc = new Blockchain([validEngagedBlock2(), validInitBlock(), validBirthBlock()])
-
-			const result = bc.getEngagedMoney()
-
-			const expected = [20250103002, 20250103003, 20250104002, 20250104003, 20250105000, 20250105001,
-				20250102002, 20250102003, 20250103000, 20250103001, 20250104000, 20250104001]
+			const expected = [20250103000, 20250103001, 20250103002]
 
 			assert.deepEqual(result, expected)
 		})
 
 		it('Should return engaged money of given date if given from every transactions.', () => {
-			const bc = new Blockchain([validEngagedBlock2(), validInitBlock(), validBirthBlock()])
+			const transactions = [
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250102),
+					money: [20250102000, 20250102001]
+				}),
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250102),
+					money: [20250102002, 20250102003, 20250102004]
+				}),
+				makeTransaction({
+					type: TXTYPE.ENGAGE,
+					date: intToDate(20250103),
+					money: [20250103000, 20250103001]
+				})
+			]
+			const bc = new Blockchain([makeBlockObj({
+				transactions: transactions
+			})])
+			const result = bc.getEngagedMoney(new Date('2025-01-02'))
 
-			const result = bc.getEngagedMoney(new Date('2025-01-03'))
-
-			const expected = [20250103002, 20250103003, 20250103000, 20250103001]
+			const expected = [20250102000, 20250102001, 20250102002, 20250102003, 20250102004]
 
 			assert.deepEqual(result, expected)
 		})
-	})*/
+	})
 
 	describe('isEmpty', () => {
 		it('Should return true for empty array', () => {

@@ -1,6 +1,5 @@
 import { describe, it } from 'mocha';
 import { assert } from 'chai';
-import nodeassert from 'node:assert';
 
 
 import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
@@ -50,164 +49,76 @@ describe('Blockchain', () => {
 		})
 	})
 
-	/**
 	describe('cashPaper', () => {
 
-		let paper1 = () => {
-			let paper = {
-				version: Blockchain.VERSION,
-				date: 20250101,
-				source: publicKey2,
-				target: 0,
-				money: [20250101000],
-				invests: [],
-				type: Blockchain.TXTYPE.PAPER,
-				signer: 0
-			}
-			paper = Blockchain.signtx(paper, privateKey2)
-			return paper
-		}
+		it('Should throw an error if transaction is not a PaperTransaction.', () => {
+			const bc = new Blockchain()
 
-		let paper2 = () => {
-			let paper = {
-				version: Blockchain.VERSION,
-				date: 20250102,
-				source: publicKey2,
-				target: 0,
-				money: [20250101001, 20250101002, 20250101003],
-				invests: [],
-				type: Blockchain.TXTYPE.PAPER,
-				signer: 0
-			}
-			paper = Blockchain.signtx(paper, privateKey2)
-			return paper
-		}
+			const tx = makeTransaction({
+				type: TXTYPE.CREATE
+			})
 
-		it('Should throw an error if target is not 0.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-
-			const tx = paper1()
-			tx.target = publicKey1
-
-			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Target is != 0')
+			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Invalid Transaction')
 		})
 
-		it('Should throw an error if transaction has no target.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+		it('Should throw an error if transaction signer is different from another paper in the block.', () => {
+			const bc = new Blockchain([makeBlockObj()])
 
-			const tx = paper1()
-			delete tx.target
-			Blockchain.signtx(tx, privateKey2)
+			const paper1 = makeTransaction({
+				type: TXTYPE.PAPER,
+				moneycount: 3,
+				signer: publicKey1,
+				target: publicKey2
+			})
+			bc.cashPaper(paper1)
 
-			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Target is != 0')
-		})
-		
-		it('Should throw an error if transaction is not signed.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const paper2 = makeTransaction({
+				type: TXTYPE.PAPER,
+				moneycount: 3,
+				signer: publicKey1,
+				target: publicKey3
+			})
 
-			const tx = paper1()
-			delete tx.hash
-
-			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong signature ' + tx.hash)
-		})
-
-		it('Should throw an error if transaction has no version.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-
-			const tx = paper1()
-			delete tx.version
-			Blockchain.signtx(tx, privateKey2)
-
-			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Missing version ' + tx.hash)
-		})
-
-		it('Should throw an error if transaction has no date.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-
-			const tx = paper1()
-			delete tx.date
-			Blockchain.signtx(tx, privateKey2)
-
-			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong date ' + tx.hash)
-		})
-
-		it('Should throw an error if transaction has no source.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-
-			const tx = paper1()
-			delete tx.source
-			Blockchain.signtx(tx, privateKey2)
-
-			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong source format ' + tx.hash)
-		})
-
-		it('Should throw an error if transaction has no money.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-
-			const tx = paper1()
-			delete tx.money
-			Blockchain.signtx(tx, privateKey2)
-
-			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong money format ' + tx.hash)
-		})
-
-		it('Should throw an error if transaction has no invests field.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-
-			const tx = paper1()
-			delete tx.invests
-			Blockchain.signtx(tx, privateKey2)
-
-			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong invests format ' + tx.hash)
-		})
-
-		it('Should throw an error if transaction has no type.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-
-			const tx = paper1()
-			delete tx.type
-			Blockchain.signtx(tx, privateKey2)
-
-			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong transaction type ' + tx.hash)
-		})
-
-		it('Should throw an error if transaction type is != PAPER.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
-
-			const tx = paper1()
-			tx.type = Blockchain.TXTYPE.CREATE
-			Blockchain.signtx(tx, privateKey2)
-
-			assert.throws(() => { bc.cashPaper(tx) }, InvalidTransactionError, 'Wrong transaction type ' + tx.hash)
+			assert.throws(() => { bc.cashPaper(paper2) }, InvalidTransactionError, 'Multiple papers target')
 		})
 
 		it('Should return the transaction.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj()])
 
-			const paper = paper1()
+			const paper = makeTransaction({
+				type: TXTYPE.PAPER,
+				moneycount: 3,
+				target: publicKey1
+			})
 			const result = bc.cashPaper(paper)
 
 			assert.deepEqual(result, paper)
 		})
 
 		it('Should add the transactions to last block.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj()])
 
-			const paper = paper1()
+			const paper = makeTransaction({
+				type: TXTYPE.PAPER,
+				moneycount: 3
+			})
 			bc.cashPaper(paper)
 
 			assert.deepEqual(bc.lastblock.transactions[0], paper)
 		})
 
 		it('Should increase the blockchain total.', () => {
-			const bc = new Blockchain([validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj()])
 
-			const paper = paper2()
+			const paper = makeTransaction({
+				type: TXTYPE.PAPER,
+				moneycount: 3
+			})
 			bc.cashPaper(paper)
 
 			assert.deepEqual(bc.lastblock.total, 3)
 		})
-	})*/
+	})
 
 	describe('isValid', () => {
 		it('Should return true for empty blockchain.', () => {
@@ -367,9 +278,7 @@ describe('Blockchain', () => {
 
 			assert.isNotOk(result)
 		})
-	})
-
-	
+	})	
 
 	describe('removeMoney', () => {
 		it('Should filter properly.', () => {
@@ -656,7 +565,13 @@ describe('Blockchain', () => {
 				signer: publicKey1
 			}
 
-			nodeassert.partialDeepStrictEqual(transaction, expected)
+			assert.equal(transaction.version, expected.version)
+			assert.equal(transaction.type, expected.type)
+			assert.equal(transaction.date.getTime(), expected.date.getTime())
+			assert.deepEqual(transaction.money, expected.money)
+			assert.deepEqual(transaction.invests, expected.invests)
+			assert.equal(transaction.target, expected.target)
+			assert.equal(transaction.signer, expected.signer)
 		})
 
 		it('Should decrease money of the block.', () => {

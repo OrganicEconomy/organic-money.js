@@ -1,12 +1,8 @@
-import { Base64 } from 'js-base64'
-import { sha256 } from 'ethereum-cryptography/sha256.js'
-import { toHex, hexToBytes } from 'ethereum-cryptography/utils.js'
-import { signSync, verify } from 'ethereum-cryptography/secp256k1.js'
-import { encode, decode } from 'msgpack-lite'
+import { verify } from 'ethereum-cryptography/secp256k1.js'
 import { InvalidTransactionError, UnauthorizedError } from './errors.js'
-import { publicFromPrivate, dateToInt, intToDate } from './crypto.js'
+import { intToDate } from './crypto.js'
 
-import { CreateTransaction, PayTransaction, Transaction, TXTYPE } from './Transaction.js'
+import { CreateTransaction, PaperTransaction, PayTransaction, TXTYPE } from './Transaction.js'
 import { Block } from './Block.js'
 
 export class Blockchain {
@@ -14,7 +10,6 @@ export class Blockchain {
 	 *                              CONSTANTS
 	 **********************************************************************/
 	static get REF_HASH() { return 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5' }
-	static get ECOREF_HASH() { return 'ec051c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a1' }
 	static get VERSION() { return 1 }
 
 	/***********************************************************************
@@ -30,7 +25,7 @@ export class Blockchain {
 		const publicKey = block.signer
 
 		for (let t of block.transactions) {
-			if (!Blockchain.isValidTransaction(t)) {
+			if (!t.isValid()) {
 				return false;
 			}
 		}
@@ -60,27 +55,6 @@ export class Blockchain {
 			block.invests.length === 1 &&
 			block.total === 0 &&
 			verify(signature, messageHash, publicKey)
-	}
-
-	/**
-	 * Return true if given transaction has all it's fields
-	 * and is correctly signed
-	 * Return false else
-	 */
-	static isValidTransaction(tx) {
-		const txHash = Blockchain.hashtx(tx)
-
-		if (!tx.source) {
-			return false
-		}
-
-		return tx.version === Blockchain.VERSION &&
-			tx.date > 0 &&
-			tx.source.length === 66 &&
-			Object.prototype.toString.call(tx.money) == '[object Array]' &&
-			Object.prototype.toString.call(tx.invests) == '[object Array]' &&
-			Object.values(Blockchain.TXTYPE).indexOf(tx.type) > -1 &&
-			verify(tx.hash, txHash, tx.source)
 	}
 
 	/***********************************************************************
@@ -131,28 +105,17 @@ export class Blockchain {
 	/**
 	 * Add the given transaction as a paper cash to the blockchain
 	 * Then return it.
+	 * TODO : cashPaper must throw error if signer is different from another paper in the block
 	 */
 	cashPaper(tx) {
-		if (tx.target !== 0) {
-			throw new InvalidTransactionError('Target is != 0')
-		} else if (!tx.version) {
-			throw new InvalidTransactionError('Missing version ' + tx.hash)
-		} else if (!tx.date > 0) {
-			throw new InvalidTransactionError('Wrong date ' + tx.hash)
-		} else if (!tx.source || tx.source.length !== 66) {
-			throw new InvalidTransactionError('Wrong source format ' + tx.hash)
-		} else if (!tx.money || !Object.prototype.toString.call(tx.money) == '[object Array]') {
-			throw new InvalidTransactionError('Wrong money format ' + tx.hash)
-		} else if (tx.money.length === 0) {
-			throw new InvalidTransactionError('Empty paper (no money) ' + tx.hash)
-		} else if (!tx.invests
-			|| !Object.prototype.toString.call(tx.invests) == '[object Array]'
-			|| tx.invests.length > 0) {
-			throw new InvalidTransactionError('Wrong invests format ' + tx.hash)
-		} else if (tx.type !== Blockchain.TXTYPE.PAPER) {
-			throw new InvalidTransactionError('Wrong transaction type ' + tx.hash)
-		} else if (!Blockchain.isValidTransaction(tx)) {
-			throw new InvalidTransactionError('Wrong signature ' + tx.hash)
+		console.log(typeof(tx))
+		if (!(tx.type === TXTYPE.PAPER && tx.isValid())) {
+			throw new InvalidTransactionError('Invalid Transaction')
+		}
+
+		const papersHandler = this.lastblock.getPapersHandler()
+		if (papersHandler !== null && papersHandler !== tx.target) {
+			throw new InvalidTransactionError('Multiple papers target')
 		}
 
 		this.addTransaction(tx)

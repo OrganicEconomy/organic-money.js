@@ -1,7 +1,7 @@
 import { describe, it } from 'mocha';
 import { assert } from 'chai';
 
-import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TransactionMaker, TXTYPE } from '../src/Transaction.js';
+import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, UnsetAdminTransaction, UnsetActorTransaction, UnsetPayerTransaction, Transaction, TransactionMaker, TXTYPE } from '../src/Transaction.js';
 import { makeTransactionObj, makeTransaction, privateKey1, publicKey1, publicKey3, publicKey2, privateKey2 } from './testUtils.js';
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
 import { buildMoneyIndexes } from '../src/crypto.js';
@@ -245,7 +245,7 @@ describe('TransactionMaker', () => {
         it('Should throw error for invalid transacrion type.', () => {
             assert.throws(() => { 
                 TransactionMaker.make(makeTransactionObj({ type: -12 }))
-            }, Error, 'Invalid transaction type -12. Allowed are {"INIT":1,"CREATE":2,"PAY":3,"ENGAGE":4,"PAPER":5,"SETADMIN":6,"SETACTOR":7,"SETPAYER":8}')
+            }, Error, 'Invalid transaction type -12. Allowed are {"INIT":1,"CREATE":2,"PAY":3,"ENGAGE":4,"PAPER":5,"SETADMIN":6,"SETACTOR":7,"SETPAYER":8,"UNSETADMIN":9,"UNSETACTOR":10,"UNSETPAYER":11}')
         })
 
         it('Should return a CreateTransaction for TXTYPE.CREATE.', () => {
@@ -294,6 +294,24 @@ describe('TransactionMaker', () => {
             const tx = TransactionMaker.make(makeTransactionObj({ type: TXTYPE.SETPAYER }))
 
             assert.isTrue(tx instanceof SetPayerTransaction)
+        })
+
+        it('Should return a UnsetAdminTransaction for TXTYPE.UNSETADMIN.', () => {
+            const tx = TransactionMaker.make(makeTransactionObj({ type: TXTYPE.UNSETADMIN }))
+
+            assert.isTrue(tx instanceof UnsetAdminTransaction)
+        })
+
+        it('Should return a UnsetActorTransaction for TXTYPE.UNSETACTOR.', () => {
+            const tx = TransactionMaker.make(makeTransactionObj({ type: TXTYPE.UNSETACTOR }))
+
+            assert.isTrue(tx instanceof UnsetActorTransaction)
+        })
+
+        it('Should return a UnsetPayerTransaction for TXTYPE.UNSETPAYER.', () => {
+            const tx = TransactionMaker.make(makeTransactionObj({ type: TXTYPE.UNSETPAYER }))
+
+            assert.isTrue(tx instanceof UnsetPayerTransaction)
         })
     })
 })
@@ -956,6 +974,220 @@ describe('SetPayerTransaction', () => {
         it('Should return true if all is fine.', () => {
             const tx = new SetPayerTransaction(makeTransactionObj({
                 type: TXTYPE.SETPAYER,
+                moneycount: 0,
+                investscount: 0
+            }))
+
+            const result = tx.isValid()
+
+            assert.isTrue(result)
+        })
+    })
+})
+
+describe('UnsetAdminTransaction', () => {
+    describe('isValid', () => {
+
+        it('Should return false if money is NOT an empty array.', () => {
+            const tx = new UnsetAdminTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETADMIN,
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if invests is NOT an empty array.', () => {
+            const tx = new UnsetAdminTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETADMIN,
+                investscount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if type is NOT TXTYPE.UNSETADMIN.', () => {
+            const tx = new UnsetAdminTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is empty.', () => {
+            const tx = new UnsetAdminTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETADMIN,
+                target: ""
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is NOT 66 char length.', () => {
+            const tx = new UnsetAdminTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETADMIN,
+                target: "123"
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return true if all is fine.', () => {
+            const tx = new UnsetAdminTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETADMIN,
+                moneycount: 0,
+                investscount: 0
+            }))
+
+            const result = tx.isValid()
+
+            assert.isTrue(result)
+        })
+    })
+})
+
+describe('UnsetActorTransaction', () => {
+    describe('isValid', () => {
+        it('Should return false if money is NOT an empty array.', () => {
+            const tx = new UnsetActorTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETACTOR,
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if invests is NOT an empty array.', () => {
+            const tx = new UnsetActorTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETACTOR,
+                investscount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if type is NOT TXTYPE.UNSETACTOR.', () => {
+            const tx = new UnsetActorTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is empty.', () => {
+            const tx = new UnsetActorTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETACTOR,
+                target: ""
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is NOT 66 char length.', () => {
+            const tx = new UnsetActorTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETACTOR,
+                target: "123"
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return true if all is fine.', () => {
+            const tx = new UnsetActorTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETACTOR,
+                moneycount: 0,
+                investscount: 0
+            }))
+
+            const result = tx.isValid()
+
+            assert.isTrue(result)
+        })
+    })
+})
+
+describe('UnsetPayerTransaction', () => {
+    describe('isValid', () => {
+        it('Should return false if money is NOT an empty array.', () => {
+            const tx = new UnsetPayerTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETPAYER,
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if invests is NOT an empty array.', () => {
+            const tx = new UnsetPayerTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETPAYER,
+                investscount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if type is NOT TXTYPE.UNSETPAYER.', () => {
+            const tx = new UnsetPayerTransaction(makeTransactionObj({
+                type: TXTYPE.CREATE,
+                moneycount: 1
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is empty.', () => {
+            const tx = new UnsetPayerTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETPAYER,
+                target: ""
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return false if target is NOT 66 char length.', () => {
+            const tx = new UnsetPayerTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETPAYER,
+                target: "123"
+            }))
+
+            const result = tx.isValid()
+
+            assert.isFalse(result)
+        })
+
+        it('Should return true if all is fine.', () => {
+            const tx = new UnsetPayerTransaction(makeTransactionObj({
+                type: TXTYPE.UNSETPAYER,
                 moneycount: 0,
                 investscount: 0
             }))

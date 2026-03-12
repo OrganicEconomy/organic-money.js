@@ -84,6 +84,12 @@ A transaction has ALWAYS this content :
 }
 ```
 
+### Paper
+
+A Paper is a transaction which represents a printer currency.
+As we don't know in advance the target of the Paper, it's *target* field is filled with the public key of the local ecosystem in charge of papers handling.
+The *source* field is always the creator citizen public key.
+
 ## Blocks
 
 A block has ALWAYS this content :

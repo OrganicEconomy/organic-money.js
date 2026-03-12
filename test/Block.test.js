@@ -102,7 +102,7 @@ describe('Block', () => {
                 previousHash: Blockchain.REF_HASH
             })
 
-            const expected = '3045022100a02d662e6a11a78baae34d6178da56741380130a6ff0ad4b9e32e2a1f87f7755022000d987c221ede1ca9535432aa2c89ce6664d2545b455dfdd0da8a54e1440e2ca'
+            const expected = '30440220561ca1d2ab101a8e1b438872c7a28bfbe68a889bcf6552d7aa4b0f2e77c9b30b02203052c306c7c10a5ab02b151570b282d835f6fb3bb1e11757e1580493f095602a'
 
             const result = block.sign(privateKey1)
 

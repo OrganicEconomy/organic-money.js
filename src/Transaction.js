@@ -14,7 +14,10 @@ export const TXTYPE = {
     PAPER: 5,
     SETADMIN: 6,
     SETACTOR: 7,
-    SETPAYER: 8
+    SETPAYER: 8,
+    UNSETADMIN: 9,
+    UNSETACTOR: 10,
+    UNSETPAYER: 11
 }
 
 export class TransactionMaker {
@@ -36,6 +39,12 @@ export class TransactionMaker {
                 return new SetActorTransaction(txObj)
             case TXTYPE.SETPAYER:
                 return new SetPayerTransaction(txObj)
+            case TXTYPE.UNSETADMIN:
+                return new UnsetAdminTransaction(txObj)
+            case TXTYPE.UNSETACTOR:
+                return new UnsetActorTransaction(txObj)
+            case TXTYPE.UNSETPAYER:
+                return new UnsetPayerTransaction(txObj)
             default:
                 throw new Error(`Invalid transaction type ${txObj.t}. Allowed are ${JSON.stringify(TXTYPE)}`)
         }
@@ -197,7 +206,7 @@ export class PaperTransaction extends Transaction {
         return super.isValid() &&
         this.type == TXTYPE.PAPER &&
         this.money.length > 0 &&
-        this .invests.length === 0 &&
+        this.invests.length === 0 &&
         !! this.target &&
         this.target.length === 66
     }
@@ -233,5 +242,38 @@ export class SetPayerTransaction extends Transaction {
         this .invests.length === 0 &&
         !! this.target &&
         this.target.length === 66
+    }
+}
+
+export class UnsetAdminTransaction extends Transaction {
+    isValid() {
+        return super.isValid() &&
+            this.type == TXTYPE.UNSETADMIN &&
+            this.money.length === 0 &&
+            this.invests.length === 0 &&
+            !!this.target &&
+            this.target.length === 66
+    }
+}
+
+export class UnsetActorTransaction extends Transaction {
+    isValid() {
+        return super.isValid() &&
+            this.type == TXTYPE.UNSETACTOR &&
+            this.money.length === 0 &&
+            this.invests.length === 0 &&
+            !!this.target &&
+            this.target.length === 66
+    }
+}
+
+export class UnsetPayerTransaction extends Transaction {
+    isValid() {
+        return super.isValid() &&
+            this.type == TXTYPE.UNSETPAYER &&
+            this.money.length === 0 &&
+            this.invests.length === 0 &&
+            !!this.target &&
+            this.target.length === 66
     }
 }

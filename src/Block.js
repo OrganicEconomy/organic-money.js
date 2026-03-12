@@ -71,8 +71,6 @@ export class Block {
         return handler
     }
 
-    // TODO : cashPaper must throw error if signer is different from another paper in the block
-
     /**
      * @param {*} sk 
      * @returns 

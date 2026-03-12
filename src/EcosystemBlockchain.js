@@ -5,13 +5,14 @@ import { randomPrivateKey, aesEncrypt, aesDecrypt, publicFromPrivate,
 	buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
 
 export class EcosystemBlockchain extends Blockchain {
+	ECOREF_HASH = 'ec051c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a1'
 	/**
 	 * Return true if the Blockchain has only one Block
 	 * which is a Birth Block
 	 */
 	isWaitingValidation() {
 		return this.blocks.length === 1 &&
-			this.lastblock.previousHash === Blockchain.ECOREF_HASH
+			this.lastblock.previousHash === this.ECOREF_HASH
 	}
 
 	/**
@@ -20,7 +21,7 @@ export class EcosystemBlockchain extends Blockchain {
 	 */
 	isValidated() {
 		return !this.isEmpty() && this.blocks.length >= 2 &&
-			this.blocks[this.blocks.length - 1].previousHash === Blockchain.ECOREF_HASH
+			this.blocks[this.blocks.length - 1].previousHash === this.ECOREF_HASH
 	}
 
 	/**
@@ -31,7 +32,7 @@ export class EcosystemBlockchain extends Blockchain {
 		let block = {
 			version: Blockchain.VERSION,
 			closedate: dateToInt(date),
-			previousHash: Blockchain.ECOREF_HASH,
+			previousHash: this.ECOREF_HASH,
 			signer: publicKey,
 			merkleroot: 0,
 			money: [],

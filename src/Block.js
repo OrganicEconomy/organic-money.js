@@ -9,7 +9,7 @@ import { CreateTransaction, InitTransaction, PaperTransaction, Transaction, Tran
 import { UnauthorizedError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
 
-const REF_HASH = 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5'
+export const REF_HASH = 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5'
 
 export class Block {
 
@@ -128,6 +128,7 @@ export class Block {
         this.transactions.unshift(transaction)
         if (transaction.type === TXTYPE.CREATE) {
             this.money = this.money.concat(transaction.money)
+            this.invests = this.invests.concat(transaction.invests)
         }
     }
 
@@ -174,6 +175,9 @@ export class Block {
 }
 
 export class BirthBlock extends Block {
+    /**
+     * TODO: Test this contructor
+     */
     constructor(sk, birthdate, name, date = new Date()) {
         super({
             v: Blockchain.VERSION,
@@ -181,8 +185,8 @@ export class BirthBlock extends Block {
             p: REF_HASH,
             s: publicFromPrivate(sk),
             r: 0,
-            m: [formatMoneyIndex(date, 0)],
-            i: [formatInvestIndex(date, 0)],
+            m: [],
+            i: [],
             t: 0,
             h: null,
             x: []
@@ -190,5 +194,6 @@ export class BirthBlock extends Block {
         
         this.add(new InitTransaction(sk, name, birthdate))
         this.add(new CreateTransaction(sk, 1, date))
+        this.sign(sk)
     }
 }

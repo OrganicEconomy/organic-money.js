@@ -3,7 +3,7 @@ import { assert } from 'chai';
 
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
 
-import { Block } from '../src/Block.js';
+import { Block, BirthBlock, REF_HASH } from '../src/Block.js';
 import { dateToInt } from '../src/crypto.js';
 import { makeBlockObj, makeBlock, makeTransactionObj, makeTransactions, privateKey1, publicKey1, makeTransaction, publicKey3, publicKey2, privateKey2 } from './testUtils.js';
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
@@ -102,7 +102,7 @@ describe('Block', () => {
                 previousHash: Blockchain.REF_HASH
             })
 
-            const expected = '30440220561ca1d2ab101a8e1b438872c7a28bfbe68a889bcf6552d7aa4b0f2e77c9b30b02203052c306c7c10a5ab02b151570b282d835f6fb3bb1e11757e1580493f095602a'
+            const expected = '3044022008adb0cf5599c850b4bb8a7dc51cee622eaded1701b7a4324d18576a4c6172ba02203dbcf7715bd53530bf7cb93bf93b094ecfd9d174135a4ec9e78e4c6892f2d564'
 
             const result = block.sign(privateKey1)
 
@@ -230,7 +230,18 @@ describe('Block', () => {
             assert.deepEqual(block.money, tx.money)
         })
 
-        it('Should NOT add the money to the block for other types of transaction.', () => {
+        it('Should add the CREATE transaction\'s invests to the block.', () => {
+            const block = makeBlock()
+            const tx = new CreateTransaction(privateKey1, 2)
+
+            assert.isTrue(tx.isValid())
+
+            block.add(tx)
+
+            assert.deepEqual(block.invests, tx.invests)
+        })
+
+        it('Should NOT add the money/invests to the block for other types of transaction.', () => {
             const block = makeBlock()
             block.add(new PayTransaction(privateKey1, publicKey2, new Date(), [20260101000]))
             block.add(makeTransaction({ type: TXTYPE.ENGAGE, moneycount: 2 }))
@@ -238,6 +249,7 @@ describe('Block', () => {
             block.add(makeTransaction({ type: TXTYPE.PAPER, moneycount: 2 }))
 
             assert.deepEqual(block.money, [])
+            assert.deepEqual(block.invests, [])
         })
     })
 
@@ -575,6 +587,57 @@ describe('Block', () => {
             const result = block.getAvailableMoneyAmount()
 
             assert.deepEqual(result, 5)
+        })
+    })
+})
+
+describe('BirthBlock', () => {
+    describe('constructor', () => {
+        it('Should set the 10 fields with correct defaults.', () => {
+            const d = new Date('2025-11-26')
+            const birthdate = new Date('2025-11-01')
+            const name = "Jean Bombeur"
+            const expectedTransactions = [
+                makeTransaction({
+                    type: TXTYPE.CREATE,
+                    date: d,
+                    moneycount: 1,
+                    investscount: 1,
+                    signer: publicKey1,
+                    target: ""
+                }),
+                makeTransaction({
+                    type: TXTYPE.INIT,
+                    date: birthdate,
+                    signer: publicKey1,
+                    target: name
+                })
+            ]
+
+            const block = new BirthBlock(privateKey1, birthdate, name, d)
+
+            assert.equal(block.version, 1)
+            assert.equal(block.closedate.getDate(), d.getDate())
+            assert.equal(block.previousHash, REF_HASH)
+            assert.equal(block.signer, publicKey1)
+            assert.equal(block.root, 0)
+            assert.deepEqual(block.money, [20251126000])
+            assert.deepEqual(block.invests, [202511269000])
+            assert.equal(block.total, 0)
+            assert.equal(block.signature, null)
+            assert.deepEqual(block.transactions, expectedTransactions)
+        })
+
+        it('Should be signed.', () => {
+            const d = new Date('2025-11-26')
+            const birthdate = new Date('2025-11-01')
+            const name = "Jean Bombeur"
+
+            const block = new BirthBlock(privateKey1, birthdate, name, d)
+
+            assert.isTrue(block.isSigned())
+            assert.equal(block.root, "78d83a0ce3c7f2cc4231b25167779df0fe225cbf43e4869ba9320b769729e91e")
+            assert.equal(block.signature, "3045022100d5db93c664985eb68f7f32c051efe6357e14b8d395faaf1115e61c34407b3838022061a3a752e9d8f5c99ede8aaa408980a061d3ec7b7670ca6fbf51cfe5d18e6fe9")
         })
     })
 })

@@ -6,145 +6,11 @@ import { Blockchain } from '../src/Blockchain.js';
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js';
 import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3 } from './testUtils.js'
 import { dateToInt } from '../src/crypto.js'
+import { TXTYPE } from '../src/Transaction.js'
 
-/**
+
 describe('CitizenBlockchain', () => {
-	const validBirthBlock = () => {
-		// A valid birth block for someone named Gus,
-		// born the 28/11/1989 and subscribing on
-		// the 01/01/2025.
-		const res = {
-			version: Blockchain.VERSION,
-			closedate: 20250101,
-			previousHash: Blockchain.REF_HASH,
-			signer: publicKey1,
-			money: [20250101000],
-			invests: [20250101000],
-			total: 0,
-			merkleroot: 0,
-			transactions: [
-				{
-					version: Blockchain.VERSION,
-					date: 19891189,
-					source: 'Gus',
-					target: publicKey1,
-					money: [],
-					invests: [],
-					type: Blockchain.TXTYPE.INIT,
-					signer: 0,
-					hash: 0
-				},
-				{
-					version: Blockchain.VERSION,
-					date: 20250101,
-					source: publicKey1,
-					target: publicKey1,
-					money: [20250101000],
-					invests: [20250101000],
-					type: Blockchain.TXTYPE.CREATE,
-					signer: 0,
-					hash: 0
-				}
-			]
-		}
-		Blockchain.signblock(res, privateKey1);
-		return res;
-	}
-
-	const validInitBlock = () => {
-		const res = {
-			closedate: '21/09/2021',
-			previousHash: validBirthBlock().hash,
-			merkleroot: 0,
-			signer: publicKey2,
-			total: 0,
-			version: 1,
-			money: [],
-			invests: [],
-			transactions: []
-		}
-		Blockchain.signblock(res, privateKey2);
-		return res;
-	}
-
-	const validCashBlock = () => {
-		const res = {
-			closedate: 20250102,
-			previousHash: validInitBlock().hash,
-			merkleroot: 0,
-			signer: publicKey1,
-			total: 27,
-			version: 1,
-			money: [20250101000, 20250102000, 20250102001, 20250102002, 20250102003],
-			invests: [202501019000, 202501029000, 202501029001, 202501029002, 202501029003],
-			transactions: [
-				{
-					version: Blockchain.VERSION,
-					date: 20250102,
-					source: publicKey1,
-					target: publicKey1,
-					money: [20250102000, 20250102001, 20250102002, 20250102003],
-					invests: [202501029000, 202501029001, 202501029002, 202501029003],
-					type: Blockchain.TXTYPE.CREATE,
-					signer: 0,
-					hash: 0
-				},
-				{
-					version: Blockchain.VERSION,
-					date: 20250102,
-					source: publicKey2,
-					target: publicKey1,
-					money: [20241228000, 20241228001, 20250101002, 20250101003, 20250101004, 20250101005, 20250101006, 20250101007, 20250101008, 20250101009, 20250101010, 20250101011, 20250101012, 20250101013, 20250101014, 20250101015, 20250101016, 20250101017, 20250101018, 20250101019, 20250101020, 20250101021, 20250101022, 20250101023, 20250101024, 20250101025, 20250101026],
-					invests: [],
-					type: Blockchain.TXTYPE.PAY,
-					signer: 0,
-					hash: 0
-				}
-			]
-		}
-		Blockchain.signblock(res, privateKey1);
-		return res;
-	}
-
-	const validEngagedBlock = () => {
-		const res = {
-			closedate: 20250102,
-			previousHash: validInitBlock().hash,
-			merkleroot: 0,
-			signer: publicKey1,
-			total: 27,
-			version: 1,
-			money: [20250101000],
-			invests: [20250101000],
-			transactions: [
-				{
-					version: Blockchain.VERSION,
-					date: 20250102,
-					source: publicKey1,
-					target: 0,
-					money: [20250102002, 20250102003, 20250103000, 20250103001, 20250104000, 20250104001],
-					invests: [],
-					type: Blockchain.TXTYPE.ENGAGE,
-					signer: publicKey1,
-					hash: 0
-				},
-				{
-					version: Blockchain.VERSION,
-					date: 20250102,
-					source: publicKey1,
-					target: 0,
-					money: [],
-					invests: [202501029002, 202501029003, 202501039000, 202501039001, 202501049000, 202501049001],
-					type: Blockchain.TXTYPE.ENGAGE,
-					signer: publicKey1,
-					hash: 0
-				}
-			]
-		}
-		Blockchain.signblock(res, privateKey1);
-		return res;
-	}
-
+	/**
 	describe('createMoneyAndInvests', () => {
 		it('Should throw error if date is in the futur.', () => {
 			const bc = new CitizenBlockchain([validInitBlock(), validBirthBlock()])
@@ -666,7 +532,7 @@ describe('CitizenBlockchain', () => {
 			assert.ok(result)
 		})
 	})
-
+	*/
 
 	describe('makeBirthBlock', () => {
 		it('Should return corectly filled block', () => {
@@ -697,7 +563,7 @@ describe('CitizenBlockchain', () => {
 						target: name,
 						money: [],
 						invests: [],
-						type: Blockchain.TXTYPE.INIT,
+						type: TXTYPE.INIT,
 						signer: 0
 					},
 					{
@@ -707,7 +573,7 @@ describe('CitizenBlockchain', () => {
 						target: publicKey1,
 						money: [20250225000],
 						invests: [202502259000],
-						type: Blockchain.TXTYPE.CREATE,
+						type: TXTYPE.CREATE,
 						signer: 0
 					}
 				]
@@ -743,6 +609,7 @@ describe('CitizenBlockchain', () => {
 		})
 	})
 
+	/**
 	describe('startBlockchain', () => {
 		it('Should make a ready to go blockchain', () => {
 			const bc = new CitizenBlockchain()
@@ -868,5 +735,5 @@ describe('CitizenBlockchain', () => {
 			assert.ok(Blockchain.isValidBlock(bc.lastblock, publicKey2))
 		})
 	})
+	*/
 })
-*/

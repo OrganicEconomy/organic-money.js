@@ -3,6 +3,7 @@ import { InvalidTransactionError } from './errors.js'
 import { randomPrivateKey, publicFromPrivate, 
 	dateToInt, intToDate, formatMoneyIndex, formatInvestIndex,
 	buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
+import { BirthBlock } from './Block.js'
 
 export class CitizenBlockchain extends Blockchain {
 	/**
@@ -243,40 +244,7 @@ export class CitizenBlockchain extends Blockchain {
 	 * Return the birthblock based on given informations
 	 */
 	makeBirthBlock(secretKey, birthdate, name, date = new Date()) {
-		const publicKey = publicFromPrivate(secretKey)
-		let block = {
-			version: Blockchain.VERSION,
-			closedate: dateToInt(date),
-			previousHash: Blockchain.REF_HASH, // Previous hash : here 'random'
-			signer: publicKey, // Compressed Signer public key, here the new one created
-			merkleroot: 0,
-			money: [formatMoneyIndex(date, 0)],
-			invests: [formatInvestIndex(date, 0)],
-			total: 0,
-			transactions: [
-				Blockchain.signtx({
-					version: Blockchain.VERSION,
-					date: dateToInt(birthdate),
-					source: publicKey,
-					target: name,
-					signer: 0,
-					money: [],
-					invests: [],
-					type: Blockchain.TXTYPE.INIT
-				}, secretKey),
-				Blockchain.signtx({
-					version: Blockchain.VERSION,
-					date: dateToInt(date),
-					source: publicKey,
-					target: publicKey,
-					signer: 0,
-					money: [formatMoneyIndex(date, 0)],
-					invests: [formatInvestIndex(date, 0)],
-					type: Blockchain.TXTYPE.CREATE
-				}, secretKey)
-			]
-		}
-		block = Blockchain.signblock(block, secretKey)
+		const block = new BirthBlock(secretKey, birthdate, name, date)
 		this.addBlock(block)
 		return block
 	}

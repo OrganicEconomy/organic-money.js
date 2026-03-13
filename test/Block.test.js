@@ -3,7 +3,7 @@ import { assert } from 'chai';
 
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
 
-import { Block, BirthBlock, REF_HASH } from '../src/Block.js';
+import { Block, BirthBlock, REF_HASH, InitializationBlock } from '../src/Block.js';
 import { dateToInt } from '../src/crypto.js';
 import { makeBlockObj, makeBlock, makeTransactionObj, makeTransactions, privateKey1, publicKey1, makeTransaction, publicKey3, publicKey2, privateKey2 } from './testUtils.js';
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
@@ -107,6 +107,18 @@ describe('Block', () => {
             const result = block.sign(privateKey1)
 
             assert.equal(result, expected)
+        })
+
+        it('Should sign with closedate as given date.', () => {
+            const block = makeBlock({
+                date: new Date('2026-01-21'),
+                previousHash: Blockchain.REF_HASH
+            })
+            const d = new Date('2025-02-19')
+
+            block.sign(privateKey1, d)
+
+            assert.equal(block.closedate.getDate(), d.getDate())
         })
 
         it('Should set the merkleroot before signing.', () => {
@@ -620,11 +632,11 @@ describe('BirthBlock', () => {
             assert.equal(block.closedate.getDate(), d.getDate())
             assert.equal(block.previousHash, REF_HASH)
             assert.equal(block.signer, publicKey1)
-            assert.equal(block.root, 0)
+            assert.ok(block.root)
             assert.deepEqual(block.money, [20251126000])
             assert.deepEqual(block.invests, [202511269000])
             assert.equal(block.total, 0)
-            assert.equal(block.signature, null)
+            assert.ok(block.signature)
             assert.deepEqual(block.transactions, expectedTransactions)
         })
 
@@ -637,7 +649,71 @@ describe('BirthBlock', () => {
 
             assert.isTrue(block.isSigned())
             assert.equal(block.root, "78d83a0ce3c7f2cc4231b25167779df0fe225cbf43e4869ba9320b769729e91e")
-            assert.equal(block.signature, "3045022100d5db93c664985eb68f7f32c051efe6357e14b8d395faaf1115e61c34407b3838022061a3a752e9d8f5c99ede8aaa408980a061d3ec7b7670ca6fbf51cfe5d18e6fe9")
+            assert.equal(block.signature, "3045022100f1a11c1f44ab8ac17cacb4fd1b364cda7cfebfc25c7fb9026faeec3ffe5d44bf02206bb2de41ad154a4c3baf04565e9e1976f81d32d2e93f78e564f50a01044af29b")
+        })
+
+        it('Should use todays date if none given.', () => {
+            const today = dateToInt(new Date())
+            const birthdate = new Date('2025-11-01')
+            const name = "Jean Bombeur"
+
+            const block = new BirthBlock(privateKey1, birthdate, name)
+
+            assert.equal(dateToInt(block.closedate), today)
+            assert.equal(dateToInt(block.transactions[0].date), today)
+            assert.equal(dateToInt(block.transactions[1].date), dateToInt(birthdate))
+        })
+    })
+
+    describe('toString', () => {
+        it('Should return [BirthBlock].', () => {
+            const block = new BirthBlock(privateKey1, new Date('2025-11-01'), "Jean Bombeur")
+
+            const result = block.toString()
+
+            assert.equal(result, "[BirthBlock]")
+        })
+    })
+})
+
+describe('InitializationBlock', () => {
+    describe('constructor', () => {
+        it('Should set the 10 fields with correct defaults.', () => {
+            const d = new Date('2025-11-26')
+
+            const previousHash = REF_HASH
+            const block = new InitializationBlock(privateKey2, previousHash, d)
+
+            assert.equal(block.version, 1)
+            assert.equal(block.closedate.getDate(), d.getDate())
+            assert.equal(block.previousHash, previousHash)
+            assert.equal(block.signer, publicKey2)
+            assert.equal(block.root, 0)
+            assert.deepEqual(block.money, [])
+            assert.deepEqual(block.invests, [])
+            assert.equal(block.total, 0)
+            assert.ok(block.signature)
+            assert.deepEqual(block.transactions, [])
+        })
+
+        it('Should be signed.', () => {
+            const d = new Date('2025-11-26')
+
+            const previousHash = REF_HASH
+            const block = new InitializationBlock(privateKey2, previousHash, d)
+
+            assert.isTrue(block.isSigned())
+            assert.equal(block.signature, "3045022100df8843f709059b5bd754227f068339cac36df2ea64a163dab945bf88e57f5eed02204a7719670f5737a3460187dc479d827b9c6033de51a47c772733461bced72d66")
+        })
+    })
+
+    describe('toString', () => {
+        it('Should return [InitializationBlock].', () => {
+            const block = new InitializationBlock(privateKey2, REF_HASH)
+
+            const result = block.toString()
+
+            assert.equal(result, "[InitializationBlock]")
         })
     })
 })

@@ -3,7 +3,7 @@ import { InvalidTransactionError } from './errors.js'
 import { randomPrivateKey, publicFromPrivate, 
 	dateToInt, intToDate, formatMoneyIndex, formatInvestIndex,
 	buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
-import { BirthBlock } from './Block.js'
+import { BirthBlock, InitializationBlock } from './Block.js'
 
 export class CitizenBlockchain extends Blockchain {
 	/**
@@ -261,23 +261,9 @@ export class CitizenBlockchain extends Blockchain {
 		return newPrivateKey
 	}
 
-	/**
-	 * Return a validated Blockchain
-	 */
-	validateAccount(privateKey, date = new Date()) {
-		let initializationBlock = {
-			closedate: dateToInt(date),
-			previousHash: this.lastblock.hash,
-			signer: publicFromPrivate(privateKey),
-			merkleroot: 0,
-			money: this.lastblock.money,
-			invests: this.lastblock.invests,
-			total: 0,
-			transactions: [],
-			version: Blockchain.VERSION
-		}
-		initializationBlock = Blockchain.signblock(initializationBlock, privateKey)
-		this.addBlock(initializationBlock)
-		return initializationBlock
+	validateAccount(secretKey, date = new Date()) {		
+		const block = new InitializationBlock(secretKey, this.blocks[0].signature, date)
+		this.addBlock(block)
+		return block
 	}
 }

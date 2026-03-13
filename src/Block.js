@@ -74,11 +74,7 @@ export class Block {
         return handler
     }
 
-    /**
-     * @param {*} sk 
-     * @returns 
-     */
-    sign(sk) {
+    sign(sk, closedate = new Date()) {
         if (this.isSigned()) {
             throw new UnauthorizedError('Block is already signed.')
         }
@@ -90,7 +86,7 @@ export class Block {
 
         this.merkle()
         this.signer = pk
-        this.closedate = new Date()
+        this.closedate = closedate
 
         const hash = this.hash()
         sk = hexToBytes(sk)
@@ -175,9 +171,6 @@ export class Block {
 }
 
 export class BirthBlock extends Block {
-    /**
-     * TODO: Test this contructor
-     */
     constructor(sk, birthdate, name, date = new Date()) {
         super({
             v: Blockchain.VERSION,
@@ -194,6 +187,33 @@ export class BirthBlock extends Block {
         
         this.add(new InitTransaction(sk, name, birthdate))
         this.add(new CreateTransaction(sk, 1, date))
-        this.sign(sk)
+        this.sign(sk, date)
+    }
+
+    toString() {
+        return '[BirthBlock]'
+    }
+}
+
+export class InitializationBlock extends Block {
+    constructor(sk, previousHash, date = new Date()) {
+        super({
+            v: Blockchain.VERSION,
+            d: dateToInt(date),
+            p: previousHash,
+            s: publicFromPrivate(sk),
+            r: 0,
+            m: [],
+            i: [],
+            t: 0,
+            h: null,
+            x: []
+        })
+
+        this.sign(sk, date)
+    }
+
+    toString() {
+        return '[InitializationBlock]'
     }
 }

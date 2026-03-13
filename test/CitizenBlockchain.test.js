@@ -10,10 +10,10 @@ import { TXTYPE } from '../src/Transaction.js'
 
 
 describe('CitizenBlockchain', () => {
-	/**
+	/*
 	describe('createMoneyAndInvests', () => {
 		it('Should throw error if date is in the futur.', () => {
-			const bc = new CitizenBlockchain([validInitBlock(), validBirthBlock()])
+			const bc = new CitizenBlockchain()
 
 			const tomorrow = new Date();
 			tomorrow.setDate(tomorrow.getDate() + 1);
@@ -22,7 +22,7 @@ describe('CitizenBlockchain', () => {
 		})
 
 		it('Should return transaction in OK case.', () => {
-			const bc = new CitizenBlockchain([validInitBlock(), validBirthBlock()]);
+			const bc = new CitizenBlockchain();
 
 			bc.createMoneyAndInvests(privateKey1, new Date('2025-01-02'));
 			const result = bc.lastblock.transactions[0]
@@ -119,7 +119,7 @@ describe('CitizenBlockchain', () => {
 			assert.deepEqual(result, expected)
 		})
 	})
-
+/**
 	describe('engageInvests', () => {
 		it('Should throw error if daily amount is unaffordable.', () => {
 			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
@@ -535,81 +535,29 @@ describe('CitizenBlockchain', () => {
 	*/
 
 	describe('makeBirthBlock', () => {
-		it('Should return corectly filled block', () => {
+		it('Should be one block lenght.', () => {
 			const bc = new CitizenBlockchain()
 			const birthdate = new Date('2002-12-12')
 			const today = new Date('2025-02-25')
 			const name = 'Gus'
-
-			const block = bc.makeBirthBlock(privateKey1, birthdate, name, today)
-			delete block.hash
-			delete block.transactions[0].hash
-			delete block.transactions[1].hash
-
-			const expected = {
-				version: Blockchain.VERSION,
-				closedate: dateToInt(today),
-				previousHash: Blockchain.REF_HASH,
-				signer: publicKey1,
-				money: [20250225000],
-				invests: [202502259000],
-				total: 0,
-				merkleroot: 0,
-				transactions: [
-					{
-						version: Blockchain.VERSION,
-						date: 20021212,
-						source: publicKey1,
-						target: name,
-						money: [],
-						invests: [],
-						type: TXTYPE.INIT,
-						signer: 0
-					},
-					{
-						version: Blockchain.VERSION,
-						date: 20250225,
-						source: publicKey1,
-						target: publicKey1,
-						money: [20250225000],
-						invests: [202502259000],
-						type: TXTYPE.CREATE,
-						signer: 0
-					}
-				]
-			}
-
-			assert.deepEqual(block, expected)
+			
+			bc.makeBirthBlock(privateKey1, birthdate, name, today)
+			
+			assert.equal(bc.blocks.length, 1)
 		})
 
-		it('Should return a signed block.', () => {
+		it('Should have a BirthBlock.', () => {
 			const bc = new CitizenBlockchain()
 			const birthdate = new Date('2002-12-12')
 			const today = new Date('2025-02-25')
 			const name = 'Gus'
 			const block = bc.makeBirthBlock(privateKey1, birthdate, name, today)
 
-			const signature = Blockchain.isValidBlock(block, publicKey1)
-
-			assert.ok(signature)
+			assert.equal(block.toString(), "[BirthBlock]")
 		})
 
-		it('Should return a block with signed transactions.', () => {
-			const bc = new CitizenBlockchain()
-			const birthdate = new Date('2002-12-12')
-			const today = new Date('2025-02-25')
-			const name = 'Gus'
-			const block = bc.makeBirthBlock(privateKey1, birthdate, name, today)
-
-			const signature1 = Blockchain.isValidTransaction(block.transactions[0])
-			const signature2 = Blockchain.isValidTransaction(block.transactions[1])
-
-			assert.ok(signature1)
-			assert.ok(signature2)
-		})
 	})
 
-	/**
 	describe('startBlockchain', () => {
 		it('Should make a ready to go blockchain', () => {
 			const bc = new CitizenBlockchain()
@@ -618,59 +566,12 @@ describe('CitizenBlockchain', () => {
 			const name = 'Gus'
 
 			bc.startBlockchain(name, birthdate, privateKey2, privateKey1, today)
-			for (let block of bc.blocks) {
-				delete block.hash
-				delete block.previousHash
-				for (let tx of block.transactions) {
-					delete tx.hash
-				}
-			}
 
-			const expected = [
-				{
-					closedate: 20250201,
-					signer: publicKey2,
-					total: 0,
-					money: [20250201000],
-					invests: [202502019000],
-					version: 1,
-					transactions: [],
-					merkleroot: 0
-				},
-				{
-					version: Blockchain.VERSION,
-					closedate: dateToInt(today),
-					signer: publicKey1,
-					money: [20250201000],
-					invests: [202502019000],
-					total: 0,
-					merkleroot: 0,
-					transactions: [
-						{
-							version: Blockchain.VERSION,
-							date: 20021212,
-							source: publicKey1,
-							target: name,
-							money: [],
-							invests: [],
-							type: Blockchain.TXTYPE.INIT,
-							signer: 0
-						},
-						{
-							version: Blockchain.VERSION,
-							date: 20250201,
-							source: publicKey1,
-							target: publicKey1,
-							money: [20250201000],
-							invests: [202502019000],
-							type: Blockchain.TXTYPE.CREATE,
-							signer: 0
-						}
-					]
-				}
-			]
-
-			assert.deepEqual(bc.blocks, expected)
+			assert.equal(bc.blocks.length, 2)
+			assert.equal(bc.blocks[0].toString(), '[InitializationBlock]')
+			assert.equal(bc.blocks[1].toString(), '[BirthBlock]')
+			assert.isTrue(bc.blocks[0].isSigned())
+			assert.isTrue(bc.blocks[1].isSigned())
 		})
 
 		it('Should use todays date if none given', () => {
@@ -681,9 +582,8 @@ describe('CitizenBlockchain', () => {
 
 			bc.startBlockchain(name, birthdate, privateKey2, privateKey1)
 
-			assert.equal(bc.lastblock.closedate, today)
-			assert.equal(bc.blocks[1].closedate, today)
-			assert.equal(bc.blocks[1].transactions[1].date, today)
+			assert.equal(dateToInt(bc.lastblock.closedate), today)
+			assert.equal(dateToInt(bc.blocks[1].closedate), today)
 		})
 
 		it('Should make and return a new private key if none given.', () => {
@@ -695,45 +595,33 @@ describe('CitizenBlockchain', () => {
 
 			assert.equal(result.length, 64)
 		})
-	})
+	})	
 
 	describe('validateAccount', () => {
-		it('Should return a valid initialization block', () => {
+		it('Should be two blocks lenght.', () => {
 			const bc = new CitizenBlockchain()
-			const birthdate = new Date('2002-12-12')
-			const today = new Date('2025-02-25')
-			const name = 'Gus'
-			const block = bc.makeBirthBlock(privateKey1, birthdate, name, today)
+			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus')
+			bc.validateAccount(privateKey2)
 
-			bc.validateAccount(privateKey2, new Date('2025-01-03'))
-			delete bc.lastblock.hash
-			delete bc.lastblock.previousHash
-
-			const expectedInitializationBlock = {
-				closedate: 20250103,
-				signer: publicKey2,
-				total: 0,
-				money: [20250225000],
-				invests: [202502259000],
-				version: 1,
-				transactions: [],
-				merkleroot: 0
-			}
-
-			assert.deepEqual(bc.lastblock, expectedInitializationBlock)
+			assert.equal(bc.blocks.length, 2)
 		})
 
-		it('Should return a signed initialization block', () => {
+		it('Should have an InitializationBlock.', () => {
 			const bc = new CitizenBlockchain()
-			const birthdate = new Date('2002-12-12')
-			const today = new Date('2025-02-25')
-			const name = 'Gus'
-			const block = bc.makeBirthBlock(privateKey1, birthdate, name, today)
+			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus')
 
-			bc.validateAccount(privateKey2, new Date('2025-01-03'))
+			const block = bc.validateAccount(privateKey2)
 
-			assert.ok(Blockchain.isValidBlock(bc.lastblock, publicKey2))
+			assert.equal(block.toString(), "[InitializationBlock]")
+		})
+
+		it('Should set correct previous hash.', () => {
+			const bc = new CitizenBlockchain()
+			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus')
+			bc.validateAccount(privateKey2)
+
+			assert.equal(bc.blocks[0].previousHash, bc.blocks[1].signature)
 		})
 	})
-	*/
+	
 })

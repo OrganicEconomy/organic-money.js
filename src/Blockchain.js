@@ -3,7 +3,7 @@ import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { intToDate } from './crypto.js'
 
 import { CreateTransaction, PaperTransaction, PayTransaction, TXTYPE } from './Transaction.js'
-import { Block } from './Block.js'
+import { Block, BlockMaker } from './Block.js'
 
 export class Blockchain {
 	/***********************************************************************
@@ -66,7 +66,7 @@ export class Blockchain {
 		this.bks = []
 
 		for (let i = 0; i < blocks.length; i++) {
-			this.bks.push(new Block(blocks[i]))
+			this.bks.push(BlockMaker.make(blocks[i]))
 		}
 	}
 
@@ -102,13 +102,26 @@ export class Blockchain {
 		this.blocks.unshift(block)
 	}
 
+
+	/**
+	 * Add given transaction to the Blockchain
+	 */
+	addTransaction(transaction) {
+		if (this.lastblock.isSigned()) {
+			this.newBlock()
+		}
+		if (this.getHistory(3).filter(element => element.signature === transaction.signature).length > 0) {
+			throw new InvalidTransactionError('Transaction duplicate ' + transaction.signature)
+		}
+		this.lastblock.add(transaction)
+	}
+
 	/**
 	 * Add the given transaction as a paper cash to the blockchain
 	 * Then return it.
 	 * TODO : cashPaper must throw error if signer is different from another paper in the block
 	 */
 	cashPaper(tx) {
-		console.log(typeof(tx))
 		if (!(tx.type === TXTYPE.PAPER && tx.isValid())) {
 			throw new InvalidTransactionError('Invalid Transaction')
 		}
@@ -218,19 +231,6 @@ export class Blockchain {
 		const result = this.lastblock.money.filter(x => !money.includes(x))
 		this.lastblock.money = result;
 		return result
-	}
-
-	/**
-	 * Add given transaction to the Blockchain
-	 */
-	addTransaction(transaction) {
-		if (this.lastblock.isSigned()) {
-			this.newBlock()
-		}
-		if (this.getHistory(3).filter(element => element.signature === transaction.signature).length > 0) {
-			throw new InvalidTransactionError('Transaction duplicate ' + transaction.signature)
-		}
-		this.lastblock.add(transaction)
 	}
 
 	/**

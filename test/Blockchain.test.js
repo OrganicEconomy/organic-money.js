@@ -6,19 +6,30 @@ import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { Blockchain } from '../src/Blockchain.js';
 import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3, makeBlockObj, makeTransactionObj, makeBlock, makeTransaction } from './testUtils.js'
 import { CreateTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
-import { dateToInt, intToDate } from '../src/crypto.js';
+import { intToDate } from '../src/crypto.js';
+import { BirthBlock, InitializationBlock, REF_HASH } from '../src/Block.js';
 
 describe('Blockchain', () => {
 
 	describe('constructor', () => {
 		it('Should load given blocks objects to Blocks.', () => {
-			const blockObj1 = makeBlockObj(new Date(), 1, 1, 0, true)
-			const blockObj2 = makeBlockObj(new Date(), 2, 2, 0, false)
+			const blockObj1 = makeBlockObj()
+			const blockObj2 = makeBlockObj()
 			const bc = new Blockchain([blockObj1, blockObj2])
 
 			assert.equal(bc.blocks.length, 2)
 			assert.equal(bc.blocks[0].toString(), '[Block]')
 			assert.equal(bc.blocks[1].toString(), '[Block]')
+		})
+
+		it('Should instanciate BirthBlock or InitializationBlock when those are.', () => {
+			const birthblock = new BirthBlock(privateKey1, intToDate('20250101'), 'Gus')
+			const initializationblock = new InitializationBlock(privateKey2, birthblock.signature)
+			const bc = new Blockchain([initializationblock.export(), birthblock.export()])
+
+			assert.equal(bc.blocks.length, 2)
+			assert.equal(bc.blocks[0].toString(), '[InitializationBlock]')
+			assert.equal(bc.blocks[1].toString(), '[BirthBlock]')
 		})
 
 		it('Should raise an error if previous block is not signed.', () => {
@@ -676,7 +687,6 @@ describe('Blockchain', () => {
 				date: new Date('2025-01-03'),
 				moneycount: 4,
 				total: 26,
-				type: TXTYPE.CREATE,
 				transactions: [makeTransaction({
 					type: TXTYPE.CREATE,
 					signer: publicKey1
@@ -685,9 +695,7 @@ describe('Blockchain', () => {
 
 			bc.pay(privateKey1, publicKey1, 4, new Date('2025-01-03'))
 
-			const result = bc.lastblock.money
-
-			assert.deepEqual(bc.lastblock.total, 30)
+			assert.equal(bc.lastblock.total, 30)
 		})
 
 		it('Should throw error if blockchain can t afford it.', () => {

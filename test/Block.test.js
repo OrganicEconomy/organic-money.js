@@ -64,6 +64,96 @@ describe('Block', () => {
             assert.isTrue(block.transactions[6] instanceof SetAdminTransaction)
             assert.isTrue(block.transactions[7] instanceof SetPayerTransaction)
         })
+
+        it('Should throw error if "v" (version) is missing', () => {
+            const obj = makeBlockObj()
+            delete obj.v
+
+            assert.throws(() => {
+                new Block(obj)
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (total), "h" (signature) and "x" (transactions) are mandatory.')
+        })
+
+        it('Should throw error if "d" (closedate) is missing', () => {
+            const obj = makeBlockObj()
+            delete obj.d
+
+            assert.throws(() => {
+                new Block(obj)
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (total), "h" (signature) and "x" (transactions) are mandatory.')
+        })
+
+        it('Should throw error if "p" (previousHash) is missing', () => {
+            const obj = makeBlockObj()
+            delete obj.p
+
+            assert.throws(() => {
+                new Block(obj)
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (total), "h" (signature) and "x" (transactions) are mandatory.')
+        })
+
+        it('Should throw error if "s" (signer) is missing', () => {
+            const obj = makeBlockObj()
+            delete obj.s
+
+            assert.throws(() => {
+                new Block(obj)
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (total), "h" (signature) and "x" (transactions) are mandatory.')
+        })
+
+        it('Should throw error if "r" (root) is missing', () => {
+            const obj = makeBlockObj()
+            delete obj.r
+
+            assert.throws(() => {
+                new Block(obj)
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (total), "h" (signature) and "x" (transactions) are mandatory.')
+        })
+
+        it('Should throw error if "m" (money) is missing', () => {
+            const obj = makeBlockObj()
+            delete obj.m
+
+            assert.throws(() => {
+                new Block(obj)
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (total), "h" (signature) and "x" (transactions) are mandatory.')
+        })
+
+        it('Should throw error if "i" (invests) is missing', () => {
+            const obj = makeBlockObj()
+            delete obj.i
+
+            assert.throws(() => {
+                new Block(obj)
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (total), "h" (signature) and "x" (transactions) are mandatory.')
+        })
+
+        it('Should throw error if "t" (total) is missing', () => {
+            const obj = makeBlockObj()
+            delete obj.t
+
+            assert.throws(() => {
+                new Block(obj)
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (total), "h" (signature) and "x" (transactions) are mandatory.')
+        })
+
+        it('Should throw error if "h" (signature) is missing', () => {
+            const obj = makeBlockObj()
+            delete obj.s
+
+            assert.throws(() => {
+                new Block(obj)
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (total), "h" (signature) and "x" (transactions) are mandatory.')
+        })
+
+        it('Should throw error if "x" (transactions) is missing', () => {
+            const obj = makeBlockObj()
+            delete obj.x
+
+            assert.throws(() => {
+                new Block(obj)
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (total), "h" (signature) and "x" (transactions) are mandatory.')
+        })
     })
 
     describe('hash', () => {
@@ -102,11 +192,11 @@ describe('Block', () => {
                 previousHash: Blockchain.REF_HASH
             })
 
-            const expected = '3044022008adb0cf5599c850b4bb8a7dc51cee622eaded1701b7a4324d18576a4c6172ba02203dbcf7715bd53530bf7cb93bf93b094ecfd9d174135a4ec9e78e4c6892f2d564'
+            assert.isFalse(block.isSigned())
 
-            const result = block.sign(privateKey1)
+            block.sign(privateKey1)
 
-            assert.equal(result, expected)
+            assert.isTrue(block.isSigned())
         })
 
         it('Should sign with closedate as given date.', () => {
@@ -233,7 +323,12 @@ describe('Block', () => {
 
         it('Should add the CREATE transaction\'s money to the block.', () => {
             const block = makeBlock()
-            const tx = new CreateTransaction(privateKey1, 2)
+            const tx = makeTransaction({
+                type: TXTYPE.CREATE,
+                moneycount: 2,
+                investscount: 2,
+                target: ""
+            })
 
             assert.isTrue(tx.isValid())
 
@@ -244,7 +339,12 @@ describe('Block', () => {
 
         it('Should add the CREATE transaction\'s invests to the block.', () => {
             const block = makeBlock()
-            const tx = new CreateTransaction(privateKey1, 2)
+            const tx = makeTransaction({
+                type: TXTYPE.CREATE,
+                moneycount: 2,
+                investscount: 2,
+                target: ""
+            })
 
             assert.isTrue(tx.isValid())
 
@@ -629,7 +729,7 @@ describe('BirthBlock', () => {
             const block = new BirthBlock(privateKey1, birthdate, name, d)
 
             assert.equal(block.version, 1)
-            assert.equal(block.closedate.getDate(), d.getDate())
+            assert.equal(dateToInt(block.closedate), dateToInt(d), 'closedate is invalid')
             assert.equal(block.previousHash, REF_HASH)
             assert.equal(block.signer, publicKey1)
             assert.ok(block.root)

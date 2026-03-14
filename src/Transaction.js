@@ -50,6 +50,7 @@ export class TransactionMaker {
         }
     }
 }
+
 export class Transaction {
 
     constructor(txObj) {
@@ -138,6 +139,10 @@ export class InitTransaction extends Transaction {
             this.sign(objOrSk)
         }
     }
+
+    toString() {
+        return '[InitTransaction]'
+    }
     
     isValid() {
         return super.isValid() &&
@@ -169,6 +174,10 @@ export class CreateTransaction extends Transaction {
         }
     }
 
+    toString() {
+        return '[CreateTransaction]'
+    }
+
     isValid() {
         return super.isValid() &&
         this.invests.length > 0 &&
@@ -198,6 +207,10 @@ export class PayTransaction extends Transaction {
         }
     }
 
+    toString() {
+        return '[PayTransaction]'
+    }
+
     isValid() {
         return super.isValid() &&
         this.invests.length === 0 &&
@@ -209,6 +222,10 @@ export class PayTransaction extends Transaction {
 }
 
 export class EngageTransaction extends Transaction {
+    toString() {
+        return '[EngageTransaction]'
+    }
+
     isValid() {
         return super.isValid() &&
         !(this.invests.length > 0 && this.money.length > 0) &&
@@ -220,6 +237,10 @@ export class EngageTransaction extends Transaction {
 }
 
 export class PaperTransaction extends Transaction {
+    toString() {
+        return '[PaperTransaction]'
+    }
+
     isValid() {
         return super.isValid() &&
         this.type == TXTYPE.PAPER &&
@@ -231,6 +252,10 @@ export class PaperTransaction extends Transaction {
 }
 
 export class SetAdminTransaction extends Transaction {
+    toString() {
+        return '[SetAdminTransaction]'
+    }
+
     isValid() {
         return super.isValid() &&
         this.type == TXTYPE.SETADMIN &&
@@ -242,6 +267,10 @@ export class SetAdminTransaction extends Transaction {
 }
 
 export class SetActorTransaction extends Transaction {
+    toString() {
+        return '[SetActorTransaction]'
+    }
+
     isValid() {
         return super.isValid() &&
         this.type == TXTYPE.SETACTOR &&
@@ -253,6 +282,10 @@ export class SetActorTransaction extends Transaction {
 }
 
 export class SetPayerTransaction extends Transaction {
+    toString() {
+        return '[SetPayerTransaction]'
+    }
+
     isValid() {
         return super.isValid() &&
         this.type == TXTYPE.SETPAYER &&
@@ -264,6 +297,10 @@ export class SetPayerTransaction extends Transaction {
 }
 
 export class UnsetAdminTransaction extends Transaction {
+    toString() {
+        return '[UnsetAdminTransaction]'
+    }
+
     isValid() {
         return super.isValid() &&
             this.type == TXTYPE.UNSETADMIN &&
@@ -275,6 +312,10 @@ export class UnsetAdminTransaction extends Transaction {
 }
 
 export class UnsetActorTransaction extends Transaction {
+    toString() {
+        return '[UnsetActorTransaction]'
+    }
+
     isValid() {
         return super.isValid() &&
             this.type == TXTYPE.UNSETACTOR &&
@@ -286,6 +327,10 @@ export class UnsetActorTransaction extends Transaction {
 }
 
 export class UnsetPayerTransaction extends Transaction {
+    toString() {
+        return '[UnsetPayerTransaction]'
+    }
+
     isValid() {
         return super.isValid() &&
             this.type == TXTYPE.UNSETPAYER &&

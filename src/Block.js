@@ -11,9 +11,25 @@ import { Blockchain } from './Blockchain.js'
 
 export const REF_HASH = 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5'
 
+export class BlockMaker {
+    static make(blockObj) {
+        if (blockObj.p ===  REF_HASH) {
+            return new BirthBlock(blockObj)
+        }
+        if (blockObj.h && blockObj.m.length === 0 && blockObj.i.length === 0
+        && blockObj.x.length === 0) {
+            return new InitializationBlock(blockObj)
+        }
+        return new Block(blockObj)
+    }
+}
+
 export class Block {
 
     constructor(blockObj) {
+        if (!("v" in blockObj && "d" in blockObj && "p" in blockObj && "s" in blockObj && "r" in blockObj && "m" in blockObj && "i" in blockObj && "t" in blockObj && "h" in blockObj && "x" in blockObj)) {
+            throw new Error('Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (total), "h" (signature) and "x" (transactions) are mandatory.')
+        }
         this.version = blockObj.v
         this.closedate = "d" in blockObj ? intToDate(blockObj.d) : null
         this.previousHash = blockObj.p
@@ -171,23 +187,27 @@ export class Block {
 }
 
 export class BirthBlock extends Block {
-    constructor(sk, birthdate, name, date = new Date()) {
-        super({
-            v: Blockchain.VERSION,
-            d: dateToInt(date),
-            p: REF_HASH,
-            s: publicFromPrivate(sk),
-            r: 0,
-            m: [],
-            i: [],
-            t: 0,
-            h: null,
-            x: []
-        })
-        
-        this.add(new InitTransaction(sk, name, birthdate))
-        this.add(new CreateTransaction(sk, 1, date))
-        this.sign(sk, date)
+    constructor(objOrSk, birthdate = null, name = null, date = new Date()) {
+        if (typeof objOrSk === 'object' && birthdate === null && name === null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                d: dateToInt(date),
+                p: REF_HASH,
+                s: publicFromPrivate(objOrSk),
+                r: 0,
+                m: [],
+                i: [],
+                t: 0,
+                h: null,
+                x: []
+            })
+            
+            this.add(new InitTransaction(objOrSk, name, birthdate))
+            this.add(new CreateTransaction(objOrSk, 1, date))
+            this.sign(objOrSk, date)
+        }
     }
 
     toString() {
@@ -196,21 +216,26 @@ export class BirthBlock extends Block {
 }
 
 export class InitializationBlock extends Block {
-    constructor(sk, previousHash, date = new Date()) {
-        super({
-            v: Blockchain.VERSION,
-            d: dateToInt(date),
-            p: previousHash,
-            s: publicFromPrivate(sk),
-            r: 0,
-            m: [],
-            i: [],
-            t: 0,
-            h: null,
-            x: []
-        })
+    constructor(objOrSk, previousHash = null, date = new Date()) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null
+        && previousHash === null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                d: dateToInt(date),
+                p: previousHash,
+                s: publicFromPrivate(objOrSk),
+                r: 0,
+                m: [],
+                i: [],
+                t: 0,
+                h: null,
+                x: []
+            })
 
-        this.sign(sk, date)
+            this.sign(objOrSk, date)
+        }
     }
 
     toString() {

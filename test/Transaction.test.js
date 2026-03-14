@@ -317,6 +317,16 @@ describe('TransactionMaker', () => {
 })
 
 describe('InitTransaction', () => {
+    describe('toString', () => {
+        it('Should return [InitTransaction]', () => {
+            const tx = makeTransaction({
+                type: TXTYPE.INIT
+            })
+
+            assert.equal(tx.toString(), "[InitTransaction]")
+        })
+    })
+
     describe('isValid', () => {
 
         it('Should return false if money is NOT an empty array.', () => {
@@ -409,6 +419,16 @@ describe('CreateTransaction', () => {
             assert.equal(tx.target, "")
             assert.equal(tx.version, Blockchain.VERSION)
             assert.isTrue(tx.isValid())
+        })
+    })
+
+    describe('toString', () => {
+        it('Should return [CreateTransaction]', () => {
+            const tx = makeTransaction({
+                type: TXTYPE.CREATE
+            })
+
+            assert.equal(tx.toString(), "[CreateTransaction]")
         })
     })
     
@@ -531,6 +551,16 @@ describe('PayTransaction', () => {
         })
     })
 
+    describe('toString', () => {
+        it('Should return [PayTransaction]', () => {
+            const tx = makeTransaction({
+                type: TXTYPE.PAY
+            })
+
+            assert.equal(tx.toString(), "[PayTransaction]")
+        })
+    })
+
     describe('isValid', () => {
 
         it('Should return false if money is an empty array.', () => {
@@ -607,6 +637,16 @@ describe('PayTransaction', () => {
 })
 
 describe('EngageTransaction', () => {
+    describe('toString', () => {
+        it('Should return [EngageTransaction]', () => {
+            const tx = makeTransaction({
+                type: TXTYPE.ENGAGE
+            })
+
+            assert.equal(tx.toString(), "[EngageTransaction]")
+        })
+    })
+
     describe('isValid', () => {
 
         it('Should return false if money AND invests are both empty arrays.', () => {
@@ -697,6 +737,16 @@ describe('EngageTransaction', () => {
 })
 
 describe('PaperTransaction', () => {
+    describe('toString', () => {
+        it('Should return [PaperTransaction]', () => {
+            const tx = makeTransaction({
+                type: TXTYPE.PAPER
+            })
+
+            assert.equal(tx.toString(), "[PaperTransaction]")
+        })
+    })
+
     describe('isValid', () => {
 
         it('Should return false if money is an empty array.', () => {
@@ -772,6 +822,16 @@ describe('PaperTransaction', () => {
 })
 
 describe('SetAdminTransaction', () => {
+    describe('toString', () => {
+        it('Should return [SetAdminTransaction]', () => {
+            const tx = makeTransaction({
+                type: TXTYPE.SETADMIN
+            })
+
+            assert.equal(tx.toString(), "[SetAdminTransaction]")
+        })
+    })
+
     describe('isValid', () => {
 
         it('Should return false if money is NOT an empty array.', () => {
@@ -844,6 +904,16 @@ describe('SetAdminTransaction', () => {
 })
 
 describe('SetActorTransaction', () => {
+    describe('toString', () => {
+        it('Should return [SetActorTransaction]', () => {
+            const tx = makeTransaction({
+                type: TXTYPE.SETACTOR
+            })
+
+            assert.equal(tx.toString(), "[SetActorTransaction]")
+        })
+    })
+
     describe('isValid', () => {
         it('Should return false if money is NOT an empty array.', () => {
             const tx = new SetActorTransaction(makeTransactionObj({
@@ -915,6 +985,16 @@ describe('SetActorTransaction', () => {
 })
 
 describe('SetPayerTransaction', () => {
+    describe('toString', () => {
+        it('Should return [SetPayerTransaction]', () => {
+            const tx = makeTransaction({
+                type: TXTYPE.SETPAYER
+            })
+
+            assert.equal(tx.toString(), "[SetPayerTransaction]")
+        })
+    })
+
     describe('isValid', () => {
         it('Should return false if money is NOT an empty array.', () => {
             const tx = new SetPayerTransaction(makeTransactionObj({
@@ -986,6 +1066,16 @@ describe('SetPayerTransaction', () => {
 })
 
 describe('UnsetAdminTransaction', () => {
+    describe('toString', () => {
+        it('Should return [UnsetAdminTransaction]', () => {
+            const tx = makeTransaction({
+                type: TXTYPE.UNSETADMIN
+            })
+
+            assert.equal(tx.toString(), "[UnsetAdminTransaction]")
+        })
+    })
+
     describe('isValid', () => {
 
         it('Should return false if money is NOT an empty array.', () => {
@@ -1058,6 +1148,16 @@ describe('UnsetAdminTransaction', () => {
 })
 
 describe('UnsetActorTransaction', () => {
+    describe('toString', () => {
+        it('Should return [UnsetActorTransaction]', () => {
+            const tx = makeTransaction({
+                type: TXTYPE.UNSETACTOR
+            })
+
+            assert.equal(tx.toString(), "[UnsetActorTransaction]")
+        })
+    })
+
     describe('isValid', () => {
         it('Should return false if money is NOT an empty array.', () => {
             const tx = new UnsetActorTransaction(makeTransactionObj({
@@ -1129,6 +1229,16 @@ describe('UnsetActorTransaction', () => {
 })
 
 describe('UnsetPayerTransaction', () => {
+    describe('toString', () => {
+        it('Should return [UnsetPayerTransaction]', () => {
+            const tx = makeTransaction({
+                type: TXTYPE.UNSETPAYER
+            })
+
+            assert.equal(tx.toString(), "[UnsetPayerTransaction]")
+        })
+    })
+
     describe('isValid', () => {
         it('Should return false if money is NOT an empty array.', () => {
             const tx = new UnsetPayerTransaction(makeTransactionObj({

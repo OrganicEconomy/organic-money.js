@@ -6,6 +6,11 @@ import { randomPrivateKey, publicFromPrivate,
 import { BirthBlock, InitializationBlock } from './Block.js'
 
 export class CitizenBlockchain extends Blockchain {
+
+	get total() {
+		return this.lastblock.total
+	}
+
 	/**
 	 * Add and return the transaction that creates Money for the Blockchain.
 	 * If date is not given, uses today's date.
@@ -193,7 +198,7 @@ export class CitizenBlockchain extends Blockchain {
 	 */
 	getLevel() {
 		if (this.isEmpty() && !this.isValidated()) { return 0 }
-		return Math.floor(Math.cbrt(this.lastblock.total)) + 1
+		return Math.floor(Math.cbrt(this.total)) + 1
 	}
 
 	/**
@@ -207,7 +212,7 @@ export class CitizenBlockchain extends Blockchain {
 		if (asPercent) {
 			return Math.floor(100 * (1 - (this.getMoneyBeforeNextLevel() / Math.pow(level, 3))))
 		}
-		return Math.pow(level, 3) - this.lastblock.total
+		return Math.pow(level, 3) - this.total
 	}
 
 	/**
@@ -215,11 +220,11 @@ export class CitizenBlockchain extends Blockchain {
 	 * level up
 	 */
 	hasLevelUpOnLastTx() {
-		const lastTx = this.getLastTransaction();
-		if (lastTx === null || lastTx.type != Blockchain.TXTYPE.PAY) {
+		const lastTx = this.lastTransaction;
+		if (lastTx === null || lastTx.toString() != "[PayTransaction]") {
 			return false
 		}
-		return Math.floor(Math.cbrt(this.lastblock.total - lastTx.money.length)) + 1 < this.getLevel()
+		return Math.floor(Math.cbrt(this.total - lastTx.money.length)) + 1 < this.getLevel()
 	}
 
 	/**
@@ -228,7 +233,7 @@ export class CitizenBlockchain extends Blockchain {
 	 */
 	isWaitingValidation() {
 		return this.blocks.length === 1 &&
-			this.lastblock.previousHash === Blockchain.REF_HASH
+			this.lastblock.toString() === "[BirthBlock]"
 	}
 
 	/**
@@ -236,8 +241,9 @@ export class CitizenBlockchain extends Blockchain {
 	 * a referent
 	 */
 	isValidated() {
-		return !this.isEmpty() && this.blocks.length >= 2 &&
-			this.blocks[this.blocks.length - 1].previousHash === Blockchain.REF_HASH
+		return this.blocks.length >= 2
+		&& this.blocks[this.blocks.length - 2].toString() === "[InitializationBlock]"
+		&& this.blocks[this.blocks.length - 1].toString() === "[BirthBlock]"
 	}
 
 	/**

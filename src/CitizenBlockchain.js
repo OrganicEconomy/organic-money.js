@@ -127,19 +127,19 @@ export class CitizenBlockchain extends Blockchain {
 
 			dateIndex.setDate(dateIndex.getDate() + 1)
 		}
-		const tx = {
-			version: Blockchain.VERSION,
-			type: Blockchain.TXTYPE.ENGAGE,
-			date: dateToInt(date),
-			source: publicFromPrivate(myPrivateKey),
-			target: targetPublicKey,
-			money: money,
-			invests: [],
-			signer: 0
-		}
-		const result = Blockchain.signtx(tx, myPrivateKey)
-		this.addTransaction(result)
-		return result
+		const tx = new  EngageTransaction({
+			v: Blockchain.VERSION,
+			t: TXTYPE.ENGAGE,
+			d: dateToInt(date),
+			p: targetPublicKey,
+			m: money,
+			i: [],
+			s: publicFromPrivate(myPrivateKey),
+			h: ""
+		})
+		tx.sign(myPrivateKey)
+		this.addTransaction(tx)
+		return tx
 	}
 
 	/**

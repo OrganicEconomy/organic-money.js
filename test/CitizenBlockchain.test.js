@@ -10,6 +10,18 @@ import { TXTYPE } from '../src/Transaction.js'
 
 
 describe('CitizenBlockchain', () => {
+	function level3CitizenBlockchain() {
+		const bc = new CitizenBlockchain()
+		bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+		bc.addTransaction(makeTransaction({
+			target: myPk,
+			type: TXTYPE.PAY,
+			signer: referentPk,
+			moneycount: 27,
+			date: new Date('2025-01-03')
+		}))
+		return bc
+	}
 
 	describe('addTransaction', () => {
 		it('Should add the given transaction to last block', () => {
@@ -222,18 +234,6 @@ describe('CitizenBlockchain', () => {
 	})
 
 	describe('engageInvests', () => {
-		function level3CitizenBlockchain() {
-			const bc = new CitizenBlockchain()
-			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
-			bc.addTransaction(makeTransaction({
-				target: myPk,
-				type: TXTYPE.PAY,
-				signer: referentPk,
-				moneycount: 27,
-				date: new Date('2025-01-03')
-			}))
-			return bc
-		}
 		
 		it('Should throw error if daily amount is unaffordable.', () => {
 			const bc = level3CitizenBlockchain()
@@ -311,27 +311,26 @@ describe('CitizenBlockchain', () => {
 			assert.deepEqual(tx.invests, expected)
 		})
 	})
-/**
+
 	describe('engageMoney', () => {
 		it('Should throw error if daily amount is unaffordable.', () => {
-			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
+			const bc = level3CitizenBlockchain()
 			const dailyAmount = 5 // total is 27 so daily creation is 3+1=4
 
-			const fn = () => { bc.engageMoney(privateKey1, publicKey2, dailyAmount, 12) }
+			const fn = () => { bc.engageMoney(mySk, publicKey2, dailyAmount, 12) }
 
 			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
 		})
 
 		it('Should return a transaction with correct money engaged.', () => {
-			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
+			const bc = level3CitizenBlockchain()
 			const dailyAmount = 4
 			const days = 3
 			const date = new Date("2025-01-02")
 
 			const expected = {
 				version: Blockchain.VERSION,
-				date: 20250102,
-				source: publicKey1,
+				date: new Date("2025-01-02"),
 				target: publicKey2,
 				money: [
 					20250102000, 20250102001, 20250102002, 20250102003,
@@ -339,47 +338,45 @@ describe('CitizenBlockchain', () => {
 					20250104000, 20250104001, 20250104002, 20250104003,
 				],
 				invests: [],
-				type: Blockchain.TXTYPE.ENGAGE,
-				signer: 0,
+				type: TXTYPE.ENGAGE,
+				signer: myPk
 			}
 
-			const tx = bc.engageMoney(privateKey1, publicKey2, dailyAmount, days, date)
-			delete tx.hash
+			const tx = bc.engageMoney(mySk, publicKey2, dailyAmount, days, date)
+			delete tx.signature
 
 			assert.deepEqual(tx, expected)
 		})
 
 		it('Should return a signed transaction.', () => {
-			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
+			const bc = level3CitizenBlockchain()
 			const dailyAmount = 4
 			const days = 3
 			const date = new Date("2025-01-04")
-			const tx = bc.engageMoney(privateKey1, publicKey2, dailyAmount, days, date)
+			const tx = bc.engageMoney(mySk, publicKey2, dailyAmount, days, date)
 
-			const signature = Blockchain.isValidTransaction(tx)
-
-			assert.ok(signature, 'invalid signature')
+			assert.isTrue(tx.isValid(), 'invalid signature')
 		})
 
 		it('Should add the returned transaction to the blockchain.', () => {
-			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
-			const tx = bc.engageMoney(privateKey1, publicKey2, 3, 3)
+			const bc = level3CitizenBlockchain()
+			const tx = bc.engageMoney(mySk, publicKey2, 3, 3)
 
-			assert.deepEqual(bc.lastblock.transactions[0], tx)
+			assert.deepEqual(bc.lastTransaction, tx)
 		})
 
 		it('Should throw error if daily amount is already engaged.', () => {
-			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
-			bc.engageMoney(privateKey1, publicKey2, 3, 12)
+			const bc = level3CitizenBlockchain()
+			bc.engageMoney(mySk, publicKey2, 3, 12)
 
-			const fn = () => { bc.engageMoney(privateKey1, publicKey2, 2, 12) }
+			const fn = () => { bc.engageMoney(mySk, publicKey2, 2, 12) }
 
 			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
 		})
 
 		it('Should engage money that was not already engaged.', () => {
-			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
-			bc.engageMoney(privateKey1, publicKey2, 2, 3, new Date("2025-01-02"))
+			const bc = level3CitizenBlockchain()
+			bc.engageMoney(mySk, publicKey2, 2, 3, new Date("2025-01-02"))
 
 			const expected = [
 				20250103002, 20250103003, // the 3rd, 2 firsts are already engaged
@@ -387,12 +384,12 @@ describe('CitizenBlockchain', () => {
 				20250105000, 20250105001, // the 5th, nothing was engaged
 			]
 
-			const tx = bc.engageMoney(privateKey1, publicKey2, 2, 3, new Date("2025-01-03"))
+			const tx = bc.engageMoney(mySk, publicKey2, 2, 3, new Date("2025-01-03"))
 
 			assert.deepEqual(tx.money, expected)
 		})
 	})
-
+/**
 	describe('getAvailableMoneyAmount', () => {
 		it('Should return 0 for empty blockchain', () => {
 			const bc = new CitizenBlockchain()

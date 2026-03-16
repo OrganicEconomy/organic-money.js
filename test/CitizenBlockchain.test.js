@@ -4,7 +4,7 @@ import { assert } from 'chai';
 import { InvalidTransactionError } from '../src/errors.js';
 import { Blockchain } from '../src/Blockchain.js';
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js';
-import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3, makeBlock, makeBlockObj, makeTransaction, referentSk, mySk, referentPk, myPk } from './testUtils.js'
+import { mySk, myPk, targetSk, targetPk, makeBlock, makeBlockObj, makeTransaction, referentSk, referentPk } from './testUtils.js'
 import { dateToInt, intToDate } from '../src/crypto.js'
 import { TXTYPE } from '../src/Transaction.js'
 
@@ -68,13 +68,13 @@ describe('CitizenBlockchain', () => {
 
 		it('Should add money to total if type is PAY and target is blockchain owner.', () => {
 			const bc = new CitizenBlockchain()
-			bc.startBlockchain('Gus', new Date('2025-01-02'), privateKey2, privateKey1)
+			bc.startBlockchain('Gus', new Date('2025-01-02'), targetSk, mySk)
 
 			const tx = makeTransaction({
 				type: TXTYPE.PAY,
-				signer: publicKey2,
-				sk: privateKey2,
-				target: publicKey1,
+				signer: targetPk,
+				sk: targetSk,
+				target: myPk,
 				moneycount: 7
 			})
 
@@ -239,7 +239,7 @@ describe('CitizenBlockchain', () => {
 			const bc = level3CitizenBlockchain()
 			const dailyAmount = 5 // total is 27 so daily creation is 3+1=4
 
-			const fn = () => { bc.engageInvests(mySk, publicKey2, dailyAmount, 12) }
+			const fn = () => { bc.engageInvests(mySk, targetPk, dailyAmount, 12) }
 
 			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
 		})
@@ -253,7 +253,7 @@ describe('CitizenBlockchain', () => {
 			const expected = {
 				version: Blockchain.VERSION,
 				date: new  Date("2025-01-02"),
-				target: publicKey2,
+				target: targetPk,
 				money: [],
 				invests: [
 					202501029000, 202501029001, 202501029002, 202501029003,
@@ -264,7 +264,7 @@ describe('CitizenBlockchain', () => {
 				signer: myPk,
 			}
 
-			const tx = bc.engageInvests(mySk, publicKey2, dailyAmount, days, date)
+			const tx = bc.engageInvests(mySk, targetPk, dailyAmount, days, date)
 			delete tx.signature
 
 			assert.deepEqual(tx, expected)
@@ -275,30 +275,30 @@ describe('CitizenBlockchain', () => {
 			const dailyAmount = 4
 			const days = 3
 			const date = new Date("2025-01-04")
-			const tx = bc.engageInvests(mySk, publicKey2, dailyAmount, days, date)
+			const tx = bc.engageInvests(mySk, targetPk, dailyAmount, days, date)
 
 			assert.isTrue(tx.isValid(), 'invalid signature')
 		})
 
 		it('Should add the returned transaction to the blockchain.', () => {
 			const bc = level3CitizenBlockchain()
-			const tx = bc.engageInvests(mySk, publicKey2, 3, 3)
+			const tx = bc.engageInvests(mySk, targetPk, 3, 3)
 
 			assert.deepEqual(bc.lastTransaction, tx)
 		})
 
 		it('Should throw error if daily amount is already engaged.', () => {
 			const bc = level3CitizenBlockchain()
-			bc.engageInvests(mySk, publicKey2, 3, 12)
+			bc.engageInvests(mySk, targetPk, 3, 12)
 
-			const fn = () => { bc.engageInvests(mySk, publicKey2, 2, 12) }
+			const fn = () => { bc.engageInvests(mySk, targetPk, 2, 12) }
 
 			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
 		})
 
 		it('Should engage invests that was not already engaged.', () => {
 			const bc = level3CitizenBlockchain()
-			bc.engageInvests(mySk, publicKey2, 2, 3, new Date("2025-01-02"))
+			bc.engageInvests(mySk, targetPk, 2, 3, new Date("2025-01-02"))
 
 			const expected = [
 				202501039002, 202501039003, // the 3rd, 2 firsts are already engaged
@@ -306,7 +306,7 @@ describe('CitizenBlockchain', () => {
 				202501059000, 202501059001, // the 5th, nothing was engaged
 			]
 
-			const tx = bc.engageInvests(mySk, publicKey2, 2, 3, new Date("2025-01-03"))
+			const tx = bc.engageInvests(mySk, targetPk, 2, 3, new Date("2025-01-03"))
 
 			assert.deepEqual(tx.invests, expected)
 		})
@@ -317,7 +317,7 @@ describe('CitizenBlockchain', () => {
 			const bc = level3CitizenBlockchain()
 			const dailyAmount = 5 // total is 27 so daily creation is 3+1=4
 
-			const fn = () => { bc.engageMoney(mySk, publicKey2, dailyAmount, 12) }
+			const fn = () => { bc.engageMoney(mySk, targetPk, dailyAmount, 12) }
 
 			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
 		})
@@ -331,7 +331,7 @@ describe('CitizenBlockchain', () => {
 			const expected = {
 				version: Blockchain.VERSION,
 				date: new Date("2025-01-02"),
-				target: publicKey2,
+				target: targetPk,
 				money: [
 					20250102000, 20250102001, 20250102002, 20250102003,
 					20250103000, 20250103001, 20250103002, 20250103003,
@@ -342,7 +342,7 @@ describe('CitizenBlockchain', () => {
 				signer: myPk
 			}
 
-			const tx = bc.engageMoney(mySk, publicKey2, dailyAmount, days, date)
+			const tx = bc.engageMoney(mySk, targetPk, dailyAmount, days, date)
 			delete tx.signature
 
 			assert.deepEqual(tx, expected)
@@ -353,30 +353,30 @@ describe('CitizenBlockchain', () => {
 			const dailyAmount = 4
 			const days = 3
 			const date = new Date("2025-01-04")
-			const tx = bc.engageMoney(mySk, publicKey2, dailyAmount, days, date)
+			const tx = bc.engageMoney(mySk, targetPk, dailyAmount, days, date)
 
 			assert.isTrue(tx.isValid(), 'invalid signature')
 		})
 
 		it('Should add the returned transaction to the blockchain.', () => {
 			const bc = level3CitizenBlockchain()
-			const tx = bc.engageMoney(mySk, publicKey2, 3, 3)
+			const tx = bc.engageMoney(mySk, targetPk, 3, 3)
 
 			assert.deepEqual(bc.lastTransaction, tx)
 		})
 
 		it('Should throw error if daily amount is already engaged.', () => {
 			const bc = level3CitizenBlockchain()
-			bc.engageMoney(mySk, publicKey2, 3, 12)
+			bc.engageMoney(mySk, targetPk, 3, 12)
 
-			const fn = () => { bc.engageMoney(mySk, publicKey2, 2, 12) }
+			const fn = () => { bc.engageMoney(mySk, targetPk, 2, 12) }
 
 			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
 		})
 
 		it('Should engage money that was not already engaged.', () => {
 			const bc = level3CitizenBlockchain()
-			bc.engageMoney(mySk, publicKey2, 2, 3, new Date("2025-01-02"))
+			bc.engageMoney(mySk, targetPk, 2, 3, new Date("2025-01-02"))
 
 			const expected = [
 				20250103002, 20250103003, // the 3rd, 2 firsts are already engaged
@@ -384,7 +384,7 @@ describe('CitizenBlockchain', () => {
 				20250105000, 20250105001, // the 5th, nothing was engaged
 			]
 
-			const tx = bc.engageMoney(mySk, publicKey2, 2, 3, new Date("2025-01-03"))
+			const tx = bc.engageMoney(mySk, targetPk, 2, 3, new Date("2025-01-03"))
 
 			assert.deepEqual(tx.money, expected)
 		})
@@ -423,9 +423,9 @@ describe('CitizenBlockchain', () => {
 	describe('generatePaper', () => {
 		it('Should throw error if blockchain can t afford the amount.', () => {
 			const bc = new CitizenBlockchain()
-			bc.startBlockchain('Gus', new Date('2025-01-02'), privateKey1, privateKey2)
+			bc.startBlockchain('Gus', new Date('2025-01-02'), mySk, targetSk)
 
-			assert.throws(() => { bc.generatePaper(privateKey1, 2, publicKey2) }, 'Unsufficient funds')
+			assert.throws(() => { bc.generatePaper(mySk, 2, targetPk) }, 'Unsufficient funds')
 		})
 
 		it('Should return a valid transaction.', () => {
@@ -463,7 +463,7 @@ describe('CitizenBlockchain', () => {
 				investcount: 3
 			}))
 
-			const tx = bc.generatePaper(privateKey1, 3, publicKey2)
+			const tx = bc.generatePaper(mySk, 3, targetPk)
 
 			const result = bc.lastblock.transactions[0]
 
@@ -479,7 +479,7 @@ describe('CitizenBlockchain', () => {
 				investcount: 3
 			}))
 
-			bc.generatePaper(privateKey1, 2, publicKey2)
+			bc.generatePaper(mySk, 2, targetPk)
 
 			assert.equal(bc.lastblock.money.length, 2)
 		})
@@ -496,7 +496,7 @@ describe('CitizenBlockchain', () => {
 
 		it('Should return 2 for t=1 to 7', () => {
 			const bc = new CitizenBlockchain()
-			bc.startBlockchain('Gus', intToDate('20240101'), privateKey1, privateKey2)
+			bc.startBlockchain('Gus', intToDate('20240101'), mySk, targetSk)
 			bc.addBlock(makeBlock({
 				total: 0
 			}))
@@ -505,7 +505,7 @@ describe('CitizenBlockchain', () => {
 				bc.addTransaction(makeTransaction({
 					type: TXTYPE.PAY,
 					money: [20240101000 + i],
-					target: publicKey2
+					target: targetPk
 				}))
 				assert.equal(bc.getLevel(), 2, "Error at i = " + i)
 			}
@@ -513,7 +513,7 @@ describe('CitizenBlockchain', () => {
 
 		it('Should return 3 for t=8 to 26', () => {
 			const bc = new CitizenBlockchain()
-			bc.startBlockchain('Gus', intToDate('20240101'), privateKey1, privateKey2)
+			bc.startBlockchain('Gus', intToDate('20240101'), mySk, targetSk)
 			bc.addBlock(makeBlock({
 				total: 8
 			}))
@@ -522,7 +522,7 @@ describe('CitizenBlockchain', () => {
 				bc.addTransaction(makeTransaction({
 					type: TXTYPE.PAY,
 					money: [20240101000 + i],
-					target: publicKey2
+					target: targetPk
 				}))
 				assert.equal(bc.getLevel(), 3, "Error at i = " + i)
 			}
@@ -539,7 +539,7 @@ describe('CitizenBlockchain', () => {
 
 		it('Should return 16 for total at 11 (target is 27)', () => {
 			const bc = new CitizenBlockchain()
-			bc.startBlockchain('Gus', intToDate('20240101'), privateKey1)
+			bc.startBlockchain('Gus', intToDate('20240101'), mySk)
 			bc.addBlock(makeBlock({
 				total: 11
 			}))
@@ -551,7 +551,7 @@ describe('CitizenBlockchain', () => {
 
 		it('Should return percent if as_percent is true', () => {
 			const bc = new CitizenBlockchain()
-			bc.startBlockchain('Gus', intToDate('20240101'), privateKey1)
+			bc.startBlockchain('Gus', intToDate('20240101'), mySk)
 			bc.addBlock(makeBlock({
 				total: 11
 			}))
@@ -565,7 +565,7 @@ describe('CitizenBlockchain', () => {
 	describe('hasLevelUpOnLastTx', () => {
 		it('Should return false if there is no transaction.', () => {
 			const bc = new CitizenBlockchain()
-			bc.startBlockchain('Gus', intToDate('20240101'), privateKey1)
+			bc.startBlockchain('Gus', intToDate('20240101'), mySk)
 
 			const result = bc.hasLevelUpOnLastTx()
 
@@ -574,14 +574,14 @@ describe('CitizenBlockchain', () => {
 
 		it('Should return false if last Transaction did not change level (from 27 to 63).', () => {
 			const bc = new CitizenBlockchain()
-			bc.startBlockchain('Gus', intToDate('20240101'), privateKey1, privateKey2)
+			bc.startBlockchain('Gus', intToDate('20240101'), mySk, targetSk)
 			bc.addBlock(makeBlock({
 				total: 27
 			}))
 			bc.addTransaction(makeTransaction({
 				type: TXTYPE.PAY,
 				moneycount: 36,
-				target: publicKey2
+				target: targetPk
 			}))
 
 			const result = bc.hasLevelUpOnLastTx()
@@ -591,14 +591,14 @@ describe('CitizenBlockchain', () => {
 
 		it('Should return true after passed from 27 to 64 Total.', () => {
 			const bc = new CitizenBlockchain()
-			bc.startBlockchain('Gus', intToDate('20240101'), privateKey1, privateKey2)
+			bc.startBlockchain('Gus', intToDate('20240101'), mySk, targetSk)
 			bc.addBlock(makeBlock({
 				total: 27
 			}))
 			bc.addTransaction(makeTransaction({
 				type: TXTYPE.PAY,
 				moneycount: 37,
-				target: publicKey2
+				target: targetPk
 			}))
 
 			const result = bc.hasLevelUpOnLastTx()
@@ -608,14 +608,14 @@ describe('CitizenBlockchain', () => {
 
 		it('Should return true after passed from 63 to 64 Total.', () => {
 			const bc = new CitizenBlockchain()
-			bc.startBlockchain('Gus', intToDate('20240101'), privateKey1, privateKey2)
+			bc.startBlockchain('Gus', intToDate('20240101'), mySk, targetSk)
 			bc.addBlock(makeBlock({
 				total: 63
 			}))
 			bc.addTransaction(makeTransaction({
 				type: TXTYPE.PAY,
 				moneycount: 1,
-				target: publicKey2
+				target: targetPk
 			}))
 
 			const result = bc.hasLevelUpOnLastTx()
@@ -634,8 +634,8 @@ describe('CitizenBlockchain', () => {
 
 		it('Should return false for already valid blockchain', () => {
 			const bc = new CitizenBlockchain()
-			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus')
-			bc.validateAccount(privateKey2)
+			bc.makeBirthBlock(mySk, new Date('2002-12-12'), 'Gus')
+			bc.validateAccount(targetSk)
 
 			const result = bc.isWaitingValidation()
 
@@ -653,7 +653,7 @@ describe('CitizenBlockchain', () => {
 
 		it('Should return true for blockchain effectively waiting for validation', () => {
 			const bc = new CitizenBlockchain()
-			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus')
+			bc.makeBirthBlock(mySk, new Date('2002-12-12'), 'Gus')
 
 			const result = bc.isWaitingValidation()
 
@@ -672,7 +672,7 @@ describe('CitizenBlockchain', () => {
 
 		it('Should return false if the first block is not a birth one', () => {
 			const bc = new CitizenBlockchain()
-			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus')
+			bc.makeBirthBlock(mySk, new Date('2002-12-12'), 'Gus')
 			const result = bc.isValidated()
 
 			assert.isFalse(result)
@@ -680,8 +680,8 @@ describe('CitizenBlockchain', () => {
 
 		it('Should return true for a valid brand new blockchain', () => {
 			const bc = new CitizenBlockchain()
-			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus')
-			bc.validateAccount(privateKey2)
+			bc.makeBirthBlock(mySk, new Date('2002-12-12'), 'Gus')
+			bc.validateAccount(targetSk)
 			const result = bc.isValidated()
 
 			assert.isTrue(result)
@@ -689,8 +689,8 @@ describe('CitizenBlockchain', () => {
 
 		it('Should return true for a long time valid', () => {
 			const bc = new CitizenBlockchain()
-			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus')
-			bc.validateAccount(privateKey2)
+			bc.makeBirthBlock(mySk, new Date('2002-12-12'), 'Gus')
+			bc.validateAccount(targetSk)
 			bc.addBlock(makeBlock())
 			const result = bc.isValidated()
 
@@ -705,7 +705,7 @@ describe('CitizenBlockchain', () => {
 			const today = new Date('2025-02-25')
 			const name = 'Gus'
 			
-			bc.makeBirthBlock(privateKey1, birthdate, name, today)
+			bc.makeBirthBlock(mySk, birthdate, name, today)
 			
 			assert.equal(bc.blocks.length, 1)
 		})
@@ -715,7 +715,7 @@ describe('CitizenBlockchain', () => {
 			const birthdate = new Date('2002-12-12')
 			const today = new Date('2025-02-25')
 			const name = 'Gus'
-			const block = bc.makeBirthBlock(privateKey1, birthdate, name, today)
+			const block = bc.makeBirthBlock(mySk, birthdate, name, today)
 
 			assert.equal(block.toString(), "[BirthBlock]")
 		})
@@ -729,7 +729,7 @@ describe('CitizenBlockchain', () => {
 			const today = new Date('2025-02-01')
 			const name = 'Gus'
 
-			bc.startBlockchain(name, birthdate, privateKey2, privateKey1, today)
+			bc.startBlockchain(name, birthdate, targetSk, mySk, today)
 
 			assert.equal(bc.blocks.length, 2)
 			assert.equal(bc.blocks[0].toString(), '[InitializationBlock]')
@@ -744,7 +744,7 @@ describe('CitizenBlockchain', () => {
 			const today = dateToInt(new Date())
 			const name = 'Gus'
 
-			bc.startBlockchain(name, birthdate, privateKey2, privateKey1)
+			bc.startBlockchain(name, birthdate, targetSk, mySk)
 
 			assert.equal(dateToInt(bc.lastblock.closedate), today)
 			assert.equal(dateToInt(bc.blocks[1].closedate), today)
@@ -755,7 +755,7 @@ describe('CitizenBlockchain', () => {
 			const birthdate = new Date('2002-12-12')
 			const name = 'Gus'
 
-			const result = bc.startBlockchain(name, birthdate, privateKey2)
+			const result = bc.startBlockchain(name, birthdate, targetSk)
 
 			assert.equal(result.length, 64)
 		})
@@ -764,33 +764,33 @@ describe('CitizenBlockchain', () => {
 	describe('validateAccount', () => {
 		it('Should be two blocks lenght.', () => {
 			const bc = new CitizenBlockchain()
-			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus')
-			bc.validateAccount(privateKey2)
+			bc.makeBirthBlock(mySk, new Date('2002-12-12'), 'Gus')
+			bc.validateAccount(targetSk)
 
 			assert.equal(bc.blocks.length, 2)
 		})
 
 		it('Should have an InitializationBlock.', () => {
 			const bc = new CitizenBlockchain()
-			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus')
+			bc.makeBirthBlock(mySk, new Date('2002-12-12'), 'Gus')
 
-			const block = bc.validateAccount(privateKey2)
+			const block = bc.validateAccount(targetSk)
 
 			assert.equal(block.toString(), "[InitializationBlock]")
 		})
 
 		it('Should set correct previous hash.', () => {
 			const bc = new CitizenBlockchain()
-			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus')
-			bc.validateAccount(privateKey2)
+			bc.makeBirthBlock(mySk, new Date('2002-12-12'), 'Gus')
+			bc.validateAccount(targetSk)
 
 			assert.equal(bc.lastblock.previousHash, bc.blocks[1].signature)
 		})
 
 		it('Should keep money and invest.', () => {
 			const bc = new CitizenBlockchain()
-			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus', new Date("2026-01-12"))
-			bc.validateAccount(privateKey2)
+			bc.makeBirthBlock(mySk, new Date('2002-12-12'), 'Gus', new Date("2026-01-12"))
+			bc.validateAccount(targetSk)
 
 			assert.deepEqual(bc.lastblock.money, [20260112000])
 			assert.deepEqual(bc.lastblock.invests, [202601129000])

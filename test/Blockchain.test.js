@@ -4,10 +4,10 @@ import { assert } from 'chai';
 
 import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { Blockchain } from '../src/Blockchain.js';
-import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3, makeBlockObj, makeTransactionObj, makeBlock, makeTransaction, mySk } from './testUtils.js'
-import { CreateTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
-import { dateToInt, intToDate } from '../src/crypto.js';
-import { BirthBlock, InitializationBlock, REF_HASH } from '../src/Block.js';
+import { mySk, myPk, targetSk, targetPk, referentPk, makeBlockObj, makeBlock, makeTransaction } from './testUtils.js'
+import { TXTYPE } from '../src/Transaction.js';
+import { intToDate } from '../src/crypto.js';
+import { BirthBlock, InitializationBlock } from '../src/Block.js';
 
 describe('Blockchain', () => {
 
@@ -23,8 +23,8 @@ describe('Blockchain', () => {
 		})
 
 		it('Should instanciate BirthBlock or InitializationBlock when those are.', () => {
-			const birthblock = new BirthBlock(privateKey1, intToDate('20250101'), 'Gus')
-			const initializationblock = new InitializationBlock(privateKey2, birthblock)
+			const birthblock = new BirthBlock(mySk, intToDate('20250101'), 'Gus')
+			const initializationblock = new InitializationBlock(targetSk, birthblock)
 			const bc = new Blockchain([initializationblock.export(), birthblock.export()])
 
 			assert.equal(bc.blocks.length, 2)
@@ -79,16 +79,16 @@ describe('Blockchain', () => {
 			const paper1 = makeTransaction({
 				type: TXTYPE.PAPER,
 				moneycount: 3,
-				signer: publicKey1,
-				target: publicKey2
+				signer: myPk,
+				target: targetPk
 			})
 			bc.cashPaper(paper1)
 
 			const paper2 = makeTransaction({
 				type: TXTYPE.PAPER,
 				moneycount: 3,
-				signer: publicKey1,
-				target: publicKey3
+				signer: myPk,
+				target: referentPk
 			})
 
 			assert.throws(() => { bc.cashPaper(paper2) }, InvalidTransactionError, 'Multiple papers target')
@@ -100,7 +100,7 @@ describe('Blockchain', () => {
 			const paper = makeTransaction({
 				type: TXTYPE.PAPER,
 				moneycount: 3,
-				target: publicKey1
+				target: myPk
 			})
 			const result = bc.cashPaper(paper)
 
@@ -436,7 +436,7 @@ describe('Blockchain', () => {
 
 		it('Should throw error if transaction date is already passed in the blockchain.', () => {
 			const bc = new Blockchain([makeBlockObj()]);
-			bc.sealLastBlock(privateKey1)
+			bc.sealLastBlock(mySk)
 			const tx = makeTransaction({ date: new Date('2026-01-20') })
 
 			assert.throws(() => { bc.addTransaction(tx) }, InvalidTransactionError, 'Invalid date')
@@ -538,12 +538,12 @@ describe('Blockchain', () => {
 		it('Should return the correct key from birth block.', () => {
 			const bc = new Blockchain([makeBlockObj({
 				previousHash: Blockchain.REF_HASH,
-				signer: publicKey2
+				signer: targetPk
 			})])
 
 			const result = bc.getMyPublicKey()
 
-			assert.equal(result, publicKey2)
+			assert.equal(result, targetPk)
 		})
 
 		it('Should return the correct key from last CREATE transaction.', () => {
@@ -552,7 +552,7 @@ describe('Blockchain', () => {
 					transactions: [
 						makeTransaction({
 							type: TXTYPE.CREATE,
-							signer: publicKey2
+							signer: targetPk
 						})
 					]
 				})
@@ -560,7 +560,7 @@ describe('Blockchain', () => {
 
 			const result = bc.getMyPublicKey()
 
-			assert.equal(result, publicKey2)
+			assert.equal(result, targetPk)
 		})
 	})
 
@@ -578,7 +578,7 @@ describe('Blockchain', () => {
 				})
 			])
 
-			bc.pay(privateKey1, publicKey2, 3, new Date('2025-01-03'))
+			bc.pay(mySk, targetPk, 3, new Date('2025-01-03'))
 			const transaction = bc.lastblock.lastTransaction
 
 			assert.isTrue(transaction.isValid())
@@ -589,8 +589,8 @@ describe('Blockchain', () => {
 				date: new Date('2025-01-03'),
 				money: [20250101000, 20250101001, 20250101002],
 				invests: [],
-				target: publicKey2,
-				signer: publicKey1
+				target: targetPk,
+				signer: myPk
 			}
 
 			assert.equal(transaction.version, expected.version)
@@ -617,7 +617,7 @@ describe('Blockchain', () => {
 
 			assert.equal(bc.lastblock.money.length, 5)
 
-			bc.pay(privateKey1, publicKey2, 3, new Date('2025-01-03'))
+			bc.pay(mySk, targetPk, 3, new Date('2025-01-03'))
 
 			const result = bc.lastblock.money
 			const expected = [20250103003, 20250103004]
@@ -634,7 +634,7 @@ describe('Blockchain', () => {
 					total: 26,
 					transactions: [makeTransaction({
 						type: TXTYPE.CREATE,
-						signer: publicKey1
+						signer: myPk
 					})]
 				}),
 				makeBlockObj({
@@ -644,7 +644,7 @@ describe('Blockchain', () => {
 				})
 			])
 
-			bc.pay(privateKey1, publicKey1, 4, new Date('2025-01-03'))
+			bc.pay(mySk, myPk, 4, new Date('2025-01-03'))
 
 			assert.equal(bc.lastblock.total, 30)
 		})
@@ -652,7 +652,7 @@ describe('Blockchain', () => {
 		it('Should throw error if blockchain can t afford it.', () => {
 			const bc = new Blockchain([makeBlockObj(), makeBlockObj({ signed: true, date: new Date('2026-01-19') })])
 
-			assert.throws(() => { bc.pay(privateKey1, publicKey2, 2) }, InvalidTransactionError, 'Unsufficient funds.')
+			assert.throws(() => { bc.pay(mySk, targetPk, 2) }, InvalidTransactionError, 'Unsufficient funds.')
 		})
 	})
 

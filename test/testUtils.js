@@ -12,8 +12,11 @@ export const privateKey3 = 'f8a33b8aa0cbf892f1c9e617126711f7304d6e5cead1d592a8b4
 export const publicKey3 = '02f126a536777e95f23b5798b1e357dc2a4f5b1869b739c290b4b2efbc18eca6fd'
 export const myPk = publicKey1
 export const mySk = privateKey1
+export const targetPk = publicKey2
+export const targetSk = privateKey2
 export const referentPk = publicKey3
 export const referentSk = privateKey3
+
 
 export function makeTransactionObj(options = {}) {
     return makeTransaction(options).export()

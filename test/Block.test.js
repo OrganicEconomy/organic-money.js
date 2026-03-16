@@ -5,7 +5,7 @@ import { bytesToHex } from 'ethereum-cryptography/utils.js';
 
 import { Block, BirthBlock, REF_HASH, InitializationBlock } from '../src/Block.js';
 import { dateToInt } from '../src/crypto.js';
-import { makeBlockObj, makeBlock, makeTransactionObj, makeTransactions, privateKey1, publicKey1, makeTransaction, publicKey3, publicKey2, privateKey2, mySk, referentSk, referentPk, myPk } from './testUtils.js';
+import { makeBlockObj, makeBlock, makeTransactions, makeTransaction, referentPk, targetPk, targetSk, mySk, referentSk, myPk } from './testUtils.js';
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
 import { UnauthorizedError } from '../src/errors.js';
 import { Blockchain } from '../src/Blockchain.js';
@@ -194,7 +194,7 @@ describe('Block', () => {
 
             assert.isFalse(block.isSigned())
 
-            block.sign(privateKey1)
+            block.sign(mySk)
 
             assert.isTrue(block.isSigned())
         })
@@ -206,7 +206,7 @@ describe('Block', () => {
             })
             const d = new Date('2025-02-19')
 
-            block.sign(privateKey1, d)
+            block.sign(mySk, d)
 
             assert.equal(block.closedate.getDate(), d.getDate())
         })
@@ -215,12 +215,12 @@ describe('Block', () => {
             const block = makeBlock({
                 date: new Date('2026-01-21'),
                 previousHash: Blockchain.REF_HASH,
-                transactions: [new CreateTransaction(privateKey1, 1, new Date('2026-01-22'))]
+                transactions: [new CreateTransaction(mySk, 1, new Date('2026-01-22'))]
             })
 
             const expected = '304502210088927c127b2c9f291b4f86adb0e69a50ffc080dccd359269def8a494be13571d02203f6904fdc34b047ac0f2bed3d71f1406dd70dd50b8d751fca639fb8492320717'
 
-            block.sign(privateKey1)
+            block.sign(mySk)
             const result = block.root
 
             assert.equal(result, expected)
@@ -230,15 +230,15 @@ describe('Block', () => {
             const block = makeBlock({
                 date: new Date('2026-01-21'),
                 previousHash: Blockchain.REF_HASH,
-                transactions: [new CreateTransaction(privateKey1, 1, new Date('2026-01-22'))],
+                transactions: [new CreateTransaction(mySk, 1, new Date('2026-01-22'))],
                 signed: false,
                 signer: ""
             })
 
-            block.sign(privateKey1)
+            block.sign(mySk)
             const result = block.signer
 
-            assert.equal(result, publicKey1)
+            assert.equal(result, myPk)
         })
 
         it('Should set the closedate to today before signing.', () => {
@@ -246,24 +246,24 @@ describe('Block', () => {
                 signed: false
             })
 
-            block.sign(privateKey1)
+            block.sign(mySk)
             const result = block.closedate
 
             assert.equal(result.getDate(), new Date().getDate())
         })
 
         it('Should throw an error if block contains Cashes Papers and signer is me.', () => {
-            const transaction = makeTransaction({ type: TXTYPE.PAPER, target: publicKey2 })
+            const transaction = makeTransaction({ type: TXTYPE.PAPER, target: targetPk })
             const block = makeBlock({ transactions: [transaction], signed: false })
 
-            assert.throws(() => { block.sign(privateKey1) }, UnauthorizedError, 'Only Paper signer can seal a block with it.')
+            assert.throws(() => { block.sign(mySk) }, UnauthorizedError, 'Only Paper signer can seal a block with it.')
         })
 
         it('Should sign even if it contains Cashes Papers while signer is Papers signer.', () => {
-            const transaction = makeTransaction({ type: TXTYPE.PAPER, target: publicKey2 })
+            const transaction = makeTransaction({ type: TXTYPE.PAPER, target: targetPk })
             const block = makeBlock({ transactions: [transaction], signed: false })
 
-            const signature = block.sign(privateKey2)
+            const signature = block.sign(targetSk)
 
             assert.ok(signature)
         })
@@ -271,7 +271,7 @@ describe('Block', () => {
 		it('Should throw an error if block is already signed.', () => {
 			const block = makeBlock({ signed: true })
 
-			assert.throws(() => { block.sign(privateKey1) }, UnauthorizedError, 'Block is already signed.')
+			assert.throws(() => { block.sign(mySk) }, UnauthorizedError, 'Block is already signed.')
 		})
 
     })
@@ -355,7 +355,7 @@ describe('Block', () => {
 
         it('Should NOT add the money/invests to the block for other types of transaction.', () => {
             const block = makeBlock()
-            block.add(new PayTransaction(privateKey1, publicKey2, new Date(), [20260101000]))
+            block.add(new PayTransaction(mySk, targetPk, new Date(), [20260101000]))
             block.add(makeTransaction({ type: TXTYPE.ENGAGE, moneycount: 2 }))
             block.add(makeTransaction({ type: TXTYPE.INIT, moneycount: 2 }))
             block.add(makeTransaction({ type: TXTYPE.PAPER, moneycount: 2 }))
@@ -443,7 +443,7 @@ describe('Block', () => {
     describe('isSigned', () => {
         it('Should return true if the block is signed.', () => {
             const block = new Block(makeBlockObj(new Date('2026-01-21')))
-            block.sign(privateKey1)
+            block.sign(mySk)
 
             const result = block.isSigned()
 
@@ -554,18 +554,18 @@ describe('Block', () => {
 
         it('Should return the holder if only transaction is PaperTransaction.', () => {
             const transactions = [
-                makeTransaction({ type: TXTYPE.PAPER, target: publicKey3 })
+                makeTransaction({ type: TXTYPE.PAPER, target: referentPk })
             ]
             const block = makeBlock({ transactions: transactions })
 
             const result = block.getPapersHandler()
 
-            assert.equal(result, publicKey3)
+            assert.equal(result, referentPk)
         })
 
         it('Should return the holder if any transaction is PaperTransaction.', () => {
             const transactions = [
-                makeTransaction({ type: TXTYPE.PAPER, target: publicKey3 }),
+                makeTransaction({ type: TXTYPE.PAPER, target: referentPk }),
                 makeTransaction({ type: TXTYPE.CREATE }),
                 makeTransaction({ type: TXTYPE.ENGAGE }),
                 makeTransaction({ type: TXTYPE.INIT }),
@@ -578,19 +578,19 @@ describe('Block', () => {
 
             const result = block.getPapersHandler()
 
-            assert.equal(result, publicKey3)
+            assert.equal(result, referentPk)
         })
 
         it('Should throw error if two PaperTransaction have different holder.', () => {
             const transactions = [
-                makeTransaction({ type: TXTYPE.PAPER, target: publicKey3 }),
+                makeTransaction({ type: TXTYPE.PAPER, target: referentPk }),
                 makeTransaction({ type: TXTYPE.CREATE }),
-                makeTransaction({ type: TXTYPE.PAPER, target: publicKey3 }),
+                makeTransaction({ type: TXTYPE.PAPER, target: referentPk }),
                 makeTransaction({ type: TXTYPE.INIT }),
                 makeTransaction({ type: TXTYPE.PAY }),
-                makeTransaction({ type: TXTYPE.PAPER, target: publicKey2 }),
+                makeTransaction({ type: TXTYPE.PAPER, target: targetPk }),
                 makeTransaction({ type: TXTYPE.SETACTOR }),
-                makeTransaction({ type: TXTYPE.PAPER, target: publicKey3 })
+                makeTransaction({ type: TXTYPE.PAPER, target: referentPk })
             ]
             const block = makeBlock({ transactions: transactions })
 
@@ -737,23 +737,23 @@ describe('BirthBlock', () => {
                     date: d,
                     moneycount: 1,
                     investscount: 1,
-                    signer: publicKey1,
+                    signer: myPk,
                     target: ""
                 }),
                 makeTransaction({
                     type: TXTYPE.INIT,
                     date: birthdate,
-                    signer: publicKey1,
+                    signer: myPk,
                     target: name
                 })
             ]
 
-            const block = new BirthBlock(privateKey1, birthdate, name, d)
+            const block = new BirthBlock(mySk, birthdate, name, d)
 
             assert.equal(block.version, 1)
             assert.equal(dateToInt(block.closedate), dateToInt(d), 'closedate is invalid')
             assert.equal(block.previousHash, REF_HASH)
-            assert.equal(block.signer, publicKey1)
+            assert.equal(block.signer, myPk)
             assert.ok(block.root)
             assert.deepEqual(block.money, [20251126000])
             assert.deepEqual(block.invests, [202511269000])
@@ -767,7 +767,7 @@ describe('BirthBlock', () => {
             const birthdate = new Date('2025-11-01')
             const name = "Jean Bombeur"
 
-            const block = new BirthBlock(privateKey1, birthdate, name, d)
+            const block = new BirthBlock(mySk, birthdate, name, d)
 
             assert.isTrue(block.isSigned())
             assert.equal(block.root, "78d83a0ce3c7f2cc4231b25167779df0fe225cbf43e4869ba9320b769729e91e")
@@ -779,7 +779,7 @@ describe('BirthBlock', () => {
             const birthdate = new Date('2025-11-01')
             const name = "Jean Bombeur"
 
-            const block = new BirthBlock(privateKey1, birthdate, name)
+            const block = new BirthBlock(mySk, birthdate, name)
 
             assert.equal(dateToInt(block.closedate), today)
             assert.equal(dateToInt(block.transactions[0].date), today)
@@ -789,7 +789,7 @@ describe('BirthBlock', () => {
 
     describe('toString', () => {
         it('Should return [BirthBlock].', () => {
-            const block = new BirthBlock(privateKey1, new Date('2025-11-01'), "Jean Bombeur")
+            const block = new BirthBlock(mySk, new Date('2025-11-01'), "Jean Bombeur")
 
             const result = block.toString()
 
@@ -832,7 +832,7 @@ describe('InitializationBlock', () => {
             const d = new Date('2025-11-26')
 
             const previousBlock = makeBlock({ signatre: REF_HASH })
-            const block = new InitializationBlock(privateKey2, previousBlock, d)
+            const block = new InitializationBlock(targetSk, previousBlock, d)
 
             assert.isTrue(block.isSigned())
         })
@@ -841,7 +841,7 @@ describe('InitializationBlock', () => {
     describe('toString', () => {
         it('Should return [InitializationBlock].', () => {
             const previousBlock = makeBlock({ signatre: REF_HASH })
-            const block = new InitializationBlock(privateKey2, previousBlock)
+            const block = new InitializationBlock(targetSk, previousBlock)
 
             const result = block.toString()
 
@@ -852,7 +852,7 @@ describe('InitializationBlock', () => {
     describe('getMyPublicKey', () => {
         it('Should return null as block cannot know it.', () => {
             const previousBlock = makeBlock({ signatre: REF_HASH })
-            const block = new InitializationBlock(privateKey2, previousBlock)
+            const block = new InitializationBlock(targetSk, previousBlock)
 
             const result = block.getMyPublicKey()
 

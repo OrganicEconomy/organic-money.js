@@ -737,6 +737,41 @@ describe('EngageTransaction', () => {
 })
 
 describe('PaperTransaction', () => {
+    describe('constructor', () => {
+        it('Should accept an object as unique parameter.', () => {
+            const tx = new PaperTransaction(makeTransactionObj({
+                type: TXTYPE.PAPER,
+                moneycount: 1,
+                date: new Date("2026-01-26"),
+                investscount: 0,
+                signer: publicKey1,
+                target: publicKey2,
+                version: 12
+            }))
+
+            assert.equal(tx.type, TXTYPE.PAPER)
+            assert.equal(tx.money.length, 1)
+            assert.equal(tx.invests.length, 0)
+            assert.equal(tx.date.getDate(), new Date("2026-01-26").getDate())
+            assert.equal(tx.signer, publicKey1)
+            assert.equal(tx.target, publicKey2)
+            assert.equal(tx.version, 12)
+        })
+
+        it('Should accept 4 parameters : my sk, referent pk, money and date.', () => {
+            const tx = new PaperTransaction(privateKey1, publicKey2, buildMoneyIndexes(new Date("2026-01-24"), 4), new Date("2026-01-26"))
+
+            assert.equal(tx.type, TXTYPE.PAPER)
+            assert.equal(tx.money.length, 4)
+            assert.equal(tx.invests.length, 0)
+            assert.equal(tx.date.getDate(), new Date("2026-01-26").getDate())
+            assert.equal(tx.signer, publicKey1)
+            assert.equal(tx.target, publicKey2)
+            assert.equal(tx.version, Blockchain.VERSION)
+            assert.isTrue(tx.isValid())
+        })
+    })
+
     describe('toString', () => {
         it('Should return [PaperTransaction]', () => {
             const tx = makeTransaction({

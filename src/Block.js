@@ -102,7 +102,7 @@ export class Block {
 
         this.merkle()
         this.signer = pk
-        this.closedate = closedate
+        this.closedate = intToDate(dateToInt(closedate))
 
         const hash = this.hash()
         sk = hexToBytes(sk)

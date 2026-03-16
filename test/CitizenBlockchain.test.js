@@ -4,12 +4,75 @@ import { assert } from 'chai';
 import { InvalidTransactionError } from '../src/errors.js';
 import { Blockchain } from '../src/Blockchain.js';
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js';
-import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3, makeBlock, makeTransaction } from './testUtils.js'
+import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3, makeBlock, makeBlockObj, makeTransaction, referentSk, mySk, referentPk, myPk } from './testUtils.js'
 import { dateToInt, intToDate } from '../src/crypto.js'
 import { TXTYPE } from '../src/Transaction.js'
 
 
 describe('CitizenBlockchain', () => {
+
+	describe('addTransaction', () => {
+		it('Should add the given transaction to last block', () => {
+			const blockObj1 = makeBlockObj({ signed: true })
+			const blockObj2 = makeBlockObj({ signed: false })
+			const blockchain = new CitizenBlockchain([blockObj2, blockObj1])
+
+			const tx = makeTransaction()
+
+			blockchain.addTransaction(tx)
+
+			assert.deepEqual(blockchain.lastTransaction, tx)
+		})
+
+		it('Should create a new block if last one is signed', () => {
+			const blockObj1 = makeBlockObj({ signed: true })
+			const blockchain = new CitizenBlockchain([blockObj1])
+
+			const tx = makeTransaction({ date: new Date() })
+
+			blockchain.addTransaction(tx)
+
+			assert.equal(blockchain.blocks.length, 2)
+		})
+
+		it('Should NOT create a new block if last one is NOT signed', () => {
+			const bc = new CitizenBlockchain([makeBlockObj(), makeBlockObj({ signed: true, date: new Date('2026-01-19') })]);
+
+			bc.addTransaction(makeTransaction({ date: new Date('2026-01-20') }))
+			bc.addTransaction(makeTransaction({ date: new Date('2026-01-21') }))
+			bc.addTransaction(makeTransaction({ date: new Date('2026-01-22') }))
+
+			assert.equal(bc.blocks.length, 2)
+		})
+
+		it('Should throw an error if transaction already is in last block.', () => {
+			const bc = new CitizenBlockchain([makeBlockObj(), makeBlockObj({ signed: true, date: new Date('2026-01-19') })]);
+			const tx = makeTransaction(new Date('2026-01-20'), 2)
+
+			bc.addTransaction(tx)
+
+			assert.throws(() => { bc.addTransaction(tx) }, InvalidTransactionError, 'Transaction duplicate ' + tx.signature)
+		})
+
+		it('Should add money to total if type is PAY and target is blockchain owner.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', intToDate('20250102'), privateKey2, privateKey1)
+
+			const tx = makeTransaction({
+				type: TXTYPE.PAY,
+				signer: publicKey2,
+				sk: privateKey2,
+				target: publicKey1,
+				moneycount: 7
+			})
+
+			bc.addTransaction(tx)
+
+			assert.isTrue(tx.isValid())
+			assert.equal(bc.total, 7)
+		})
+	})
+
 	/*
 	describe('createMoneyAndInvests', () => {
 		it('Should throw error if date is in the futur.', () => {
@@ -305,46 +368,51 @@ describe('CitizenBlockchain', () => {
 			assert.equal(result, 5)
 		})
 	})
-
+*/
 	describe('generatePaper', () => {
 		it('Should throw error if blockchain can t afford the amount.', () => {
-			const bc = new CitizenBlockchain([validInitBlock(), validBirthBlock()])
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', intToDate('20250102'), privateKey1, privateKey2)
 
 			assert.throws(() => { bc.generatePaper(privateKey1, 2, publicKey2) }, 'Unsufficient funds')
 		})
 
-		it('Should throw error if date is already passed in the blockchain.', () => {
-			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
-
-			assert.throws(() => { bc.generatePaper(privateKey1, 2, publicKey2, new Date('2025-01-01')) }, 'Invalid date')
-		})
-
 		it('Should return a valid transaction.', () => {
-			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', intToDate('20250101'), referentSk, mySk, intToDate('20250101'))
+			bc.addTransaction(makeTransaction({
+				type: TXTYPE.CREATE,
+				moneycount: 1,
+				investcount: 1,
+				date: intToDate('20250101')
+			}))
+			bc.addTransaction(makeTransaction({
+				type: TXTYPE.CREATE,
+				moneycount: 3,
+				investcount: 3,
+				date: intToDate('20250102')
+			}))
 
-			const result = bc.generatePaper(privateKey1, 3, publicKey2, new Date('2025-01-03'))
+			const result = bc.generatePaper(mySk, 3, referentPk, intToDate('20250103'))
 
-			assert.ok(Blockchain.isValidTransaction(result), "invalid signature")
-			delete result.hash
-
-			const expected = {
-				version: Blockchain.VERSION,
-				type: Blockchain.TXTYPE.PAPER,
-				date: 20250103,
-				money: [20250101000, 20250102000, 20250102001],
-				invests: [],
-				source: publicKey1,
-				target: 0,
-				signer: publicKey2
-			}
-
-			assert.deepEqual(result, expected)
+			assert.isTrue(result.isValid())
+			assert.equal(result.type, TXTYPE.PAPER)
+			assert.equal(dateToInt(result.date), '20250103')
+			assert.equal(result.target, referentPk)
+			assert.equal(result.signer, myPk)
+			assert.deepEqual(result.money, [20250101000, 20250102000, 20250102001])
 		})
 
 		it('Should add the created transaction to the blockchain.', () => {
-			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', intToDate('20250102'), referentSk, mySk)
+			bc.addTransaction(makeTransaction({
+				type: TXTYPE.CREATE,
+				moneycount: 3,
+				investcount: 3
+			}))
 
-			const tx = bc.generatePaper(privateKey1, 3, publicKey2, new Date('2025-01-03'))
+			const tx = bc.generatePaper(privateKey1, 3, publicKey2)
 
 			const result = bc.lastblock.transactions[0]
 
@@ -352,17 +420,20 @@ describe('CitizenBlockchain', () => {
 		})
 
 		it('Should decrease money of the block.', () => {
-			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', intToDate('20250102'), referentSk, mySk)
+			bc.addTransaction(makeTransaction({
+				type: TXTYPE.CREATE,
+				moneycount: 3,
+				investcount: 3
+			}))
 
-			bc.generatePaper(privateKey1, 3, publicKey2, new Date('2025-01-03'))
+			bc.generatePaper(privateKey1, 2, publicKey2)
 
-			const result = bc.lastblock.money
-			const expected = [20250102002, 20250102003]
-
-			assert.deepEqual(result, expected)
+			assert.equal(bc.lastblock.money.length, 1)
 		})
 	})
-*/
+
 	describe('getLevel', () => {
 		it('Should return 0 for empty blockchain', () => {
 			const bc = new CitizenBlockchain()
@@ -380,7 +451,7 @@ describe('CitizenBlockchain', () => {
 			}))
 
 			for (let i = 1; i < 8; i++) {
-				bc.income(makeTransaction({
+				bc.addTransaction(makeTransaction({
 					type: TXTYPE.PAY,
 					money: [20240101000 + i],
 					target: publicKey2
@@ -397,7 +468,7 @@ describe('CitizenBlockchain', () => {
 			}))
 
 			for (let i = 8; i < 26; i++) {
-				bc.income(makeTransaction({
+				bc.addTransaction(makeTransaction({
 					type: TXTYPE.PAY,
 					money: [20240101000 + i],
 					target: publicKey2
@@ -456,7 +527,7 @@ describe('CitizenBlockchain', () => {
 			bc.addBlock(makeBlock({
 				total: 27
 			}))
-			bc.income(makeTransaction({
+			bc.addTransaction(makeTransaction({
 				type: TXTYPE.PAY,
 				moneycount: 36,
 				target: publicKey2
@@ -473,7 +544,7 @@ describe('CitizenBlockchain', () => {
 			bc.addBlock(makeBlock({
 				total: 27
 			}))
-			bc.income(makeTransaction({
+			bc.addTransaction(makeTransaction({
 				type: TXTYPE.PAY,
 				moneycount: 37,
 				target: publicKey2
@@ -490,7 +561,7 @@ describe('CitizenBlockchain', () => {
 			bc.addBlock(makeBlock({
 				total: 63
 			}))
-			bc.income(makeTransaction({
+			bc.addTransaction(makeTransaction({
 				type: TXTYPE.PAY,
 				moneycount: 1,
 				target: publicKey2
@@ -576,7 +647,6 @@ describe('CitizenBlockchain', () => {
 		})
 	})
 	
-
 	describe('makeBirthBlock', () => {
 		it('Should be one block lenght.', () => {
 			const bc = new CitizenBlockchain()

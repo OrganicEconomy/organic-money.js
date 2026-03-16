@@ -91,6 +91,15 @@ export class Blockchain {
 		return null;
 	}
 
+	get lastClosedBlock() {
+		for (let block of this.blocks) {
+			if (block.isSigned()) {
+				return block
+			}
+		}
+		return null
+	}
+
 	/***********************************************************************
 	 *                            UTILS METHODS
 	 **********************************************************************/
@@ -112,6 +121,9 @@ export class Blockchain {
 		}
 		if (this.getHistory(3).filter(element => element.signature === transaction.signature).length > 0) {
 			throw new InvalidTransactionError('Transaction duplicate ' + transaction.signature)
+		}
+		if (this.lastClosedBlock.closedate > transaction.date) {
+			throw new InvalidTransactionError('Invalid date')
 		}
 		this.lastblock.add(transaction)
 	}
@@ -257,7 +269,7 @@ export class Blockchain {
 		const date = intToDate(this.lastblock.closedate)
 		date.setDate(date.getDate() + 1)
 		for (let tx of this.lastblock.transactions) {
-			if (tx.type === Blockchain.TXTYPE.ENGAGE) {
+			if (tx.type === TXTYPE.ENGAGE) {
 				for (let money of tx.money) {
 					if (intToDate(money).getTime() === date.getTime()) {
 						block.transactions.push(tx)
@@ -328,26 +340,6 @@ export class Blockchain {
 	/***********************************************************************
 	 *                           MAIN METHODS
 	 **********************************************************************/
-
-	/**
-	 * Add and return the given Income transaction to the blockchain
-	 * and add the funds to total
-	 * Throws an error if target is not blockchain owner
-	 * Throws an error if transaction is invalid
-	 */
-	income(transaction) {
-		const myPublicKey = this.getMyPublicKey()
-		if (transaction.target !== myPublicKey ||
-			transaction.type !== TXTYPE.PAY ||
-			!transaction.isValid()
-		) {
-			throw new Error('Invalid transaction')
-		}
-		this.addTransaction(transaction)
-		this.lastblock.total += transaction.money.length
-
-		return transaction
-	}
 
 	/**
 	 * Add and return the transaction holding the payment with :

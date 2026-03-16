@@ -237,6 +237,24 @@ export class EngageTransaction extends Transaction {
 }
 
 export class PaperTransaction extends Transaction {
+    constructor(objOrSk, referentPk=null, money=[], date=new Date()) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.PAPER,
+                m: money,
+                i: [],
+                d: dateToInt(date),
+                s: publicFromPrivate(objOrSk),
+                p: referentPk,
+                h: ""
+            })
+            this.sign(objOrSk)
+        }
+    }
+
     toString() {
         return '[PaperTransaction]'
     }

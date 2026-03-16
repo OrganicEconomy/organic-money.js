@@ -10,6 +10,10 @@ export const privateKey2 = 'e68955130b2c4adc6165b0bae6e6b8f4bcce1879dbf0c6f91b3a
 export const publicKey2 = '03cbe4edbfbbc99dfbae83e8c591fafdd6a82d61589be6f60775e3fe2a4677ef46'
 export const privateKey3 = 'f8a33b8aa0cbf892f1c9e617126711f7304d6e5cead1d592a8b4288c0985b3c5'
 export const publicKey3 = '02f126a536777e95f23b5798b1e357dc2a4f5b1869b739c290b4b2efbc18eca6fd'
+export const myPk = publicKey1
+export const mySk = privateKey1
+export const referentPk = publicKey3
+export const referentSk = privateKey3
 
 export function makeTransactionObj(options = {}) {
     return makeTransaction(options).export()
@@ -78,7 +82,7 @@ export function makeBlock(options = {}) {
         block.invests = buildInvestIndexes(date, options.investscount || 0)
     }
     if (options.signed) {
-        block.sign(options.signer || privateKey1)
+        block.sign(options.signer || privateKey1, date)
     }
     return block
 }

@@ -4,11 +4,20 @@ import { randomPrivateKey, publicFromPrivate,
 	dateToInt, intToDate, formatMoneyIndex, formatInvestIndex,
 	buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
 import { BirthBlock, InitializationBlock } from './Block.js'
+import { PaperTransaction, TXTYPE } from './Transaction.js'
 
 export class CitizenBlockchain extends Blockchain {
 
 	get total() {
 		return this.lastblock.total
+	}
+
+	addTransaction(transaction) {
+		super.addTransaction(transaction)
+		const myself = this.getMyPublicKey()
+		if (transaction.type === TXTYPE.PAY && transaction.target === myself) {
+			this.lastblock.total += transaction.money.length
+		}
 	}
 
 	/**
@@ -149,20 +158,10 @@ export class CitizenBlockchain extends Blockchain {
 		if (date < this.getLastTransactionDate()) {
 			throw new Error('Invalid date')
 		}
+		const transaction = new PaperTransaction(myPrivateKey, referentPublicKey, money, date)
+		transaction.sign(myPrivateKey)
 
-		const transaction = {
-			version: Blockchain.VERSION,
-			type: Blockchain.TXTYPE.PAPER,
-			date: dateToInt(date),
-			money: money,
-			invests: [],
-			source: publicFromPrivate(myPrivateKey),
-			target: 0,
-			signer: referentPublicKey // TODO: signer is me; referentPublicKey must be the target
-		}
-
-		const result = Blockchain.signtx(transaction, myPrivateKey)
-		this.addTransaction(result)
+		this.addTransaction(transaction)
 		this.removeMoney(money);
 		return transaction
 	}

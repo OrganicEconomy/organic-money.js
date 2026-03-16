@@ -4,7 +4,7 @@ import { randomPrivateKey, publicFromPrivate,
 	dateToInt, intToDate, formatMoneyIndex, formatInvestIndex,
 	buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
 import { BirthBlock, InitializationBlock } from './Block.js'
-import { CreateTransaction, PaperTransaction, TXTYPE } from './Transaction.js'
+import { CreateTransaction, EngageTransaction, PaperTransaction, TXTYPE } from './Transaction.js'
 
 export class CitizenBlockchain extends Blockchain {
 
@@ -93,19 +93,19 @@ export class CitizenBlockchain extends Blockchain {
 
 			dateIndex.setDate(dateIndex.getDate() + 1)
 		}
-		const tx = {
-			version: Blockchain.VERSION,
-			type: Blockchain.TXTYPE.ENGAGE,
-			date: dateToInt(date),
-			source: publicFromPrivate(myPrivateKey),
-			target: targetPublicKey,
-			money: [],
-			invests: invests,
-			signer: 0
-		}
-		const result = Blockchain.signtx(tx, myPrivateKey)
-		this.addTransaction(result)
-		return result
+		const tx = new  EngageTransaction({
+			v: Blockchain.VERSION,
+			t: TXTYPE.ENGAGE,
+			d: dateToInt(date),
+			p: targetPublicKey,
+			m: [],
+			i: invests,
+			s: publicFromPrivate(myPrivateKey),
+			h: ""
+		})
+		tx.sign(myPrivateKey)
+		this.addTransaction(tx)
+		return tx
 	}
 
 	/**

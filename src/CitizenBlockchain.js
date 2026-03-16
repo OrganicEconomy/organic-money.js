@@ -4,7 +4,7 @@ import { randomPrivateKey, publicFromPrivate,
 	dateToInt, intToDate, formatMoneyIndex, formatInvestIndex,
 	buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
 import { BirthBlock, InitializationBlock } from './Block.js'
-import { PaperTransaction, TXTYPE } from './Transaction.js'
+import { CreateTransaction, PaperTransaction, TXTYPE } from './Transaction.js'
 
 export class CitizenBlockchain extends Blockchain {
 
@@ -32,18 +32,18 @@ export class CitizenBlockchain extends Blockchain {
 
 		const today = new Date();
 		if (date.getTime() > today.getTime()) {
-			throw new Error('Cannot create futur money, live in the present.')
+			throw new Error('Cannot create futur money, live the moment.')
 		}
 		const lastCreationTx = this.getLastCreationTransaction();
 		if (lastCreationTx) {
-			lastdate = intToDate(lastCreationTx.date);
+			lastdate = lastCreationTx.date;
 			lastdate.setDate(lastdate.getDate() + 1);
 		}
 		if (lastdate > date) {
 			return null;
 		}
 		const level = this.getLevel()
-		let moneys = [];
+		let money = [];
 		let invests = [];
 		let tmpMoney, tmpInvests, filteredInvests, filteredMoney
 
@@ -54,26 +54,24 @@ export class CitizenBlockchain extends Blockchain {
 
 			tmpMoney = buildMoneyIndexes(lastdate, level)
 			filteredMoney = tmpMoney.filter(x => !this.getEngagedMoney(lastdate).includes(x))
-			moneys = moneys.concat(filteredMoney);
+			money = money.concat(filteredMoney);
 
 			lastdate.setDate(lastdate.getDate() + 1);
 		}
 
-		const transaction = {
-			version: Blockchain.VERSION,
-			type: Blockchain.TXTYPE.CREATE,
-			date: dateToInt(date),
-			source: publicFromPrivate(privateKey),
-			target: publicFromPrivate(privateKey), // TODO: if target is null, then target is source
-			signer: 0,  // TODO: inverse : signer must never me null; if source is null, then source is signer.
-			money: moneys,
-			invests: invests,
-		}
-		const result = Blockchain.signtx(transaction, privateKey)
-		this.addTransaction(result);
-		this.lastblock.money = this.lastblock.money.concat(moneys);
-		this.lastblock.invests = this.lastblock.invests.concat(invests);
-		return result;
+		const transaction = new CreateTransaction({
+			v: Blockchain.VERSION,
+			t: TXTYPE.CREATE,
+			d: dateToInt(date),
+			p: '',
+			s: publicFromPrivate(privateKey),
+			m: money,
+			i: invests,
+			h: ''
+		})
+		transaction.sign(privateKey)
+		this.addTransaction(transaction);
+		return transaction;
 	}
 
 	/**
@@ -182,7 +180,7 @@ export class CitizenBlockchain extends Blockchain {
 	getLastCreationTransaction() {
 		for (let block of this.blocks) {
 			for (let tx of block.transactions) {
-				if (tx.type === Blockchain.TXTYPE.CREATE) {
+				if (tx.type === TXTYPE.CREATE) {
 					return tx;
 				}
 			}

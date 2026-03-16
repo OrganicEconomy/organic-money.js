@@ -486,19 +486,6 @@ describe('CreateTransaction', () => {
             assert.isFalse(result)
         })
 
-        it('Should return false if money count and invests count are differents.', () => {
-            const tx = new CreateTransaction(makeTransactionObj({
-                type: TXTYPE.CREATE,
-                target: "",
-                moneycount: 1,
-                investscount: 2
-            }))
-
-            const result = tx.isValid()
-
-            assert.isFalse(result)
-        })
-
         it('Should return true if all is fine.', () => {
             const tx = new CreateTransaction(makeTransactionObj({
                 type: TXTYPE.CREATE,

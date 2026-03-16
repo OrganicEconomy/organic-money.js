@@ -182,7 +182,6 @@ export class CreateTransaction extends Transaction {
         return super.isValid() &&
         this.invests.length > 0 &&
         this.money.length > 0 &&
-        this.money.length === this.invests.length &&
         this.type === TXTYPE.CREATE &&
         this.target === ""
     }

@@ -100,6 +100,14 @@ export class Blockchain {
 		return null
 	}
 
+	get money() {
+		return this.lastblock.money
+	}
+
+	get invests() {
+		return this.lastblock.invests
+	}
+
 	/***********************************************************************
 	 *                            UTILS METHODS
 	 **********************************************************************/

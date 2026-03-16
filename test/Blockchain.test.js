@@ -4,7 +4,7 @@ import { assert } from 'chai';
 
 import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { Blockchain } from '../src/Blockchain.js';
-import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3, makeBlockObj, makeTransactionObj, makeBlock, makeTransaction } from './testUtils.js'
+import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3, makeBlockObj, makeTransactionObj, makeBlock, makeTransaction, mySk } from './testUtils.js'
 import { CreateTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
 import { dateToInt, intToDate } from '../src/crypto.js';
 import { BirthBlock, InitializationBlock, REF_HASH } from '../src/Block.js';
@@ -478,25 +478,52 @@ describe('Blockchain', () => {
 			assert.equal(bc.lastblock.total, 12)
 		})
 
-		/**
-		it('Should report running engagement from previous block.', () => {
-			const bc = new Blockchain([validEngagedBlock(), validInitBlock(), validBirthBlock()])
+		it('Should report money and invests.', () => {
+			const bc = new Blockchain([makeBlockObj({ signed: true, total: 12 })])
+			bc.addTransaction(makeTransaction({
+				moneycount: 4,
+				investscount: 4
+			}))
+			bc.sealLastBlock(mySk)
 
 			bc.newBlock()
 
-			const expected = validEngagedBlock().transactions
+			assert.equal(bc.lastblock.money.length, 4)
+			assert.equal(bc.lastblock.invests.length, 4)
+		})
 
-			assert.deepEqual(bc.lastblock.transactions, expected)
+		it('Should report running engagement from previous block.', () => {
+			const bc = new Blockchain([makeBlockObj({ signed: true, date: new Date("2025-01-01") })])
+			console.log(bc.blocks[0].isSigned())
+			const tx = makeTransaction({
+				type: TXTYPE.ENGAGE,
+				money: [20250101000, 20250102000, 20250103000],
+				date: new Date("2025-01-02")
+			})
+			bc.addTransaction(tx)
+			bc.sealLastBlock(mySk, new Date("2025-01-02"))
+
+			bc.newBlock()
+
+			assert.equal(bc.blocks.length, 3)
+			assert.deepEqual(bc.lastblock.transactions[0], tx)
 		})
  
 		it('Should NOT report finished engagements from previous block.', () => {
-			const bc = new Blockchain([validNoMoreEngagedBlock(), validInitBlock(), validBirthBlock()])
+			const bc = new Blockchain([makeBlockObj({ signed: true, date: new Date("2025-01-01") })])
+			const tx = makeTransaction({
+				type: TXTYPE.ENGAGE,
+				money: [20250101000, 20250102000, 20250103000],
+				date: new Date("2025-01-02")
+			})
+			bc.addTransaction(tx)
+			bc.sealLastBlock(mySk, new Date("2025-01-03"))
 
 			bc.newBlock()
 
-			assert.equal(bc.lastblock.transactions.length, 0)
+			assert.equal(bc.blocks.length, 3)
+			assert.deepEqual(bc.lastblock.transactions.length, 0)
 		})
-		*/
 	})
 
 	describe('getMyPublicKey', () => {

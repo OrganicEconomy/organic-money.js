@@ -1,8 +1,8 @@
 import { verify } from 'ethereum-cryptography/secp256k1.js'
 import { InvalidTransactionError, UnauthorizedError } from './errors.js'
-import { intToDate } from './crypto.js'
+import { intToDate, dateToInt } from './crypto.js'
 
-import { CreateTransaction, PaperTransaction, PayTransaction, TXTYPE } from './Transaction.js'
+import { CreateTransaction, PayTransaction, TXTYPE } from './Transaction.js'
 import { Block, BlockMaker } from './Block.js'
 
 export class Blockchain {
@@ -131,7 +131,6 @@ export class Blockchain {
 	/**
 	 * Add the given transaction as a paper cash to the blockchain
 	 * Then return it.
-	 * TODO : cashPaper must throw error if signer is different from another paper in the block
 	 */
 	cashPaper(tx) {
 		if (!(tx.type === TXTYPE.PAPER && tx.isValid())) {
@@ -266,12 +265,15 @@ export class Blockchain {
 			h: null,
 			x: []
 		})
-		const date = intToDate(this.lastblock.closedate)
+
+		const date = new Date(this.lastblock.closedate)
 		date.setDate(date.getDate() + 1)
 		for (let tx of this.lastblock.transactions) {
 			if (tx.type === TXTYPE.ENGAGE) {
 				for (let money of tx.money) {
-					if (intToDate(money).getTime() === date.getTime()) {
+					//console.log(dateToInt(intToDate(money)))
+					//console.log(dateToInt(date))
+					if (dateToInt(intToDate(money)) === dateToInt(date)) {
 						block.transactions.push(tx)
 						break
 					}
@@ -290,8 +292,8 @@ export class Blockchain {
 	/**
 	 * Sign the last block of the Blockchain
 	 */
-	sealLastBlock(privateKey) {
-		return this.lastblock.sign(privateKey)
+	sealLastBlock(privateKey, date=new Date()) {
+		return this.lastblock.sign(privateKey, date)
 	}
 
 	/**

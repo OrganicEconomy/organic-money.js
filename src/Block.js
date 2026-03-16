@@ -16,7 +16,7 @@ export class BlockMaker {
         if (blockObj.p ===  REF_HASH) {
             return new BirthBlock(blockObj)
         }
-        if (blockObj.h && blockObj.m.length === 0 && blockObj.i.length === 0
+        if (blockObj.h && blockObj.m.length === 1 && blockObj.i.length === 1
         && blockObj.x.length === 0) {
             return new InitializationBlock(blockObj)
         }
@@ -216,19 +216,19 @@ export class BirthBlock extends Block {
 }
 
 export class InitializationBlock extends Block {
-    constructor(objOrSk, previousHash = null, date = new Date()) {
+    constructor(objOrSk, previousBlock = null, date = new Date()) {
         if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null
-        && previousHash === null) {
+            && previousBlock === null) {
             super(objOrSk)
         } else {
             super({
                 v: Blockchain.VERSION,
                 d: dateToInt(date),
-                p: previousHash,
+                p: previousBlock.signature,
                 s: publicFromPrivate(objOrSk),
                 r: 0,
-                m: [],
-                i: [],
+                m: previousBlock.money,
+                i: previousBlock.invests,
                 t: 0,
                 h: null,
                 x: []

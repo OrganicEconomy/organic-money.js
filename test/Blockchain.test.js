@@ -24,7 +24,7 @@ describe('Blockchain', () => {
 
 		it('Should instanciate BirthBlock or InitializationBlock when those are.', () => {
 			const birthblock = new BirthBlock(privateKey1, intToDate('20250101'), 'Gus')
-			const initializationblock = new InitializationBlock(privateKey2, birthblock.signature)
+			const initializationblock = new InitializationBlock(privateKey2, birthblock)
 			const bc = new Blockchain([initializationblock.export(), birthblock.export()])
 
 			assert.equal(bc.blocks.length, 2)

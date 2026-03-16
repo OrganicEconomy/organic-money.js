@@ -265,7 +265,7 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	validateAccount(secretKey, date = new Date()) {		
-		const block = new InitializationBlock(secretKey, this.blocks[0].signature, date)
+		const block = new InitializationBlock(secretKey, this.lastblock, date)
 		this.addBlock(block)
 		return block
 	}

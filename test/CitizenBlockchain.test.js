@@ -169,7 +169,7 @@ describe('CitizenBlockchain', () => {
 
 			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
 			const expected = [
-				20250103000, 20250103001, 20250103002, 20250103003,
+				20250102000, 20250103000, 20250103001, 20250103002, 20250103003,
 			]
 
 			assert.deepEqual(bc.money, expected)
@@ -188,7 +188,7 @@ describe('CitizenBlockchain', () => {
 
 			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
 			const expected = [
-				202501039000, 202501039001, 202501039002, 202501039003,
+				202501029000, 202501039000, 202501039001, 202501039002, 202501039003,
 			]
 
 			assert.deepEqual(bc.invests, expected)
@@ -389,7 +389,7 @@ describe('CitizenBlockchain', () => {
 			assert.deepEqual(tx.money, expected)
 		})
 	})
-/**
+
 	describe('getAvailableMoneyAmount', () => {
 		it('Should return 0 for empty blockchain', () => {
 			const bc = new CitizenBlockchain()
@@ -399,21 +399,27 @@ describe('CitizenBlockchain', () => {
 		})
 
 		it('Should return 0 for validation waiting blockchain', () => {
-			const bc = new CitizenBlockchain([validBirthBlock()])
+			const bc = new CitizenBlockchain()
+			bc.makeBirthBlock(mySk, new Date('2020-12-12'), 'Gus')
 			const result = bc.getAvailableMoneyAmount()
 
 			assert.equal(result, 0)
 		})
 
 		it('Should return last block s money for valid blockchain', () => {
-			const bc = new CitizenBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
+			const bc = level3CitizenBlockchain()
+			bc.addTransaction(makeTransaction({
+				type: TXTYPE.CREATE,
+				moneycount: 4,
+				investcount: 4
+			}))
 
 			const result = bc.getAvailableMoneyAmount()
 
 			assert.equal(result, 5)
 		})
 	})
-*/
+
 	describe('generatePaper', () => {
 		it('Should throw error if blockchain can t afford the amount.', () => {
 			const bc = new CitizenBlockchain()
@@ -429,13 +435,13 @@ describe('CitizenBlockchain', () => {
 				type: TXTYPE.CREATE,
 				moneycount: 1,
 				investcount: 1,
-				date: intToDate('20250101')
+				date: new Date('2025-01-02')
 			}))
 			bc.addTransaction(makeTransaction({
 				type: TXTYPE.CREATE,
 				moneycount: 3,
 				investcount: 3,
-				date: new Date('2025-01-02')
+				date: new Date('2025-01-03')
 			}))
 
 			const result = bc.generatePaper(mySk, 3, referentPk, intToDate('20250103'))
@@ -445,7 +451,7 @@ describe('CitizenBlockchain', () => {
 			assert.equal(dateToInt(result.date), '20250103')
 			assert.equal(result.target, referentPk)
 			assert.equal(result.signer, myPk)
-			assert.deepEqual(result.money, [20250101000, 20250102000, 20250102001])
+			assert.deepEqual(result.money, [20250101000, 20250102000, 20250103000])
 		})
 
 		it('Should add the created transaction to the blockchain.', () => {
@@ -475,7 +481,7 @@ describe('CitizenBlockchain', () => {
 
 			bc.generatePaper(privateKey1, 2, publicKey2)
 
-			assert.equal(bc.lastblock.money.length, 1)
+			assert.equal(bc.lastblock.money.length, 2)
 		})
 	})
 
@@ -778,7 +784,16 @@ describe('CitizenBlockchain', () => {
 			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus')
 			bc.validateAccount(privateKey2)
 
-			assert.equal(bc.blocks[0].previousHash, bc.blocks[1].signature)
+			assert.equal(bc.lastblock.previousHash, bc.blocks[1].signature)
+		})
+
+		it('Should keep money and invest.', () => {
+			const bc = new CitizenBlockchain()
+			bc.makeBirthBlock(privateKey1, new Date('2002-12-12'), 'Gus', new Date("2026-01-12"))
+			bc.validateAccount(privateKey2)
+
+			assert.deepEqual(bc.lastblock.money, [20260112000])
+			assert.deepEqual(bc.lastblock.invests, [202601129000])
 		})
 	})
 	

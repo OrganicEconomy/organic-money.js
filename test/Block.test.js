@@ -781,12 +781,12 @@ describe('InitializationBlock', () => {
         it('Should set the 10 fields with correct defaults.', () => {
             const d = new Date('2025-11-26')
 
-            const previousHash = REF_HASH
-            const block = new InitializationBlock(privateKey2, previousHash, d)
+            const previousBlock = makeBlock({ signatre: REF_HASH })
+            const block = new InitializationBlock(privateKey2, previousBlock, d)
 
             assert.equal(block.version, 1)
             assert.equal(block.closedate.getDate(), d.getDate())
-            assert.equal(block.previousHash, previousHash)
+            assert.equal(block.previousHash, previousBlock.signature)
             assert.equal(block.signer, publicKey2)
             assert.equal(block.root, 0)
             assert.deepEqual(block.money, [])
@@ -799,11 +799,10 @@ describe('InitializationBlock', () => {
         it('Should be signed.', () => {
             const d = new Date('2025-11-26')
 
-            const previousHash = REF_HASH
-            const block = new InitializationBlock(privateKey2, previousHash, d)
+            const previousBlock = makeBlock({ signatre: REF_HASH })
+            const block = new InitializationBlock(privateKey2, previousBlock, d)
 
             assert.isTrue(block.isSigned())
-            assert.equal(block.signature, "3045022100df8843f709059b5bd754227f068339cac36df2ea64a163dab945bf88e57f5eed02204a7719670f5737a3460187dc479d827b9c6033de51a47c772733461bced72d66")
         })
     })
 

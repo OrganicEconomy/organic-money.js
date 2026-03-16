@@ -1,11 +1,11 @@
-import { encode, decode } from 'msgpack-lite'
+import { encode } from 'msgpack-lite'
 import { sha256 } from 'ethereum-cryptography/sha256.js'
 import { hexToBytes, toHex } from 'ethereum-cryptography/utils.js'
 import { MerkleTree } from 'merkletreejs'
 import { signSync, verify } from 'ethereum-cryptography/secp256k1.js'
 
-import { dateToInt, formatInvestIndex, formatMoneyIndex, intToDate, publicFromPrivate } from "./crypto.js"
-import { CreateTransaction, InitTransaction, PaperTransaction, Transaction, TransactionMaker, TXTYPE } from './Transaction.js'
+import { dateToInt, intToDate, publicFromPrivate } from "./crypto.js"
+import { CreateTransaction, InitTransaction, TransactionMaker, TXTYPE } from './Transaction.js'
 import { UnauthorizedError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
 
@@ -156,6 +156,10 @@ export class Block {
         return this.transactions.length > 0
     }
 
+    isValid() {
+        return true
+    }
+
     isSigned() {
         return verify(
             this.signature,
@@ -183,6 +187,22 @@ export class Block {
 
     getAvailableMoneyAmount() {
         return this.getAvailableMoney().length
+    }
+
+    getEngagedInvests(date = null) {
+        let invests = []
+        for (let tx of this.transactions) {
+            invests = invests.concat(tx.getEngagedInvests(date))
+        }
+        return invests
+    }
+
+    getEngagedMoney(date = null) {
+        let money = []
+        for (let tx of this.transactions) {
+            money = money.concat(tx.getEngagedMoney(date))
+        }
+        return money
     }
 
     getMyPublicKey() {
@@ -226,6 +246,28 @@ export class BirthBlock extends Block {
     getMyPublicKey() {
         return this.signer
     }
+
+    // TODO : test it
+    isValid() {
+        const signature = this.signature
+        const messageHash = this.hash(k)
+        const publicKey = this.signer
+
+        for (let tx of this.transactions) {
+            if (!tx.isValid()) {
+                return false;
+            }
+        }
+
+        return this.previousHash === REF_HASH &&
+            this.version === Blockchain.VERSION &&
+            this.transactions.length === 2 &&
+            this.root === 0 &&
+            this.money.length === 1 &&
+            this.invests.length === 1 &&
+            this.total === 0 &&
+            verify(signature, messageHash, publicKey)
+    }
 }
 
 export class InitializationBlock extends Block {
@@ -257,5 +299,20 @@ export class InitializationBlock extends Block {
 
     getMyPublicKey() {
         return null
+    }
+
+    // TODO : test it
+    isValid() {
+        const signature = this.signature
+        const messageHash = this.hash()
+        const publicKey = this.signer
+
+        return this.version === Blockchain.VERSION &&
+            this.transactions.length === 0 &&
+            this.root === 0 &&
+            this.money.length === 1 &&
+            this.invests.length === 1 &&
+            this.total === 0 &&
+            verify(signature, messageHash, publicKey)
     }
 }

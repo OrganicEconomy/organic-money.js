@@ -4,7 +4,7 @@ import { assert } from 'chai';
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
 
 import { Block, BirthBlock, REF_HASH, InitializationBlock } from '../src/Block.js';
-import { dateToInt } from '../src/crypto.js';
+import { dateToInt, intToDate } from '../src/crypto.js';
 import { makeBlockObj, makeBlock, makeTransactions, makeTransaction, referentPk, targetPk, targetSk, mySk, referentSk, myPk } from './testUtils.js';
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
 import { UnauthorizedError } from '../src/errors.js';
@@ -160,7 +160,7 @@ describe('Block', () => {
         it('Should make valid hash of the transaction', () => {
             const block = makeBlock({
                 date: new Date('2026-01-21'),
-                previousHash: Blockchain.REF_HASH
+                previousHash: REF_HASH
             })
 
             const expected = '8bdc8f1436a86f07fdb4fad2d10a5d02499dd14e49d385aae6ac6b9a714c8d5c'
@@ -173,7 +173,7 @@ describe('Block', () => {
         it('Should ignore existing hash.', () => {
             const block = makeBlock({
                 date: new Date('2026-01-21'),
-                previousHash: Blockchain.REF_HASH
+                previousHash: REF_HASH
             })
             block.signature = "titi"
 
@@ -721,6 +721,157 @@ describe('Block', () => {
             const result = block.getMyPublicKey()
 
             assert.equal(result, myPk)
+        })
+    })
+
+    describe('getEngagedMoney', () => {
+        it('Should return all engaged money if no date is given.', () => {
+            const transactions = [
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250102),
+                    moneycount: 2
+                }),
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250103),
+                    moneycount: 1
+                }),
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250104),
+                    moneycount: 4
+                })
+            ]
+            const block = makeBlock({ transactions: transactions })
+
+            const result = block.getEngagedMoney()
+
+            const expected = [20250102000, 20250102001, 20250103000, 20250104000, 20250104001, 20250104002, 20250104003]
+
+            assert.deepEqual(result, expected)
+        })
+
+        it('Should return engaged money of given date.', () => {
+            const transactions = [
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250102),
+                    moneycount: 2
+                }),
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250103),
+                    moneycount: 3
+                })
+            ]
+            const block = makeBlock({ transactions: transactions })
+
+            const result = block.getEngagedMoney(new Date('2025-01-03'))
+            const expected = [20250103000, 20250103001, 20250103002]
+
+            assert.deepEqual(result, expected)
+        })
+
+        it('Should return engaged money of given date if given from every transactions.', () => {
+            const transactions = [
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250102),
+                    money: [20250102000, 20250102001]
+                }),
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250102),
+                    money: [20250102002, 20250102003, 20250102004]
+                }),
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250103),
+                    money: [20250103000, 20250103001]
+                })
+            ]
+            const block = makeBlock({ transactions: transactions })
+
+            const result = block.getEngagedMoney(new Date('2025-01-02'))
+            const expected = [20250102000, 20250102001, 20250102002, 20250102003, 20250102004]
+
+            assert.deepEqual(result, expected)
+        })
+    })
+
+    describe('getEngagedInvests', () => {
+        it('Should return all engaged invests if no date is given.', () => {
+            const transactions = [
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250102),
+                    investscount: 2
+                }),
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250103),
+                    investscount: 1
+                }),
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250104),
+                    investscount: 4
+                })
+            ]
+            const block = makeBlock({ transactions: transactions })
+
+            const result = block.getEngagedInvests()
+            const expected = [202501029000, 202501029001, 202501039000, 202501049000, 202501049001, 202501049002, 202501049003]
+
+            assert.deepEqual(result, expected)
+        })
+
+        it('Should return engaged invests of given date.', () => {
+            const transactions = [
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250102),
+                    investscount: 2
+                }),
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250103),
+                    investscount: 3
+                })
+            ]
+            const block = makeBlock({ transactions: transactions })
+
+            const result = block.getEngagedInvests(new Date('2025-01-03'))
+            const expected = [202501039000, 202501039001, 202501039002]
+
+            assert.deepEqual(result, expected)
+        })
+
+        it('Should return engaged invests of given date even from multiple transactions.', () => {
+            const transactions = [
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250102),
+                    invests: [202501029000, 202501029001]
+                }),
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250102),
+                    invests: [202501029002, 202501029003, 202501029004]
+                }),
+                makeTransaction({
+                    type: TXTYPE.ENGAGE,
+                    date: intToDate(20250103),
+                    invests: [202501039000, 202501039001]
+                })
+            ]
+            const block = makeBlock({ transactions: transactions })
+
+            const result = block.getEngagedInvests(new Date('2025-01-02'))
+            const expected = [202501029000, 202501029001, 202501029002, 202501029003, 202501029004]
+
+            assert.deepEqual(result, expected)
         })
     })
 })

@@ -119,6 +119,14 @@ export class Transaction {
             Object.prototype.toString.call(this.invests) == '[object Array]' &&
             verify(this.signature, this.hash(), this.signer)
     }
+
+    getEngagedMoney(date = null) {
+        return []
+    }
+
+    getEngagedInvests(date = null) {
+        return []
+    }
 }
 
 export class InitTransaction extends Transaction {
@@ -157,6 +165,13 @@ export class InitTransaction extends Transaction {
 export class CreateTransaction extends Transaction {
     constructor(objOrSk, level=0, date=null) {
         if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            objOrSk = Object.assign({}, {
+                v: Blockchain.VERSION,
+                t: TXTYPE.CREATE,
+                h: '',
+                p: '',
+            }, objOrSk)
+            
             super(objOrSk)
         } else {
             date = date || new Date()
@@ -221,6 +236,17 @@ export class PayTransaction extends Transaction {
 }
 
 export class EngageTransaction extends Transaction {
+    constructor(objOrSk) {
+        objOrSk = Object.assign({}, {
+            v: Blockchain.VERSION,
+            t: TXTYPE.ENGAGE,
+            h: "",
+            m: [],
+            i: []
+        }, objOrSk)
+        super(objOrSk)
+    }
+
     toString() {
         return '[EngageTransaction]'
     }
@@ -232,6 +258,34 @@ export class EngageTransaction extends Transaction {
         this.type == TXTYPE.ENGAGE &&
         !! this.target &&
         this.target.length === 66
+    }
+
+    getEngagedMoney(date = null) {
+        const money = []
+        for (let m of this.money) {
+            if (date !== null) {
+                if (intToDate(m).getDate() === date.getDate()) {
+                    money.push(m)
+                }
+            } else {
+                money.push(m)
+            }
+        }
+        return money
+    }
+
+    getEngagedInvests(date = null) {
+        const invests = []
+        for (let m of this.invests) {
+            if (date !== null) {
+                if (intToDate(m).getDate() === date.getDate()) {
+                    invests.push(m)
+                }
+            } else {
+                invests.push(m)
+            }
+        }
+        return invests
     }
 }
 

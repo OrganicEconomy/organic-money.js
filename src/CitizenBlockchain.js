@@ -1,8 +1,7 @@
 import { Blockchain } from './Blockchain.js'
 import { InvalidTransactionError } from './errors.js'
 import { randomPrivateKey, publicFromPrivate, 
-	dateToInt, intToDate, formatMoneyIndex, formatInvestIndex,
-	buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
+	dateToInt, buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
 import { BirthBlock, InitializationBlock } from './Block.js'
 import { CreateTransaction, EngageTransaction, PaperTransaction, TXTYPE } from './Transaction.js'
 
@@ -20,6 +19,32 @@ export class CitizenBlockchain extends Blockchain {
 		}
 	}
 
+	makeFilteredMoneyIndexes(level, fromdate, toDate) {
+		let result = []
+		let money
+		const engagedMoney = this.getEngagedMoney()
+		while (fromdate <= toDate) {
+			money = buildMoneyIndexes(fromdate, level)
+			result = result.concat(money)
+			fromdate.setDate(fromdate.getDate() + 1)
+		}
+		result = result.filter(x => !engagedMoney.includes(x))
+		return result
+	}
+
+	makeFilteredInvestsIndexes(level, fromdate, toDate) {
+		let result = []
+		let invests
+		const engagedInvests = this.getEngagedInvests()
+		while (fromdate <= toDate) {
+			invests = buildInvestIndexes(fromdate, level)
+			result = result.concat(invests)
+			fromdate.setDate(fromdate.getDate() + 1)
+		}
+		result = result.filter(x => !engagedInvests.includes(x))
+		return result
+	}
+
 	/**
 	 * Add and return the transaction that creates Money for the Blockchain.
 	 * If date is not given, uses today's date.
@@ -31,7 +56,7 @@ export class CitizenBlockchain extends Blockchain {
 		var lastdate = date
 
 		const today = new Date();
-		if (date.getTime() > today.getTime()) {
+		if (date > today) {
 			throw new Error('Cannot create futur money, live the moment.')
 		}
 		const lastCreationTx = this.getLastCreationTransaction();
@@ -43,31 +68,14 @@ export class CitizenBlockchain extends Blockchain {
 			return null;
 		}
 		const level = this.getLevel()
-		let money = [];
-		let invests = [];
-		let tmpMoney, tmpInvests, filteredInvests, filteredMoney
-
-		while (lastdate <= date) {
-			tmpInvests = buildInvestIndexes(lastdate, level)
-			filteredInvests = tmpInvests.filter(x => !this.getEngagedInvests(lastdate).includes(x))
-			invests = invests.concat(filteredInvests);
-
-			tmpMoney = buildMoneyIndexes(lastdate, level)
-			filteredMoney = tmpMoney.filter(x => !this.getEngagedMoney(lastdate).includes(x))
-			money = money.concat(filteredMoney);
-
-			lastdate.setDate(lastdate.getDate() + 1);
-		}
+		const money = this.makeFilteredMoneyIndexes(level, new Date(lastdate), date)
+		const invests = this.makeFilteredInvestsIndexes(level, new Date(lastdate), date)
 
 		const transaction = new CreateTransaction({
-			v: Blockchain.VERSION,
-			t: TXTYPE.CREATE,
 			d: dateToInt(date),
-			p: '',
 			s: publicFromPrivate(privateKey),
 			m: money,
-			i: invests,
-			h: ''
+			i: invests
 		})
 		transaction.sign(privateKey)
 		this.addTransaction(transaction);
@@ -93,15 +101,11 @@ export class CitizenBlockchain extends Blockchain {
 
 			dateIndex.setDate(dateIndex.getDate() + 1)
 		}
-		const tx = new  EngageTransaction({
-			v: Blockchain.VERSION,
-			t: TXTYPE.ENGAGE,
+		const tx = new EngageTransaction({
 			d: dateToInt(date),
 			p: targetPublicKey,
-			m: [],
 			i: invests,
 			s: publicFromPrivate(myPrivateKey),
-			h: ""
 		})
 		tx.sign(myPrivateKey)
 		this.addTransaction(tx)
@@ -128,14 +132,10 @@ export class CitizenBlockchain extends Blockchain {
 			dateIndex.setDate(dateIndex.getDate() + 1)
 		}
 		const tx = new  EngageTransaction({
-			v: Blockchain.VERSION,
-			t: TXTYPE.ENGAGE,
 			d: dateToInt(date),
 			p: targetPublicKey,
 			m: money,
-			i: [],
-			s: publicFromPrivate(myPrivateKey),
-			h: ""
+			s: publicFromPrivate(myPrivateKey)
 		})
 		tx.sign(myPrivateKey)
 		this.addTransaction(tx)

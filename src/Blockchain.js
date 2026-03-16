@@ -1,61 +1,14 @@
-import { verify } from 'ethereum-cryptography/secp256k1.js'
 import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { intToDate, dateToInt } from './crypto.js'
 
-import { CreateTransaction, PayTransaction, TXTYPE } from './Transaction.js'
+import { PayTransaction, TXTYPE } from './Transaction.js'
 import { Block, BlockMaker } from './Block.js'
 
 export class Blockchain {
 	/***********************************************************************
 	 *                              CONSTANTS
 	 **********************************************************************/
-	static get REF_HASH() { return 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5' }
 	static get VERSION() { return 1 }
-
-	/***********************************************************************
-	 *                           STATIC METHODS
-	 **********************************************************************/
-
-	/**
-	 * Return true if given Block is a valid Birth one
-	 */
-	static isValidBirthBlock(block) {
-		const signature = block.hash
-		const messageHash = Blockchain.hashblock(block)
-		const publicKey = block.signer
-
-		for (let t of block.transactions) {
-			if (!t.isValid()) {
-				return false;
-			}
-		}
-
-		return block.previousHash === Blockchain.REF_HASH &&
-			block.version === Blockchain.VERSION &&
-			block.transactions.length === 2 &&
-			block.merkleroot === 0 &&
-			block.money.length === 1 &&
-			block.invests.length === 1 &&
-			block.total === 0 &&
-			verify(signature, messageHash, publicKey)
-	}
-
-	/**
-	 * Return true if given Block is a valid Initialization one
-	 */
-	static isValidInitializationBlock(block) {
-		const signature = block.hash
-		const messageHash = Blockchain.hashblock(block)
-		const publicKey = block.signer
-
-		return block.version === Blockchain.VERSION &&
-			block.transactions.length === 0 &&
-			block.merkleroot === 0 &&
-			block.money.length === 1 &&
-			block.invests.length === 1 &&
-			block.total === 0 &&
-			verify(signature, messageHash, publicKey)
-	}
 
 	/***********************************************************************
 	 *                      BASE METHODS AND GETTERS
@@ -184,21 +137,7 @@ export class Blockchain {
 	 * If date is given, return those of this day engaged
 	 */
 	getEngagedInvests(date = null) {
-		const result = []
-		for (let tx of this.lastblock.transactions) {
-			if (tx.type === TXTYPE.ENGAGE) {
-				for (let invest of tx.invests) {
-					if (date !== null) {
-						if (intToDate(invest).getDate() === date.getDate()) {
-							result.push(invest)
-						}
-					} else {
-						result.push(invest)
-					}
-				}
-			}
-		}
-		return result
+		return this.lastblock.getEngagedInvests(date)
 	}
 
 	/**
@@ -206,21 +145,7 @@ export class Blockchain {
 	 * If date is given, return those of this day engaged
 	 */
 	getEngagedMoney(date = null) {
-		const result = []
-		for (let tx of this.lastblock.transactions) {
-			if (tx.type === TXTYPE.ENGAGE) {
-				for (let m of tx.money) {
-					if (date !== null) {
-						if (intToDate(m).getDate() === date.getDate()) {
-							result.push(m)
-						}
-					} else {
-						result.push(m)
-					}
-				}
-			}
-		}
-		return result
+		return this.lastblock.getEngagedMoney(date)
 	}
 
 	/**
@@ -277,15 +202,15 @@ export class Blockchain {
 		const date = new Date(this.lastblock.closedate)
 		date.setDate(date.getDate() + 1)
 		for (let tx of this.lastblock.transactions) {
+			// TODO : go to Transaction
 			if (tx.type === TXTYPE.ENGAGE) {
 				for (let money of tx.money) {
-					//console.log(dateToInt(intToDate(money)))
-					//console.log(dateToInt(date))
 					if (dateToInt(intToDate(money)) === dateToInt(date)) {
 						block.transactions.push(tx)
 						break
 					}
 				}
+				// TODO : this is buggy, sure
 				for (let invest of tx.invests) {
 					if (intToDate(invest).getTime() === date.getTime()) {
 						block.transactions.push(tx)
@@ -299,6 +224,7 @@ export class Blockchain {
 
 	/**
 	 * Sign the last block of the Blockchain
+	 * // TODO : rename to closeLasttBlock
 	 */
 	sealLastBlock(privateKey, date=new Date()) {
 		return this.lastblock.sign(privateKey, date)
@@ -312,6 +238,7 @@ export class Blockchain {
 		let i = 0
 		const result = []
 		this.blocks.forEach(block => {
+			// TODO : go to Block
 			if (block.transactions) {
 				block.transactions.forEach(tx => {
 					result.push(tx)
@@ -326,8 +253,7 @@ export class Blockchain {
 	}
 
 	/**
-	 * Return the public key written in the last creation block or in the
-	 * initialization block
+	 * Return the public key of the owner of the blockchain
 	 */
 	getMyPublicKey() {
 		let pk = null
@@ -346,23 +272,24 @@ export class Blockchain {
 
 	/**
 	 * Add and return the transaction holding the payment with :
-	 *    - myPrivateKey to sign the transaction
+	 *    - mySk to sign the transaction
 	 *    - target pubkey
 	 *    - given amount
 	 *    - given date or today
 	 * Throws an error if Blockchain can't afford it
 	 */
-	pay(myPrivateKey, targetPublicKey, amount, d = new Date()) {
+	pay(mySk, targetPk, amount, d = new Date()) {
 		const money = this.getAvailableMoney(amount);
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
-		const transaction = new PayTransaction (myPrivateKey, targetPublicKey, d, money)
+		const transaction = new PayTransaction (mySk, targetPk, d, money)
 
 		this.addTransaction(transaction)
+		// TODO : go to Block
 		this.removeMoney(money)
 
-		if (targetPublicKey === this.getMyPublicKey()) {
+		if (targetPk === this.getMyPublicKey()) {
 			this.lastblock.total += transaction.money.length
 		}
 		return transaction

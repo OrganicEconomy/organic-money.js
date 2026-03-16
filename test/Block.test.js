@@ -5,7 +5,7 @@ import { bytesToHex } from 'ethereum-cryptography/utils.js';
 
 import { Block, BirthBlock, REF_HASH, InitializationBlock } from '../src/Block.js';
 import { dateToInt } from '../src/crypto.js';
-import { makeBlockObj, makeBlock, makeTransactionObj, makeTransactions, privateKey1, publicKey1, makeTransaction, publicKey3, publicKey2, privateKey2 } from './testUtils.js';
+import { makeBlockObj, makeBlock, makeTransactionObj, makeTransactions, privateKey1, publicKey1, makeTransaction, publicKey3, publicKey2, privateKey2, mySk, referentSk, referentPk, myPk } from './testUtils.js';
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
 import { UnauthorizedError } from '../src/errors.js';
 import { Blockchain } from '../src/Blockchain.js';
@@ -701,6 +701,28 @@ describe('Block', () => {
             assert.deepEqual(result, 5)
         })
     })
+
+    describe('getMyPublicKey', () => {
+        it('Should return null if there are no transaction.', () => {
+            const block = makeBlock()
+
+            const result = block.getMyPublicKey()
+
+            assert.isNull(result)
+        })
+
+        it('Should return first CREATE transaction signer.', () => {
+            const block = makeBlock()
+            block.add(makeTransaction({
+                signer: myPk,
+                sk: mySk
+            }))
+
+            const result = block.getMyPublicKey()
+
+            assert.equal(result, myPk)
+        })
+    })
 })
 
 describe('BirthBlock', () => {
@@ -774,6 +796,16 @@ describe('BirthBlock', () => {
             assert.equal(result, "[BirthBlock]")
         })
     })
+
+    describe('getMyPublicKey', () => {
+        it('Should return block signer.', () => {
+            const block = new BirthBlock(mySk, new Date('2025-11-01'), "Jean Bombeur")
+
+            const result = block.getMyPublicKey()
+
+            assert.equal(result, myPk)
+        })
+    })
 })
 
 describe('InitializationBlock', () => {
@@ -782,12 +814,12 @@ describe('InitializationBlock', () => {
             const d = new Date('2025-11-26')
 
             const previousBlock = makeBlock({ signatre: REF_HASH })
-            const block = new InitializationBlock(privateKey2, previousBlock, d)
+            const block = new InitializationBlock(referentSk, previousBlock, d)
 
             assert.equal(block.version, 1)
             assert.equal(block.closedate.getDate(), d.getDate())
             assert.equal(block.previousHash, previousBlock.signature)
-            assert.equal(block.signer, publicKey2)
+            assert.equal(block.signer, referentPk)
             assert.equal(block.root, 0)
             assert.deepEqual(block.money, [])
             assert.deepEqual(block.invests, [])
@@ -808,11 +840,23 @@ describe('InitializationBlock', () => {
 
     describe('toString', () => {
         it('Should return [InitializationBlock].', () => {
-            const block = new InitializationBlock(privateKey2, REF_HASH)
+            const previousBlock = makeBlock({ signatre: REF_HASH })
+            const block = new InitializationBlock(privateKey2, previousBlock)
 
             const result = block.toString()
 
             assert.equal(result, "[InitializationBlock]")
+        })
+    })
+
+    describe('getMyPublicKey', () => {
+        it('Should return null as block cannot know it.', () => {
+            const previousBlock = makeBlock({ signatre: REF_HASH })
+            const block = new InitializationBlock(privateKey2, previousBlock)
+
+            const result = block.getMyPublicKey()
+
+            assert.isNull(result)
         })
     })
 })

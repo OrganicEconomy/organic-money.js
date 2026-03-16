@@ -328,20 +328,13 @@ export class Blockchain {
 	/**
 	 * Return the public key written in the last creation block or in the
 	 * initialization block
-	 * TODO: call block.getMyPublicKey()
 	 */
 	getMyPublicKey() {
+		let pk = null
 		for (let block of this.blocks) {
-			if (block.previousHash === Blockchain.REF_HASH) {
-				// Case 1: Birth block
-				return block.signer
-			} else if (block.transactions.length > 0) {
-				// Case 2: Standard block => look in transactions
-				for (let tx of block.transactions) {
-					if (tx instanceof CreateTransaction) {
-						return tx.signer
-					}
-				}
+			pk = block.getMyPublicKey()
+			if (pk !== null) {
+				return pk
 			}
 		}
 		return null

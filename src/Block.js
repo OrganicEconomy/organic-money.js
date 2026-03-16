@@ -184,6 +184,15 @@ export class Block {
     getAvailableMoneyAmount() {
         return this.getAvailableMoney().length
     }
+
+    getMyPublicKey() {
+        for (let tx of this.transactions) {
+            if (tx.type === TXTYPE.CREATE) {
+                return tx.signer
+            }
+        }
+        return null
+    }
 }
 
 export class BirthBlock extends Block {
@@ -213,6 +222,10 @@ export class BirthBlock extends Block {
     toString() {
         return '[BirthBlock]'
     }
+
+    getMyPublicKey() {
+        return this.signer
+    }
 }
 
 export class InitializationBlock extends Block {
@@ -240,5 +253,9 @@ export class InitializationBlock extends Block {
 
     toString() {
         return '[InitializationBlock]'
+    }
+
+    getMyPublicKey() {
+        return null
     }
 }

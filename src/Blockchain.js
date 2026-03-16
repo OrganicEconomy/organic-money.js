@@ -211,7 +211,6 @@ export class Blockchain {
 
 	/**
 	 * Sign the last block of the Blockchain
-	 * // TODO : rename to closeLasttBlock
 	 */
 	closeLastBlock(privateKey, date=new Date()) {
 		return this.lastblock.sign(privateKey, date)
@@ -223,14 +222,9 @@ export class Blockchain {
 	 */
 	getHistory(limit = 0) {
 		let i = 0
-		const result = []
+		let result = []
 		this.blocks.forEach(block => {
-			// TODO : go to Block
-			if (block.transactions) {
-				block.transactions.forEach(tx => {
-					result.push(tx)
-				})
-			}
+			result = result.concat(block.transactions)
 			i++
 			if (limit > 0 && i >= limit) {
 				return result
@@ -273,7 +267,6 @@ export class Blockchain {
 		const transaction = new PayTransaction (mySk, targetPk, d, money)
 
 		this.addTransaction(transaction)
-		// TODO : go to Block
 		this.removeMoney(money)
 
 		if (targetPk === this.getMyPublicKey()) {

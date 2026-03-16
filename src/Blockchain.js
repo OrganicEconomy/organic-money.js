@@ -202,21 +202,8 @@ export class Blockchain {
 		const date = new Date(this.lastblock.closedate)
 		date.setDate(date.getDate() + 1)
 		for (let tx of this.lastblock.transactions) {
-			// TODO : go to Transaction
-			if (tx.type === TXTYPE.ENGAGE) {
-				for (let money of tx.money) {
-					if (dateToInt(intToDate(money)) === dateToInt(date)) {
-						block.transactions.push(tx)
-						break
-					}
-				}
-				// TODO : this is buggy, sure
-				for (let invest of tx.invests) {
-					if (intToDate(invest).getTime() === date.getTime()) {
-						block.transactions.push(tx)
-						break
-					}
-				}
+			if (tx.isEngagedForDate(date)) {
+				block.transactions.push(tx)
 			}
 		}
 		this.blocks.unshift(block)
@@ -226,7 +213,7 @@ export class Blockchain {
 	 * Sign the last block of the Blockchain
 	 * // TODO : rename to closeLasttBlock
 	 */
-	sealLastBlock(privateKey, date=new Date()) {
+	closeLastBlock(privateKey, date=new Date()) {
 		return this.lastblock.sign(privateKey, date)
 	}
 

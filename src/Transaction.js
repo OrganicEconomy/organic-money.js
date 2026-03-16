@@ -120,6 +120,10 @@ export class Transaction {
             verify(this.signature, this.hash(), this.signer)
     }
 
+    isEngagedForDate(date) {
+        return this.getEngagedMoney(date).length > 0 || this.getEngagedInvests(date).length > 0
+    }
+
     getEngagedMoney(date = null) {
         return []
     }
@@ -127,6 +131,7 @@ export class Transaction {
     getEngagedInvests(date = null) {
         return []
     }
+
 }
 
 export class InitTransaction extends Transaction {

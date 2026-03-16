@@ -330,7 +330,7 @@ describe('Blockchain', () => {
 
 		it('Should throw error if transaction date is already passed in the blockchain.', () => {
 			const bc = new Blockchain([makeBlockObj()]);
-			bc.sealLastBlock(mySk)
+			bc.closeLastBlock(mySk)
 			const tx = makeTransaction({ date: new Date('2026-01-20') })
 
 			assert.throws(() => { bc.addTransaction(tx) }, InvalidTransactionError, 'Invalid date')
@@ -378,7 +378,7 @@ describe('Blockchain', () => {
 				moneycount: 4,
 				investscount: 4
 			}))
-			bc.sealLastBlock(mySk)
+			bc.closeLastBlock(mySk)
 
 			bc.newBlock()
 
@@ -395,7 +395,7 @@ describe('Blockchain', () => {
 				date: new Date("2025-01-02")
 			})
 			bc.addTransaction(tx)
-			bc.sealLastBlock(mySk, new Date("2025-01-02"))
+			bc.closeLastBlock(mySk, new Date("2025-01-02"))
 
 			bc.newBlock()
 
@@ -411,12 +411,12 @@ describe('Blockchain', () => {
 				date: new Date("2025-01-02")
 			})
 			bc.addTransaction(tx)
-			bc.sealLastBlock(mySk, new Date("2025-01-03"))
+			bc.closeLastBlock(mySk, new Date("2025-01-03"))
 
 			bc.newBlock()
 
 			assert.equal(bc.blocks.length, 3)
-			assert.deepEqual(bc.lastblock.transactions.length, 0)
+			assert.equal(bc.lastblock.transactions.length, 0)
 		})
 	})
 

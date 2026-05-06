@@ -388,7 +388,6 @@ describe('Blockchain', () => {
 
 		it('Should report running engagement from previous block.', () => {
 			const bc = new Blockchain([makeBlockObj({ signed: true, date: new Date("2025-01-01") })])
-			console.log(bc.blocks[0].isSigned())
 			const tx = makeTransaction({
 				type: TXTYPE.ENGAGE,
 				money: [20250101000, 20250102000, 20250103000],

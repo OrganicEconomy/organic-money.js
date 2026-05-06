@@ -244,24 +244,30 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	/**
-	 * Return the birthblock based on given informations
+	 * Make the birthblock based on given informations
+	 * If no secretKey is given, make one
+	 * If no date is given, use today
+	 * 
+	 * Return the secretKey
 	 */
-	makeBirthBlock(secretKey, birthdate, name, date = new Date()) {
+	makeBirthBlock(name, birthdate, secretKey = null, date = new Date()) {
+		secretKey = secretKey || randomPrivateKey()
 		const block = new BirthBlock(secretKey, birthdate, name, date)
 		this.addBlock(block)
-		return block
+		return secretKey
 	}
 
 	/**
 	 * Initalize Blockchain and return its private key
-	 * If no newPrivateKey is given, make one
+	 * If no secretKey is given, make one
 	 * If no date is given, use today
+	 * 
+	 * Return the secretKey
 	 */
-	startBlockchain(name, birthdate, signerPrivateKey, newPrivateKey = null, date = new Date()) {
-		newPrivateKey = newPrivateKey || randomPrivateKey()
-		const birthblock = this.makeBirthBlock(newPrivateKey, birthdate, name, date)
-		this.validateAccount(signerPrivateKey, date)
-		return newPrivateKey
+	startBlockchain(name, birthdate, signerSecretKey, secretKey = null, date = new Date()) {
+		secretKey = this.makeBirthBlock(name, birthdate, secretKey, date)
+		this.validateAccount(signerSecretKey, date)
+		return secretKey
 	}
 
 	validateAccount(secretKey, date = new Date()) {		

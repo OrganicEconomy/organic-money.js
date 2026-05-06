@@ -250,7 +250,7 @@ export class BirthBlock extends Block {
     // TODO : test it
     isValid() {
         const signature = this.signature
-        const messageHash = this.hash(k)
+        const messageHash = this.hash()
         const publicKey = this.signer
 
         for (let tx of this.transactions) {
@@ -262,7 +262,7 @@ export class BirthBlock extends Block {
         return this.previousHash === REF_HASH &&
             this.version === Blockchain.VERSION &&
             this.transactions.length === 2 &&
-            this.root === 0 &&
+            this.root.length === 64 &&
             this.money.length === 1 &&
             this.invests.length === 1 &&
             this.total === 0 &&
@@ -309,7 +309,7 @@ export class InitializationBlock extends Block {
 
         return this.version === Blockchain.VERSION &&
             this.transactions.length === 0 &&
-            this.root === 0 &&
+            this.root.length === 64 &&
             this.money.length === 1 &&
             this.invests.length === 1 &&
             this.total === 0 &&

@@ -3,9 +3,7 @@ import { assert } from 'chai';
 import { hexToBytes } from 'ethereum-cryptography/utils.js';
 
 import {
-    randomPrivateKey, publicFromPrivate, aesDecrypt, aesEncrypt,
-    dateToInt, intToDate, formatMoneyIndex, formatInvestIndex,
-    buildInvestIndexes, buildMoneyIndexes
+    randomPrivateKey, aesDecrypt, aesEncrypt, dateToInt, intToDate
 } from '../src/crypto.js'
 
 

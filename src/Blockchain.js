@@ -1,5 +1,5 @@
 import { InvalidTransactionError, UnauthorizedError } from './errors.js'
-import { intToDate, dateToInt } from './crypto.js'
+import { intToDate, dateToInt, infinityDate } from './crypto.js'
 
 import { PayTransaction, TXTYPE } from './Transaction.js'
 import { Block, BlockMaker } from './Block.js'
@@ -87,6 +87,10 @@ export class Blockchain {
 			throw new InvalidTransactionError('Invalid date')
 		}
 		this.lastblock.add(transaction)
+	}
+
+	export() {
+		return this.blocks.map(bk => bk.export())
 	}
 
 	/**
@@ -188,7 +192,7 @@ export class Blockchain {
 		}
 		const block = new Block ({
 			v: Blockchain.VERSION,
-			d: null,
+			d: infinityDate,
 			p: this.lastblock.signature,
 			m: this.lastblock.money,
 			i: this.lastblock.invests,

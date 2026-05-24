@@ -5,6 +5,7 @@ import { utils, getPublicKey } from 'ethereum-cryptography/secp256k1.js'
 import { encrypt, decrypt } from 'ethereum-cryptography/aes.js'
 import { getRandomBytesSync } from 'ethereum-cryptography/random.js'
 
+export const infinityDate = "99991231"
 
 export function randomPrivateKey() {
     return toHex(utils.randomPrivateKey())

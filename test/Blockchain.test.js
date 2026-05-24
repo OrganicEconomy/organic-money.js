@@ -6,7 +6,7 @@ import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { Blockchain } from '../src/Blockchain.js';
 import { mySk, myPk, targetSk, targetPk, referentPk, makeBlockObj, makeBlock, makeTransaction } from './testUtils.js'
 import { TXTYPE } from '../src/Transaction.js';
-import { intToDate } from '../src/crypto.js';
+import { intToDate, dateToInt } from '../src/crypto.js';
 import { BirthBlock, InitializationBlock, REF_HASH } from '../src/Block.js';
 
 describe('Blockchain', () => {
@@ -139,6 +139,38 @@ describe('Blockchain', () => {
 			const result = bc.isValid()
 
 			assert.ok(result)
+		})
+	})
+
+	describe('export', () => {
+		it('Should export every block and transaction.', () => {
+			const bc = new Blockchain([makeBlockObj({ signed: true, total: 12 })])
+			bc.addTransaction(makeTransaction({
+				moneycount: 4,
+				investscount: 4
+			}))
+			bc.closeLastBlock(mySk)
+			bc.newBlock()
+
+			const result = bc.export()
+
+			assert.equal(result.length, 3)
+			assert.hasAllKeys(result[1], ['v', 'd', 'p', 's', 'r', 'm', 'i', 't', 'h', 'x'])
+			assert.hasAllKeys(result[1].x[0], ['v', 't', 'm', 'i', 'd', 's', 'p', 'h',])
+		})
+
+		it('Should import correctly from export.', () => {
+			const bc = new Blockchain([makeBlockObj({ signed: true, total: 12 })])
+			bc.addTransaction(makeTransaction({
+				moneycount: 4,
+				investscount: 4
+			}))
+			bc.closeLastBlock(mySk)
+			bc.newBlock()
+
+			const result = new Blockchain(bc.export())
+
+			assert.deepEqual(result, bc)
 		})
 	})
 
@@ -354,6 +386,16 @@ describe('Blockchain', () => {
 			bc.newBlock()
 
 			assert.equal(bc.blocks.length, 3)
+		})
+
+		it('Should set new block date to "infinity".', () => {
+			const bc = new Blockchain([makeBlockObj({ signed: true }), makeBlockObj({ signed: true })])
+
+			assert.equal(bc.blocks.length, 2)
+
+			bc.newBlock()
+
+			assert.equal(dateToInt(bc.lastblock.closedate), "99991231")
 		})
 
 		it('Should add a Block type.', () => {

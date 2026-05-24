@@ -4,7 +4,7 @@ import { assert } from 'chai';
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
 
 import { Block, BirthBlock, REF_HASH, InitializationBlock } from '../src/Block.js';
-import { dateToInt, intToDate } from '../src/crypto.js';
+import { dateToInt, infinityDate, intToDate } from '../src/crypto.js';
 import { makeBlockObj, makeBlock, makeTransactions, makeTransaction, referentPk, targetPk, targetSk, mySk, referentSk, myPk } from './testUtils.js';
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
 import { UnauthorizedError } from '../src/errors.js';
@@ -39,6 +39,25 @@ describe('Block', () => {
             assert.equal(block.total, 12)
             assert.equal(block.signature, 'signature')
             assert.deepEqual(block.transactions, [])
+        })
+
+        it('Should set infinity date if none is given', () => {
+            const obj = {
+                v: 1,
+                d: null,
+                p: 'previousHash',
+                s: 'signer',
+                r: 'merkleroot',
+                m: [20251226000, 20251226001],
+                i: [202512269000, 202512269001],
+                t: 12,
+                h: 'signature',
+                x: []
+            }
+
+            const block = new Block(obj)
+
+            assert.equal(dateToInt(block.closedate), infinityDate)
         })
 
         it('Should make correct instance belonging on types.', () => {

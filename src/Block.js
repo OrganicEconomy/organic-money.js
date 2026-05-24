@@ -4,7 +4,7 @@ import { hexToBytes, toHex } from 'ethereum-cryptography/utils.js'
 import { MerkleTree } from 'merkletreejs'
 import { signSync, verify } from 'ethereum-cryptography/secp256k1.js'
 
-import { dateToInt, intToDate, publicFromPrivate } from "./crypto.js"
+import { dateToInt, infinityDate, intToDate, publicFromPrivate } from "./crypto.js"
 import { CreateTransaction, InitTransaction, TransactionMaker, TXTYPE } from './Transaction.js'
 import { UnauthorizedError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
@@ -31,7 +31,10 @@ export class Block {
             throw new Error('Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (total), "h" (signature) and "x" (transactions) are mandatory.')
         }
         this.version = blockObj.v
-        this.closedate = "d" in blockObj ? intToDate(blockObj.d) : null
+        this.closedate = intToDate(infinityDate)
+        if ("d" in blockObj && !!blockObj.d) {
+            this.closedate = intToDate(blockObj.d)
+        }
         this.previousHash = blockObj.p
         this.signer = blockObj.s
         this.root = blockObj.r

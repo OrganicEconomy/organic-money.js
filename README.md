@@ -55,17 +55,17 @@ This way, you can always follow the limit date of use and also know if its a mon
 ## Transactions
 
 There are 11 types of transaction :
-* INIT: 0, // Initialization transaction
-* CREATE: 1, // Money and Invest creation
-* PAY: 2, // Payment
-* ENGAGE: 3, // Engagement
-* PAPER: 4, // Paper creation or income
-* SETADMIN: 5, // Ecosystem admin set
-* SETACTOR: 6, // Ecosystem actor set
-* SETPAYER: 7, // Ecosystem payer set
-* UNSETADMIN: 8, // Ecosystem admin unset
-* UNSETACTOR: 9, // Ecosystem actor unset
-* UNSETPAYER: 10, // Ecosystem payer unset
+* INIT: 1, // Initialization transaction
+* CREATE: 2, // Money and Invest creation
+* PAY: 3, // Payment
+* ENGAGE: 4, // Engagement
+* PAPER: 5, // Paper creation or income
+* SETADMIN: 6, // Ecosystem admin set
+* SETACTOR: 7, // Ecosystem actor set
+* SETPAYER: 8, // Ecosystem payer set
+* UNSETADMIN: 9, // Ecosystem admin unset
+* UNSETACTOR: 10, // Ecosystem actor unset
+* UNSETPAYER: 11, // Ecosystem payer unset
 
 A transaction has ALWAYS this content :
 ```

@@ -14,7 +14,22 @@ describe('aesEncrypt', () => {
 
         assert.property(result, 'msg')
         assert.property(result, 'iv')
-        assert.property(result, 'sha')
+        assert.property(result, 'salt')
+    })
+
+    it('Should not store the password hash.', async () => {
+        const msg = randomPrivateKey()
+        const result = await aesEncrypt(msg, 'test_pwd')
+
+        assert.notProperty(result, 'sha')
+    })
+
+    it('Should use a different salt on each call.', async () => {
+        const msg = randomPrivateKey()
+        const result1 = await aesEncrypt(msg, 'test_pwd')
+        const result2 = await aesEncrypt(msg, 'test_pwd')
+
+        assert.notDeepEqual(result1.salt, result2.salt)
     })
 })
 

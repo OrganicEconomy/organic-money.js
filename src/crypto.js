@@ -13,18 +13,19 @@ export function randomPrivateKey() {
 }
 
 export async function aesEncrypt(msg, pwd) {
-    const key = scryptSync(utf8ToBytes(pwd), utf8ToBytes("salt"), 2048, 8, 1, 16)
+    const salt = getRandomBytesSync(32)
+    const derived = scryptSync(utf8ToBytes(pwd), salt, 16384, 8, 1, 32)
     const iv = getRandomBytesSync(16)
-    msg = await encrypt(msg, key, iv)
-    return { msg, iv, sha: sha256(utf8ToBytes(pwd)) }
+    msg = await encrypt(msg, derived.slice(0, 16), iv)
+    return { msg, iv, salt, verifier: derived.slice(16) }
 }
 
 export async function aesDecrypt(encrypted, pwd) {
-    if (JSON.stringify(sha256(utf8ToBytes(pwd))) !== JSON.stringify(encrypted.sha)) {
+    const derived = scryptSync(utf8ToBytes(pwd), encrypted.salt, 16384, 8, 1, 32)
+    if (toHex(derived.slice(16)) !== toHex(encrypted.verifier)) {
         throw new Error('Invalid password')
     }
-    const key = scryptSync(utf8ToBytes(pwd), utf8ToBytes("salt"), 2048, 8, 1, 16)
-    return await decrypt(encrypted.msg, key, encrypted.iv)
+    return await decrypt(encrypted.msg, derived.slice(0, 16), encrypted.iv)
 }
 
 export function publicFromPrivate(privateKey) {

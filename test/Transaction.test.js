@@ -110,12 +110,15 @@ describe('Transaction', () => {
     describe('hash', () => {
         it('Should make valid hash of the transaction', () => {
             const tx = new Transaction(makeTransactionObj({
-                date: new Date('2026-01-21')
+                date: new Date('2026-01-21'),
+                money: [],
+                invests: [],
+                target: myPk
             }))
 
             const expected = '14d5e8a5ad59438ca29821dd66debce748bdcb20cc87f90aa27452665c222315'
 
-            const result = bytesToHex(tx.hash())            
+            const result = bytesToHex(tx.hash())
 
             assert.equal(result, expected)
         })
@@ -123,6 +126,9 @@ describe('Transaction', () => {
         it('Should ignore existing hash.', () => {
             const tx = new Transaction(makeTransactionObj({
                 date: new Date('2026-01-21'),
+                money: [],
+                invests: [],
+                target: myPk,
                 signature: "titi"
             }))
 
@@ -137,7 +143,10 @@ describe('Transaction', () => {
     describe('sign', () => {
         it('Should sign the transaction if all is ok.', () => {
             const tx = new Transaction(makeTransactionObj({
-                date: new Date('2025-11-16')
+                date: new Date('2025-11-16'),
+                money: [],
+                invests: [],
+                target: myPk
             }))
 
             const expected = '304402206e50340d0355c34d9cdba44c9ec2101dabc880f816b19e2603f8538a6ce8da3502201477c0e02b233600fab3564cf9004b09542641bc5f46d14dc6490bec9ffbe666'

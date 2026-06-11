@@ -17,6 +17,7 @@ describe('CitizenBlockchain', () => {
 			target: myPk,
 			type: TXTYPE.PAY,
 			signer: referentPk,
+			sk: referentSk,
 			moneycount: 27,
 			date: new Date('2025-01-03')
 		}))
@@ -121,10 +122,11 @@ describe('CitizenBlockchain', () => {
 		it('Should create 1+Total^(1/3) Money.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
-			bc.addTransaction(makeTransaction({ 
+			bc.addTransaction(makeTransaction({
 				target: myPk,
 				type: TXTYPE.PAY,
 				signer: referentPk,
+				sk: referentSk,
 				moneycount: 27,
 				date: new Date('2025-01-02')
 			 }))
@@ -163,6 +165,7 @@ describe('CitizenBlockchain', () => {
 				target: myPk,
 				type: TXTYPE.PAY,
 				signer: referentPk,
+				sk: referentSk,
 				moneycount: 27,
 				date: new Date('2025-01-03')
 			}))
@@ -182,6 +185,7 @@ describe('CitizenBlockchain', () => {
 				target: myPk,
 				type: TXTYPE.PAY,
 				signer: referentPk,
+				sk: referentSk,
 				moneycount: 27,
 				date: new Date('2025-01-03')
 			}))
@@ -212,6 +216,7 @@ describe('CitizenBlockchain', () => {
 				target: myPk,
 				type: TXTYPE.PAY,
 				signer: referentPk,
+				sk: referentSk,
 				moneycount: 27,
 				date: new Date('2025-01-03')
 			}))

@@ -367,6 +367,14 @@ describe('Blockchain', () => {
 
 			assert.throws(() => { bc.addTransaction(tx) }, InvalidTransactionError, 'Invalid date')
 		})
+
+		it('Should throw an error if transaction signature is invalid.', () => {
+			const bc = new Blockchain([makeBlockObj(), makeBlockObj({ signed: true, date: new Date('2026-01-19') })])
+			const tx = makeTransaction({ date: new Date('2026-01-20') })
+			tx.signature = '0'.repeat(tx.signature.length)
+
+			assert.throws(() => { bc.addTransaction(tx) }, InvalidTransactionError, 'Invalid transaction')
+		})
 	})
 
 	describe('newBlock', () => {

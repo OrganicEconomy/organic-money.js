@@ -24,22 +24,24 @@ export function makeTransactionObj(options = {}) {
 
 export function makeTransaction(options = {}) {
 
+    const type = "type" in options ? options.type : TXTYPE.CREATE
     const date = "date" in options ? options.date : new Date()
+    const isCreate = type === TXTYPE.CREATE
     const tx = TransactionMaker.make({
         v: "version" in options ? options.version : 1,
         d: dateToInt(date),
-        p: "target" in options ? options.target : publicKey1,
+        p: "target" in options ? options.target : (isCreate ? "" : publicKey1),
         s: "signer" in options ? options.signer : publicKey1,
-        m: "money" in options ? options.money : [],
-        i: "invests" in options ? options.invests : [],
-        t: "type" in options ? options.type : TXTYPE.CREATE,
+        m: "money" in options ? options.money : (isCreate ? buildMoneyIndexes(date, 1) : []),
+        i: "invests" in options ? options.invests : (isCreate ? buildInvestIndexes(date, 1) : []),
+        t: type,
         h: "signature" in options ? options.signature : 'notsetyet'
     })
-    if (options.moneycount) {
-        tx.money = buildMoneyIndexes(date, options.moneycount || 0)
+    if ("moneycount" in options) {
+        tx.money = buildMoneyIndexes(date, options.moneycount)
     }
-    if (options.investscount) {
-        tx.invests = buildInvestIndexes(date, options.investscount || 0)
+    if ("investscount" in options) {
+        tx.invests = buildInvestIndexes(date, options.investscount)
     }
     if (tx.signature === 'notsetyet') {
         tx.sign(options.sk || privateKey1)

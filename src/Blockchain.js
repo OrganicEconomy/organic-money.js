@@ -77,6 +77,9 @@ export class Blockchain {
 	 * Add given transaction to the Blockchain
 	 */
 	addTransaction(transaction) {
+		if (!transaction.isValid()) {
+			throw new InvalidTransactionError('Invalid transaction')
+		}
 		if (this.lastblock.isSigned()) {
 			this.newBlock()
 		}

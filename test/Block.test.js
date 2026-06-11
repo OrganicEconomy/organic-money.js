@@ -387,8 +387,8 @@ describe('Block', () => {
     describe('merkle', () => {
         it('Should set the merkle root based on its transactions.', () => {
             const block = makeBlock()
-            const tx1 = makeTransaction({ date: new Date("2026-01-22"), moneycount: 1 })
-            const tx2 = makeTransaction({ date: new Date("2026-01-22"), moneycount: 3 })
+            const tx1 = makeTransaction({ date: new Date("2026-01-22"), moneycount: 1, invests: [], target: myPk })
+            const tx2 = makeTransaction({ date: new Date("2026-01-22"), moneycount: 3, invests: [], target: myPk })
             block.add(tx1)
             block.add(tx2)
 
@@ -398,7 +398,7 @@ describe('Block', () => {
         })
 
         it('Should set the merkle root (with 50 transactions).', () => {
-            const transactions = makeTransactions(50, { date: new Date("2026-01-22"), incrementMoney: true })
+            const transactions = makeTransactions(50, { date: new Date("2026-01-22"), incrementMoney: true, invests: [], target: myPk })
             const block = makeBlock({ transactions: transactions })
 
             block.merkle()

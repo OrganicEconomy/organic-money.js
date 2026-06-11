@@ -1,9 +1,10 @@
 import { sha256 } from 'ethereum-cryptography/sha256.js'
 import { scryptSync } from 'ethereum-cryptography/scrypt.js'
-import { utf8ToBytes, toHex } from 'ethereum-cryptography/utils.js'
-import { utils, getPublicKey } from 'ethereum-cryptography/secp256k1.js'
+import { utf8ToBytes, toHex, hexToBytes } from 'ethereum-cryptography/utils.js'
+import { utils, getPublicKey, signSync, verify } from 'ethereum-cryptography/secp256k1.js'
 import { encrypt, decrypt } from 'ethereum-cryptography/aes.js'
 import { getRandomBytesSync } from 'ethereum-cryptography/random.js'
+
 
 export const infinityDate = "99991231"
 
@@ -66,4 +67,20 @@ export function buildMoneyIndexes(date, level) {
         result.push(formatMoneyIndex(date, i))
     }
     return result
+}
+
+export function signHash(hash, sk) {
+    return toHex(signSync(hash, hexToBytes(sk)))
+}
+
+export function verifySignature(hash, signature, pk) {
+    try {
+        return verify(hexToBytes(signature), hash, hexToBytes(pk))
+    } catch {
+        return false
+    }
+}
+
+export function hashTimestampAuth(publickey, timestamp) {
+    return sha256(utf8ToBytes(`${publickey}:${timestamp}`))
 }

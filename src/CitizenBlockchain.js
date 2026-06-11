@@ -113,6 +113,9 @@ export class CitizenBlockchain extends Blockchain {
 		for (let d = 0; d < days; d++) {
 			const tmp = buildFn(dateIndex, this.getLevel())
 			const filtered = tmp.filter(x => !getEngagedFn.call(this, dateIndex).includes(x))
+			if (filtered.length < dailyAmount) {
+				throw new InvalidTransactionError('Unsufficient funds.')
+			}
 			indexes = indexes.concat(filtered.slice(0, dailyAmount))
 			dateIndex.setDate(dateIndex.getDate() + 1)
 		}

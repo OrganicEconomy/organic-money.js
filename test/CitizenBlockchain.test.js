@@ -482,6 +482,19 @@ describe('CitizenBlockchain', () => {
 
 			assert.deepEqual(tx.money, expected)
 		})
+
+		it('Should throw error if a future day in the engagement period has insufficient funds.', () => {
+			const bc = level3CitizenBlockchain()
+			bc.engageMoney(mySk, targetPk, 2, 1, new Date('2025-01-05')) // 2 of 4 slots taken on Jan 05
+
+			// Jan 04: 4 available → 3 requested → passes initial check
+			// Jan 05: 4 - 2 = 2 available → 3 requested → should throw
+			assert.throws(
+				() => bc.engageMoney(mySk, targetPk, 3, 2, new Date('2025-01-04')),
+				InvalidTransactionError,
+				'Unsufficient funds.'
+			)
+		})
 	})
 
 	describe('getAvailableMoneyAmount', () => {

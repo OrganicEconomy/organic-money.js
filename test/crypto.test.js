@@ -9,7 +9,7 @@ import {
 
 describe('aesEncrypt', () => {
     it('Should encrypt data correctly.', async () => {
-        const msg = randomPrivateKey()
+        const msg = hexToBytes(randomPrivateKey())
         const result = await aesEncrypt(msg, 'test_pwd')
 
         assert.property(result, 'msg')
@@ -18,14 +18,14 @@ describe('aesEncrypt', () => {
     })
 
     it('Should not store the password hash.', async () => {
-        const msg = randomPrivateKey()
+        const msg = hexToBytes(randomPrivateKey())
         const result = await aesEncrypt(msg, 'test_pwd')
 
         assert.notProperty(result, 'sha')
     })
 
     it('Should use a different salt on each call.', async () => {
-        const msg = randomPrivateKey()
+        const msg = hexToBytes(randomPrivateKey())
         const result1 = await aesEncrypt(msg, 'test_pwd')
         const result2 = await aesEncrypt(msg, 'test_pwd')
 
@@ -43,7 +43,7 @@ describe('aesDecrypt', () => {
     })
 
     it('Should throw error for invalid password.', async () => {
-        const msg = randomPrivateKey()
+        const msg = hexToBytes(randomPrivateKey())
         const encrypted = await aesEncrypt(msg, 'test_pwd')
 
         let error = null

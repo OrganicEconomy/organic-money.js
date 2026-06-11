@@ -3,7 +3,7 @@ import { sha256 } from 'ethereum-cryptography/sha256.js'
 
 import { buildInvestIndexes, buildMoneyIndexes, dateToInt, intToDate, publicFromPrivate } from "./crypto.js"
 import { hexToBytes, toHex } from 'ethereum-cryptography/utils.js'
-import { signSync, verify } from 'ethereum-cryptography/secp256k1.js'
+import { secp256k1 } from 'ethereum-cryptography/secp256k1.js'
 import { Blockchain } from './Blockchain.js'
 
 export const TXTYPE = {
@@ -87,9 +87,7 @@ export class Transaction {
 
     sign(sk) {
         const hash = this.hash()
-        sk = hexToBytes(sk)
-        const bytes = signSync(hash, sk)
-        this.signature = toHex(bytes)
+        this.signature = toHex(secp256k1.sign(hash, hexToBytes(sk)).toDERRawBytes())
         return this.signature
     }
 
@@ -111,13 +109,17 @@ export class Transaction {
     }
 
     isValid() {
-        return !!this.signer &&
-            this.signer.length === 66 &&
-            this.date instanceof Date &&
-            this.date <= new Date() &&
-            Object.prototype.toString.call(this.money) == '[object Array]' &&
-            Object.prototype.toString.call(this.invests) == '[object Array]' &&
-            verify(this.signature, this.hash(), this.signer)
+        try {
+            return !!this.signer &&
+                this.signer.length === 66 &&
+                this.date instanceof Date &&
+                this.date <= new Date() &&
+                Object.prototype.toString.call(this.money) == '[object Array]' &&
+                Object.prototype.toString.call(this.invests) == '[object Array]' &&
+                secp256k1.verify(this.signature, this.hash(), this.signer)
+        } catch {
+            return false
+        }
     }
 
     isEngagedForDate(date) {

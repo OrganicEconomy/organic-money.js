@@ -2,7 +2,7 @@ import { encode } from 'msgpack-lite'
 import { sha256 } from 'ethereum-cryptography/sha256.js'
 import { hexToBytes, toHex } from 'ethereum-cryptography/utils.js'
 import { MerkleTree } from 'merkletreejs'
-import { signSync, verify } from 'ethereum-cryptography/secp256k1.js'
+import { secp256k1 } from 'ethereum-cryptography/secp256k1.js'
 
 import { dateToInt, infinityDate, intToDate, publicFromPrivate } from "./crypto.js"
 import { CreateTransaction, InitTransaction, TransactionMaker, TXTYPE } from './Transaction.js'
@@ -109,8 +109,7 @@ export class Block {
 
         const hash = this.hash()
         sk = hexToBytes(sk)
-        const bytes = signSync(hash, sk)
-        this.signature = toHex(bytes)
+        this.signature = toHex(secp256k1.sign(hash, sk).toDERRawBytes())
         return this.signature
     }
 
@@ -164,11 +163,11 @@ export class Block {
     }
 
     isSigned() {
-        return verify(
-            this.signature,
-            this.hash(),
-            this.signer
-        )
+        try {
+            return secp256k1.verify(this.signature, this.hash(), this.signer)
+        } catch {
+            return false
+        }
     }
 
     /**
@@ -269,7 +268,7 @@ export class BirthBlock extends Block {
             this.money.length === 1 &&
             this.invests.length === 1 &&
             this.total === 0 &&
-            verify(signature, messageHash, publicKey)
+            secp256k1.verify(signature, messageHash, publicKey)
     }
 }
 
@@ -316,6 +315,6 @@ export class InitializationBlock extends Block {
             this.money.length === 1 &&
             this.invests.length === 1 &&
             this.total === 0 &&
-            verify(signature, messageHash, publicKey)
+            secp256k1.verify(signature, messageHash, publicKey)
     }
 }

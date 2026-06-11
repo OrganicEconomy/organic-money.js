@@ -32,7 +32,7 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "ethereum-cryptography": "^0.2.0",
+    "ethereum-cryptography": "^3.2.0",
     "js-base64": "^3.7.2",
     "merkletreejs": "^0.5.2",
     "msgpack-lite": "^0.1.26"

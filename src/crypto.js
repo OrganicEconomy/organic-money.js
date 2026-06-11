@@ -1,7 +1,7 @@
 import { sha256 } from 'ethereum-cryptography/sha256.js'
 import { scryptSync } from 'ethereum-cryptography/scrypt.js'
 import { utf8ToBytes, toHex, hexToBytes } from 'ethereum-cryptography/utils.js'
-import { utils, getPublicKey, signSync, verify } from 'ethereum-cryptography/secp256k1.js'
+import { secp256k1 } from 'ethereum-cryptography/secp256k1.js'
 import { encrypt, decrypt } from 'ethereum-cryptography/aes.js'
 import { getRandomBytesSync } from 'ethereum-cryptography/random.js'
 
@@ -9,7 +9,7 @@ import { getRandomBytesSync } from 'ethereum-cryptography/random.js'
 export const infinityDate = "99991231"
 
 export function randomPrivateKey() {
-    return toHex(utils.randomPrivateKey())
+    return toHex(secp256k1.utils.randomPrivateKey())
 }
 
 export async function aesEncrypt(msg, pwd) {
@@ -29,7 +29,7 @@ export async function aesDecrypt(encrypted, pwd) {
 }
 
 export function publicFromPrivate(privateKey) {
-    return toHex(getPublicKey(privateKey, true))
+    return toHex(secp256k1.getPublicKey(privateKey, true))
 }
 
 export function dateToInt(date) {
@@ -71,12 +71,12 @@ export function buildMoneyIndexes(date, level) {
 }
 
 export function signHash(hash, sk) {
-    return toHex(signSync(hash, hexToBytes(sk)))
+    return toHex(secp256k1.sign(hash, hexToBytes(sk)).toDERRawBytes())
 }
 
 export function verifySignature(hash, signature, pk) {
     try {
-        return verify(hexToBytes(signature), hash, hexToBytes(pk))
+        return secp256k1.verify(hexToBytes(signature), hash, hexToBytes(pk))
     } catch {
         return false
     }

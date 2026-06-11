@@ -256,6 +256,34 @@ describe('CitizenBlockchain', () => {
 		})
 	})
 
+	describe('makeFilteredMoneyIndexes', () => {
+		it('Should not mutate the fromdate parameter.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+
+			const fromdate = new Date('2025-01-03')
+			const originalTime = fromdate.getTime()
+
+			bc.makeFilteredMoneyIndexes(1, fromdate, new Date('2025-01-05'))
+
+			assert.equal(fromdate.getTime(), originalTime)
+		})
+	})
+
+	describe('makeFilteredInvestsIndexes', () => {
+		it('Should not mutate the fromdate parameter.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+
+			const fromdate = new Date('2025-01-03')
+			const originalTime = fromdate.getTime()
+
+			bc.makeFilteredInvestsIndexes(1, fromdate, new Date('2025-01-05'))
+
+			assert.equal(fromdate.getTime(), originalTime)
+		})
+	})
+
 	describe('engageInvests', () => {
 		it('Should throw error if private key does not belong to the blockchain owner.', () => {
 			const bc = level3CitizenBlockchain()

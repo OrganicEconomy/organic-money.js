@@ -20,29 +20,22 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	makeFilteredMoneyIndexes(level, fromdate, toDate) {
-		let result = []
-		let money
-		const engagedMoney = this.getEngagedMoney()
-		while (fromdate <= toDate) {
-			money = buildMoneyIndexes(fromdate, level)
-			result = result.concat(money)
-			fromdate.setDate(fromdate.getDate() + 1)
-		}
-		result = result.filter(x => !engagedMoney.includes(x))
-		return result
+		return this.#makeFilteredIndexes(level, fromdate, toDate, buildMoneyIndexes, this.getEngagedMoney)
 	}
 
 	makeFilteredInvestsIndexes(level, fromdate, toDate) {
+		return this.#makeFilteredIndexes(level, fromdate, toDate, buildInvestIndexes, this.getEngagedInvests)
+	}
+
+	#makeFilteredIndexes(level, fromdate, toDate, buildFn, getEngagedFn) {
+		const engaged = getEngagedFn.call(this)
 		let result = []
-		let invests
-		const engagedInvests = this.getEngagedInvests()
-		while (fromdate <= toDate) {
-			invests = buildInvestIndexes(fromdate, level)
-			result = result.concat(invests)
-			fromdate.setDate(fromdate.getDate() + 1)
+		const current = new Date(fromdate)
+		while (current <= toDate) {
+			result = result.concat(buildFn(current, level))
+			current.setDate(current.getDate() + 1)
 		}
-		result = result.filter(x => !engagedInvests.includes(x))
-		return result
+		return result.filter(x => !engaged.includes(x))
 	}
 
 	/**
@@ -71,8 +64,8 @@ export class CitizenBlockchain extends Blockchain {
 			return null;
 		}
 		const level = this.getLevel()
-		const money = this.makeFilteredMoneyIndexes(level, new Date(startdate), date)
-		const invests = this.makeFilteredInvestsIndexes(level, new Date(startdate), date)
+		const money = this.makeFilteredMoneyIndexes(level, startdate, date)
+		const invests = this.makeFilteredInvestsIndexes(level, startdate, date)
 
 		const transaction = new CreateTransaction({
 			d: dateToInt(date),

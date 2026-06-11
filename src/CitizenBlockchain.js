@@ -1,5 +1,5 @@
 import { Blockchain } from './Blockchain.js'
-import { InvalidTransactionError } from './errors.js'
+import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { randomPrivateKey, publicFromPrivate, 
 	dateToInt, buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
 import { BirthBlock, InitializationBlock } from './Block.js'
@@ -53,6 +53,9 @@ export class CitizenBlockchain extends Blockchain {
 	 * Throw an error if date is in the futur as one cannot create futur money.
 	 */
 	createMoneyAndInvests(privateKey, date = new Date()) {
+		if (publicFromPrivate(privateKey) !== this.getMyPublicKey()) {
+			throw new UnauthorizedError('Private key does not match blockchain owner.')
+		}
 		var lastdate = date
 
 		const today = new Date();
@@ -86,6 +89,9 @@ export class CitizenBlockchain extends Blockchain {
 	 * Add and return the transaction that engage invests of the BLockchain.
 	 */
 	engageInvests(myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
+		if (publicFromPrivate(myPrivateKey) !== this.getMyPublicKey()) {
+			throw new UnauthorizedError('Private key does not match blockchain owner.')
+		}
 		if (dailyAmount > this.getAffordableInvestAmount(date)) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
@@ -116,6 +122,9 @@ export class CitizenBlockchain extends Blockchain {
 	 * Add and return the transaction that engage money of the BLockchain.
 	 */
 	engageMoney(myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
+		if (publicFromPrivate(myPrivateKey) !== this.getMyPublicKey()) {
+			throw new UnauthorizedError('Private key does not match blockchain owner.')
+		}
 		if (dailyAmount > this.getAffordableMoneyAmount(date)) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}

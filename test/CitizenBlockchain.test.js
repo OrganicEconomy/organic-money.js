@@ -1,7 +1,7 @@
 import { describe, it } from 'mocha';
 import { assert } from 'chai';
 
-import { InvalidTransactionError } from '../src/errors.js';
+import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js';
 import { Blockchain } from '../src/Blockchain.js';
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js';
 import { mySk, myPk, targetSk, targetPk, makeBlock, makeBlockObj, makeTransaction, referentSk, referentPk } from './testUtils.js'
@@ -87,6 +87,13 @@ describe('CitizenBlockchain', () => {
 	})
 	
 	describe('createMoneyAndInvests', () => {
+		it('Should throw error if private key does not belong to the blockchain owner.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk)
+
+			assert.throws(() => { bc.createMoneyAndInvests(targetSk) }, UnauthorizedError)
+		})
+
 		it('Should throw error if date is in the futur.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk)
@@ -250,7 +257,12 @@ describe('CitizenBlockchain', () => {
 	})
 
 	describe('engageInvests', () => {
-		
+		it('Should throw error if private key does not belong to the blockchain owner.', () => {
+			const bc = level3CitizenBlockchain()
+
+			assert.throws(() => { bc.engageInvests(targetSk, referentPk, 1, 1) }, UnauthorizedError)
+		})
+
 		it('Should throw error if daily amount is unaffordable.', () => {
 			const bc = level3CitizenBlockchain()
 			const dailyAmount = 5 // total is 27 so daily creation is 3+1=4
@@ -329,6 +341,12 @@ describe('CitizenBlockchain', () => {
 	})
 
 	describe('engageMoney', () => {
+		it('Should throw error if private key does not belong to the blockchain owner.', () => {
+			const bc = level3CitizenBlockchain()
+
+			assert.throws(() => { bc.engageMoney(targetSk, referentPk, 1, 1) }, UnauthorizedError)
+		})
+
 		it('Should throw error if daily amount is unaffordable.', () => {
 			const bc = level3CitizenBlockchain()
 			const dailyAmount = 5 // total is 27 so daily creation is 3+1=4

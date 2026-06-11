@@ -56,7 +56,7 @@ export class CitizenBlockchain extends Blockchain {
 		if (publicFromPrivate(privateKey) !== this.getMyPublicKey()) {
 			throw new UnauthorizedError('Private key does not match blockchain owner.')
 		}
-		var lastdate = date
+		let startdate = new Date(date)
 
 		const today = new Date();
 		if (date > today) {
@@ -64,15 +64,15 @@ export class CitizenBlockchain extends Blockchain {
 		}
 		const lastCreationTx = this.getLastCreationTransaction();
 		if (lastCreationTx) {
-			lastdate = new Date(lastCreationTx.date);
-			lastdate.setDate(lastdate.getDate() + 1);
+			startdate = new Date(lastCreationTx.date);
+			startdate.setDate(startdate.getDate() + 1);
 		}
-		if (lastdate > date) {
+		if (startdate > date) {
 			return null;
 		}
 		const level = this.getLevel()
-		const money = this.makeFilteredMoneyIndexes(level, new Date(lastdate), date)
-		const invests = this.makeFilteredInvestsIndexes(level, new Date(lastdate), date)
+		const money = this.makeFilteredMoneyIndexes(level, new Date(startdate), date)
+		const invests = this.makeFilteredInvestsIndexes(level, new Date(startdate), date)
 
 		const transaction = new CreateTransaction({
 			d: dateToInt(date),

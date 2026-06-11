@@ -483,11 +483,19 @@ describe('CitizenBlockchain', () => {
 	})
 
 	describe('generatePaper', () => {
+		it('Should throw error if private key does not belong to the blockchain owner.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk)
+			bc.addTransaction(makeTransaction({ type: TXTYPE.CREATE, moneycount: 3 }))
+
+			assert.throws(() => { bc.generatePaper(targetSk, 1, referentPk) }, UnauthorizedError)
+		})
+
 		it('Should throw error if blockchain can t afford the amount.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), mySk, targetSk)
 
-			assert.throws(() => { bc.generatePaper(mySk, 2, targetPk) }, 'Unsufficient funds')
+			assert.throws(() => { bc.generatePaper(targetSk, 2, myPk) }, 'Unsufficient funds')
 		})
 
 		it('Should throw error if date is before last transaction.', () => {

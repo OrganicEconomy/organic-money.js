@@ -151,6 +151,9 @@ export class CitizenBlockchain extends Blockchain {
 	 * Throws an error if given date is before last transaction date
 	 */
 	generatePaper(myPrivateKey, amount, referentPublicKey, date = new Date()) {
+		if (publicFromPrivate(myPrivateKey) !== this.getMyPublicKey()) {
+			throw new UnauthorizedError('Private key does not match blockchain owner.')
+		}
 		const money = this.getAvailableMoney(amount);
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')

@@ -269,7 +269,7 @@ export class EngageTransaction extends Transaction {
         const money = []
         for (let m of this.money) {
             if (date !== null) {
-                if (intToDate(m).getDate() === date.getDate()) {
+                if (dateToInt(intToDate(m)) === dateToInt(date)) {
                     money.push(m)
                 }
             } else {
@@ -283,7 +283,7 @@ export class EngageTransaction extends Transaction {
         const invests = []
         for (let m of this.invests) {
             if (date !== null) {
-                if (intToDate(m).getDate() === date.getDate()) {
+                if (dateToInt(intToDate(m)) === dateToInt(date)) {
                     invests.push(m)
                 }
             } else {

@@ -721,6 +721,34 @@ describe('EngageTransaction', () => {
             assert.isTrue(result)
         })
     })
+
+    describe('getEngagedMoney', () => {
+        it('Should not match money from a different month with the same day.', () => {
+            const tx = new EngageTransaction(makeTransactionObj({
+                type: TXTYPE.ENGAGE,
+                target: referentPk,
+                money: [20250103000, 20250103001] // January 3rd
+            }))
+
+            const result = tx.getEngagedMoney(new Date('2025-02-03')) // February 3rd — same day, different month
+
+            assert.deepEqual(result, [])
+        })
+    })
+
+    describe('getEngagedInvests', () => {
+        it('Should not match invests from a different month with the same day.', () => {
+            const tx = new EngageTransaction(makeTransactionObj({
+                type: TXTYPE.ENGAGE,
+                target: referentPk,
+                invests: [202501039000, 202501039001] // January 3rd
+            }))
+
+            const result = tx.getEngagedInvests(new Date('2025-02-03')) // February 3rd — same day, different month
+
+            assert.deepEqual(result, [])
+        })
+    })
 })
 
 describe('PaperTransaction', () => {

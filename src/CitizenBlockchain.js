@@ -194,7 +194,7 @@ export class CitizenBlockchain extends Blockchain {
 	 * each day
 	 */
 	getLevel() {
-		if (this.isEmpty() && !this.isValidated()) { return 0 }
+		if (this.isEmpty() || !this.isValidated()) { return 0 }
 		return Math.floor(Math.cbrt(this.total)) + 1
 	}
 

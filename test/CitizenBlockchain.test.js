@@ -518,6 +518,15 @@ describe('CitizenBlockchain', () => {
 			assert.equal(result, 0)
 		})
 
+		it('Should return 0 for a blockchain waiting for validation', () => {
+			const bc = new CitizenBlockchain()
+			bc.makeBirthBlock('Gus', new Date('2002-12-12'), mySk)
+
+			const result = bc.getLevel()
+
+			assert.equal(result, 0)
+		})
+
 		it('Should return 2 for t=1 to 7', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', intToDate('20240101'), mySk, targetSk)

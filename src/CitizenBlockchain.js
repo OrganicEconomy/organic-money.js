@@ -61,7 +61,7 @@ export class CitizenBlockchain extends Blockchain {
 		}
 		const lastCreationTx = this.getLastCreationTransaction();
 		if (lastCreationTx) {
-			lastdate = lastCreationTx.date;
+			lastdate = new Date(lastCreationTx.date);
 			lastdate.setDate(lastdate.getDate() + 1);
 		}
 		if (lastdate > date) {

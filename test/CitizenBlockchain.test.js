@@ -194,6 +194,17 @@ describe('CitizenBlockchain', () => {
 			assert.deepEqual(bc.invests, expected)
 		})
 
+		it('Should not corrupt the previous CREATE transaction.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+
+			const prevCreateTx = bc.getLastCreationTransaction()
+
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
+
+			assert.isTrue(prevCreateTx.isValid())
+		})
+
 		it('Should create 1+Total^(1/3) minus engaged money/invests.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))

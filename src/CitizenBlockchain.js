@@ -46,7 +46,8 @@ export class CitizenBlockchain extends Blockchain {
 	 * Throw an error if date is in the futur as one cannot create futur money.
 	 */
 	createMoneyAndInvests(privateKey, date = new Date()) {
-		if (publicFromPrivate(privateKey) !== this.getMyPublicKey()) {
+		const myPublicKey = publicFromPrivate(privateKey)
+		if (myPublicKey !== this.getMyPublicKey()) {
 			throw new UnauthorizedError('Private key does not match blockchain owner.')
 		}
 		let startdate = new Date(date)
@@ -69,7 +70,7 @@ export class CitizenBlockchain extends Blockchain {
 
 		const transaction = new CreateTransaction({
 			d: dateToInt(date),
-			s: publicFromPrivate(privateKey),
+			s: myPublicKey,
 			m: money,
 			i: invests
 		})
@@ -82,30 +83,15 @@ export class CitizenBlockchain extends Blockchain {
 	 * Add and return the transaction that engage invests of the BLockchain.
 	 */
 	engageInvests(myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
-		if (publicFromPrivate(myPrivateKey) !== this.getMyPublicKey()) {
+		const myPublicKey = publicFromPrivate(myPrivateKey)
+		if (myPublicKey !== this.getMyPublicKey()) {
 			throw new UnauthorizedError('Private key does not match blockchain owner.')
 		}
 		if (dailyAmount > this.getAffordableInvestAmount(date)) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
-
-		let invests = []
-		const level = this.getLevel()
-		const dateIndex = new Date(date)
-		let tmpInvests, filteredInvests
-		for (let d = 0; d < days; d++) {
-			tmpInvests = buildInvestIndexes(dateIndex, level)
-			filteredInvests = tmpInvests.filter(x => !this.getEngagedInvests(dateIndex).includes(x))
-			invests = invests.concat(filteredInvests.slice(0, dailyAmount))
-
-			dateIndex.setDate(dateIndex.getDate() + 1)
-		}
-		const tx = new EngageTransaction({
-			d: dateToInt(date),
-			p: targetPublicKey,
-			i: invests,
-			s: publicFromPrivate(myPrivateKey),
-		})
+		const invests = this.#buildEngageIndexes(days, date, dailyAmount, buildInvestIndexes, this.getEngagedInvests)
+		const tx = new EngageTransaction({ d: dateToInt(date), p: targetPublicKey, i: invests, s: myPublicKey })
 		tx.sign(myPrivateKey)
 		this.addTransaction(tx)
 		return tx
@@ -115,33 +101,30 @@ export class CitizenBlockchain extends Blockchain {
 	 * Add and return the transaction that engage money of the BLockchain.
 	 */
 	engageMoney(myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
-		if (publicFromPrivate(myPrivateKey) !== this.getMyPublicKey()) {
+		const myPublicKey = publicFromPrivate(myPrivateKey)
+		if (myPublicKey !== this.getMyPublicKey()) {
 			throw new UnauthorizedError('Private key does not match blockchain owner.')
 		}
 		if (dailyAmount > this.getAffordableMoneyAmount(date)) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
-
-		let money = []
-		const level = this.getLevel()
-		const dateIndex = new Date(date)
-		let tmpMoney, filteredMoney
-		for (let d = 0; d < days; d++) {
-			tmpMoney = buildMoneyIndexes(dateIndex, level)
-			filteredMoney = tmpMoney.filter(x => !this.getEngagedMoney(dateIndex).includes(x))
-			money = money.concat(filteredMoney.slice(0, dailyAmount))
-
-			dateIndex.setDate(dateIndex.getDate() + 1)
-		}
-		const tx = new  EngageTransaction({
-			d: dateToInt(date),
-			p: targetPublicKey,
-			m: money,
-			s: publicFromPrivate(myPrivateKey)
-		})
+		const money = this.#buildEngageIndexes(days, date, dailyAmount, buildMoneyIndexes, this.getEngagedMoney)
+		const tx = new EngageTransaction({ d: dateToInt(date), p: targetPublicKey, m: money, s: myPublicKey })
 		tx.sign(myPrivateKey)
 		this.addTransaction(tx)
 		return tx
+	}
+
+	#buildEngageIndexes(days, date, dailyAmount, buildFn, getEngagedFn) {
+		let indexes = []
+		const dateIndex = new Date(date)
+		for (let d = 0; d < days; d++) {
+			const tmp = buildFn(dateIndex, this.getLevel())
+			const filtered = tmp.filter(x => !getEngagedFn.call(this, dateIndex).includes(x))
+			indexes = indexes.concat(filtered.slice(0, dailyAmount))
+			dateIndex.setDate(dateIndex.getDate() + 1)
+		}
+		return indexes
 	}
 
 	/**
@@ -223,7 +206,7 @@ export class CitizenBlockchain extends Blockchain {
 	 */
 	hasLevelUpOnLastTx() {
 		const lastTx = this.lastTransaction;
-		if (lastTx === null || lastTx.toString() != "[PayTransaction]") {
+		if (lastTx === null || lastTx.type !== TXTYPE.PAY) {
 			return false
 		}
 		return Math.floor(Math.cbrt(this.total - lastTx.money.length)) + 1 < this.getLevel()

@@ -84,6 +84,13 @@ describe('CitizenBlockchain', () => {
 			assert.isTrue(tx.isValid())
 			assert.equal(bc.total, 7)
 		})
+
+		it('Should add money to total exactly once when pay() targets blockchain owner.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+			bc.pay(mySk, myPk, 1)
+			assert.equal(bc.total, 1)
+		})
 	})
 	
 	describe('createMoneyAndInvests', () => {

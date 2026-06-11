@@ -11,14 +11,6 @@ export class CitizenBlockchain extends Blockchain {
 		return this.lastblock.total
 	}
 
-	addTransaction(transaction) {
-		super.addTransaction(transaction)
-		const myself = this.getMyPublicKey()
-		if (transaction.type === TXTYPE.PAY && transaction.target === myself) {
-			this.lastblock.total += transaction.money.length
-		}
-	}
-
 	makeFilteredMoneyIndexes(level, fromdate, toDate) {
 		return this.#makeFilteredIndexes(level, fromdate, toDate, buildMoneyIndexes, this.getEngagedMoney)
 	}
@@ -145,8 +137,6 @@ export class CitizenBlockchain extends Blockchain {
 			throw new Error('Invalid date')
 		}
 		const transaction = new PaperTransaction(myPrivateKey, referentPublicKey, money, date)
-		transaction.sign(myPrivateKey)
-
 		this.addTransaction(transaction)
 		this.removeMoney(money);
 		return transaction
@@ -218,7 +208,7 @@ export class CitizenBlockchain extends Blockchain {
 	 */
 	isWaitingValidation() {
 		return this.blocks.length === 1 &&
-			this.lastblock.toString() === "[BirthBlock]"
+			this.lastblock instanceof BirthBlock
 	}
 
 	/**
@@ -227,8 +217,8 @@ export class CitizenBlockchain extends Blockchain {
 	 */
 	isValidated() {
 		return this.blocks.length >= 2
-		&& this.blocks[this.blocks.length - 2].toString() === "[InitializationBlock]"
-		&& this.blocks[this.blocks.length - 1].toString() === "[BirthBlock]"
+		&& this.blocks[this.blocks.length - 2] instanceof InitializationBlock
+		&& this.blocks[this.blocks.length - 1] instanceof BirthBlock
 	}
 
 	/**
@@ -258,7 +248,11 @@ export class CitizenBlockchain extends Blockchain {
 		return secretKey
 	}
 
-	validateAccount(secretKey, date = new Date()) {		
+	/**
+	 * Add an InitializationBlock signed by secretKey to validate the account.
+	 * Authorization is delegated to the caller — any key is accepted here.
+	 */
+	validateAccount(secretKey, date = new Date()) {
 		const block = new InitializationBlock(secretKey, this.lastblock, date)
 		this.addBlock(block)
 		return block

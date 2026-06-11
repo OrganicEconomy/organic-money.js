@@ -256,6 +256,31 @@ describe('CitizenBlockchain', () => {
 		})
 	})
 
+	describe('getLastCreationTransaction', () => {
+		it('Should return the last CREATE when multiple exist in the same unsigned block.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-04'))
+
+			const lastCreate = bc.getLastCreationTransaction()
+
+			assert.equal(dateToInt(lastCreate.date), '20250104')
+		})
+
+		it('Should not create duplicate money when called multiple times before block is signed.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-04'))
+
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-05'))
+
+			const allMoney = bc.money
+			assert.equal(allMoney.length, new Set(allMoney).size, 'Duplicate money indexes detected')
+		})
+	})
+
 	describe('makeFilteredMoneyIndexes', () => {
 		it('Should not mutate the fromdate parameter.', () => {
 			const bc = new CitizenBlockchain()

@@ -439,6 +439,19 @@ describe('CitizenBlockchain', () => {
 			assert.throws(() => { bc.generatePaper(mySk, 2, targetPk) }, 'Unsufficient funds')
 		})
 
+		it('Should throw error if date is before last transaction.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+			bc.addTransaction(makeTransaction({
+				type: TXTYPE.CREATE,
+				moneycount: 3,
+				investscount: 3,
+				date: new Date('2025-01-05')
+			}))
+
+			assert.throws(() => { bc.generatePaper(mySk, 2, referentPk, new Date('2025-01-03')) }, Error, 'Invalid date')
+		})
+
 		it('Should return a valid transaction.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', intToDate('20250101'), referentSk, mySk, intToDate('20250101'))

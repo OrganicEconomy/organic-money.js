@@ -157,7 +157,7 @@ export class Blockchain {
 	 */
 	getLastTransactionDate() {
 		const tx = this.lastTransaction
-		return intToDate(tx.date)
+		return tx.date
 	}
 
 	/**

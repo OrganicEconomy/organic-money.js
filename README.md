@@ -125,18 +125,18 @@ When a citizen pays another, the money IDs are removed from the sender's wallet.
 A citizen's **level** controls how many units they generate per day:
 
 ```
-level = floor(∛total_received) + 1
+level = floor(∛economic_experience) + 1
 ```
 
-`total_received` is the cumulative count of money units ever received by the citizen (via PAY transactions). This encourages economic participation and gives a natural catch-up mechanic: anyone can grow, but growth requires genuine exchange.
+**Economic experience** is the cumulative count of money units ever received by the citizen (via PAY transactions). It is stored as the `total` field in each block. This encourages economic participation and gives a natural catch-up mechanic: anyone can grow, but growth requires genuine exchange.
 
-| Level | Units/day | `total_received` to reach |
-|-------|-----------|--------------------------|
-| 1     | 1         | 0 (starting level)       |
-| 2     | 2         | 1                        |
-| 3     | 3         | 8                        |
-| 4     | 4         | 27                       |
-| n     | n         | (n−1)³                   |
+| Level | Units/day | Economic experience to reach |
+|-------|-----------|------------------------------|
+| 1     | 1         | 0 (starting level)           |
+| 2     | 2         | 1                            |
+| 3     | 3         | 8                            |
+| 4     | 4         | 27                           |
+| n     | n         | (n−1)³                       |
 
 ### Ecosystems
 
@@ -667,7 +667,7 @@ Every transaction is serialized with short field names for compactness:
 | `s` | signer | Block signer's compressed public key |
 | `m` | money | Available (unspent) money unit IDs at seal time |
 | `i` | invests | Available invest unit IDs at seal time |
-| `t` | total | Cumulative money received — drives level progression |
+| `t` | total | Economic experience (cumulative money received) — drives level progression |
 | `r` | merkleroot | Merkle root of all transaction signatures in the block |
 | `h` | signature | DER-encoded SECP256K1 signature of the block |
 | `x` | transactions | Array of all transactions in the block |

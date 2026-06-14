@@ -150,7 +150,7 @@ An `EcosystemBlockchain` represents a collective entity (cooperative, associatio
 
 Two separate economic flows pass through an ecosystem:
 
-- **Invest flow** — citizens engage invests into the ecosystem over a period of days. The engagement transaction carries invest IDs for the current day and all future days of the commitment; the ecosystem records them all at once (`receiveInvests`), but only invests whose date has been reached can be used in orders. Payers send invest orders (`payerOrder`); the ecosystem validates and executes them (`order`), delegating the mature invests to a supplier.
+- **Invest flow** — citizens engage invests into the ecosystem over a period of days. The engagement transaction carries invest IDs for the current day and all future days of the commitment; the ecosystem records them all at once (`receiveInvests`), but only invests whose date has been reached can be used in orders. Payers send invest orders (`payerOrder`); the ecosystem validates them and executes the actual payment via `order`, which converts the mature invests into money (1 invest = 1 money, invest ID transformed to money ID) and sends them directly to the target as an EARN transaction — the target can be a citizen or another ecosystem.
 - **Money flow** — citizen clients pay the ecosystem with money (PAY). The ecosystem then distributes that money to its actors as salary (EARN), proportional to their ratios.
 
 The founding admin is automatically registered as admin and actor (ratio 1) when the ecosystem is created.
@@ -167,7 +167,7 @@ sequenceDiagram
     C->>Eco: engageInvests(ecoPk, amount, days)
     Eco->>Eco: receiveInvests(engageTx)
     P->>Eco: payerOrder(supplierPk, invests)
-    Eco->>Su: order(supplierPk, invests)
+    Eco->>Su: order(supplierPk, invests) → EARN with converted money
 
     Note over C,Ac: Money flow
     C->>Eco: pay(ecoPk, amount)
@@ -404,12 +404,15 @@ console.log(eco.invests.length) // invests now available in the ecosystem
 #### Issue invest orders
 
 ```js
-// Payer delegates invests from the ecosystem's wallet to a supplier
-const payOrderTx = citizenBlockchain.payerOrder(aliceSk, supplierPk, eco.invests.slice(0, 5))
+// Alice (payer) authorizes an invest order through the ecosystem
+eco.payerOrder(aliceSk, supplierPk, eco.invests.slice(0, 5))
 
-// The ecosystem records the payerOrder and then create corresponding order (using its own private key)
-eco.addaddTransaction(payOrderTx)
-eco.order(ecoSk, targetPk, eco.invests.slice(0, 3))
+// The ecosystem executes the order: invests are converted to money (invest ID → money ID, 1:1)
+// and sent to the target (citizen or ecosystem) as an EARN transaction
+const earnTx = eco.order(ecoSk, supplierPk, eco.invests.slice(0, 3))
+
+// The target records the earn transaction on their own blockchain
+supplierBlockchain.addTransaction(earnTx)
 ```
 
 #### Distribute earnings to actors

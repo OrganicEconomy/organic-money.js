@@ -66,6 +66,11 @@ export function unitIdToDateInt(unitId) {
     return +(('' + unitId).slice(0, 8))
 }
 
+export function investIdToMoneyId(investId) {
+    const s = '' + investId
+    return +(s.slice(0, 8) + s.slice(9))
+}
+
 export function buildMoneyIndexes(date, level) {
     const result = []
     for (let i = 0; i < level; i++) {

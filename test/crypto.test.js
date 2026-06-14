@@ -3,7 +3,7 @@ import { assert } from 'chai';
 import { hexToBytes } from 'ethereum-cryptography/utils.js';
 
 import {
-    randomPrivateKey, aesDecrypt, aesEncrypt, dateToInt, intToDate
+    randomPrivateKey, aesDecrypt, aesEncrypt, dateToInt, intToDate, investIdToMoneyId
 } from '../src/crypto.js'
 
 
@@ -90,5 +90,19 @@ describe('intToDate', () => {
         const result = intToDate(20210905)
 
         assert.equal(result.getTime(), date.getTime())
+    })
+})
+
+describe('investIdToMoneyId', () => {
+    it('Should remove the 9 separator and return a money ID.', () => {
+        assert.equal(investIdToMoneyId(202501019000), 20250101000)
+    })
+
+    it('Should work with non-zero index.', () => {
+        assert.equal(investIdToMoneyId(202501019002), 20250101002)
+    })
+
+    it('Should preserve the date portion unchanged.', () => {
+        assert.equal(investIdToMoneyId(202512319005), 20251231005)
     })
 })

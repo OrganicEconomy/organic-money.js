@@ -543,17 +543,17 @@ describe('EcosystemBlockchain', () => {
             assert.throws(() => bc.order(mySk, myPk, invests, DATE2))
         })
 
-        it('Should create an OrderTransaction and remove invests from lastblock.', () => {
+        it('Should create an EarnTransaction, convert invests to money, and remove invests from lastblock.', () => {
             const bc = makeStartedEco()
 
             bc.setPayer(adminSk, referentPk, 0, DATE2)
             const engageTx = makeEngageTx(referentSk, myPk)
             bc.receiveInvests(engageTx)
             bc.payerOrder(referentSk, myPk, engageTx.invests, DATE2)
-            const tx = bc.order(mySk, myPk, engageTx.invests, DATE2)
+            const tx = bc.order(mySk, targetPk, engageTx.invests, DATE2)
 
-            assert.equal(tx.type, TXTYPE.ORDER)
-            assert.equal(tx.signer, myPk)
+            assert.equal(tx.type, TXTYPE.EARN)
+            assert.equal(tx.target, targetPk)
             assert.ok(tx.isValid())
             assert.notDeepInclude(bc.lastblock.invests, engageTx.invests[0])
         })

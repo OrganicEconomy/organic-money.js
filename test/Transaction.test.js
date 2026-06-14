@@ -254,7 +254,7 @@ describe('TransactionMaker', () => {
         it('Should throw error for invalid transacrion type.', () => {
             assert.throws(() => { 
                 TransactionMaker.make(makeTransactionObj({ type: -12 }))
-            }, Error, 'Invalid transaction type -12. Allowed are {"INIT":1,"CREATE":2,"PAY":3,"ENGAGE":4,"PAPER":5,"SETADMIN":6,"SETACTOR":7,"SETPAYER":8,"UNSETADMIN":9,"UNSETACTOR":10,"UNSETPAYER":11,"PAYERORDER":12,"ORDER":13,"EARN":14}')
+            }, Error, 'Invalid transaction type -12. Allowed are {"INIT":1,"CREATE":2,"PAY":3,"ENGAGE":4,"PAPER":5,"SETADMIN":6,"SETACTOR":7,"SETPAYER":8,"UNSETADMIN":9,"UNSETACTOR":10,"UNSETPAYER":11,"PAYERORDER":12,"EARN":13}')
         })
 
         it('Should return a CreateTransaction for TXTYPE.CREATE.', () => {

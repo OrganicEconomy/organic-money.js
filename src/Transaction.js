@@ -19,8 +19,7 @@ export const TXTYPE = {
     UNSETACTOR: 10,
     UNSETPAYER: 11,
     PAYERORDER: 12,
-    ORDER: 13,
-    EARN: 14
+    EARN: 13
 }
 
 export class TransactionMaker {
@@ -50,8 +49,7 @@ export class TransactionMaker {
                 return new UnsetPayerTransaction(txObj)
             case TXTYPE.PAYERORDER:
                 return new PayerOrderTransaction(txObj)
-            case TXTYPE.ORDER:
-                return new OrderTransaction(txObj)
+
             case TXTYPE.EARN:
                 return new EarnTransaction(txObj)
             default:
@@ -588,36 +586,6 @@ export class PayerOrderTransaction extends Transaction {
     isValid() {
         return super.isValid() &&
             this.type === TXTYPE.PAYERORDER &&
-            this.money.length === 0 &&
-            !! this.target &&
-            this.target.length === 66
-    }
-}
-
-export class OrderTransaction extends Transaction {
-    constructor(objOrSk, targetPk = null, invests = [], date = null) {
-        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
-            super(objOrSk)
-        } else {
-            super({
-                v: Blockchain.VERSION,
-                t: TXTYPE.ORDER,
-                m: [],
-                i: invests,
-                d: dateToInt(date || new Date()),
-                s: publicFromPrivate(objOrSk),
-                p: targetPk,
-                h: ""
-            })
-            this.sign(objOrSk)
-        }
-    }
-
-    toString() { return '[OrderTransaction]' }
-
-    isValid() {
-        return super.isValid() &&
-            this.type === TXTYPE.ORDER &&
             this.money.length === 0 &&
             !! this.target &&
             this.target.length === 66

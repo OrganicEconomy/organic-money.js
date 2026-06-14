@@ -188,9 +188,9 @@ sequenceDiagram
     Note over Alice: Money removed from Alice's wallet
     Alice-->>Bob: hands physical paper
 
-    Bob->>LocalEco: redemption request
-    LocalEco->>Bob: co-signs Bob's block (closeLastBlock)
     Bob->>Bob: cashPaper(paperTx)
+    Bob->>LocalEco: redemption request
+    LocalEco->>Bob: signs Bob's block (closeLastBlock)
     Note over Bob: Economic experience (total) incremented
 ```
 

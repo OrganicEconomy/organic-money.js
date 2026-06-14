@@ -911,6 +911,61 @@ describe('CitizenBlockchain', () => {
 		})
 	})	
 
+	describe('pay', () => {
+		it('Should make valid transaction.', () => {
+			const bc = new CitizenBlockchain([
+				makeBlockObj({ date: new Date('2025-01-01'), moneycount: 3 }),
+				makeBlockObj({ signed: true, date: new Date('2025-01-01') })
+			])
+
+			bc.pay(mySk, targetPk, 3, new Date('2025-01-03'))
+			const transaction = bc.lastblock.lastTransaction
+
+			assert.isTrue(transaction.isValid())
+			assert.equal(transaction.version, Blockchain.VERSION)
+			assert.equal(transaction.type, TXTYPE.PAY)
+			assert.equal(transaction.date.getTime(), new Date('2025-01-03').getTime())
+			assert.deepEqual(transaction.money, [20250101000, 20250101001, 20250101002])
+			assert.deepEqual(transaction.invests, [])
+			assert.equal(transaction.target, targetPk)
+			assert.equal(transaction.signer, myPk)
+		})
+
+		it('Should decrease money of the block.', () => {
+			const bc = new CitizenBlockchain([
+				makeBlockObj({ date: new Date('2025-01-03'), moneycount: 5, type: TXTYPE.CREATE }),
+				makeBlockObj({ signed: true, date: new Date('2025-01-02') })
+			])
+
+			bc.pay(mySk, targetPk, 3, new Date('2025-01-03'))
+
+			assert.equal(bc.lastblock.money.length, 2)
+			assert.deepEqual(bc.lastblock.money, [20250103003, 20250103004])
+		})
+
+		it('Should increase total if I am the target.', () => {
+			const bc = new CitizenBlockchain([
+				makeBlockObj({
+					date: new Date('2025-01-03'),
+					moneycount: 4,
+					total: 26,
+					transactions: [makeTransaction({ type: TXTYPE.CREATE, signer: myPk })]
+				}),
+				makeBlockObj({ signed: true, date: new Date('2025-01-02') })
+			])
+
+			bc.pay(mySk, myPk, 4, new Date('2025-01-03'))
+
+			assert.equal(bc.lastblock.total, 30)
+		})
+
+		it('Should throw error if blockchain can t afford it.', () => {
+			const bc = new CitizenBlockchain([makeBlockObj(), makeBlockObj({ signed: true, date: new Date('2026-01-19') })])
+
+			assert.throws(() => { bc.pay(mySk, targetPk, 2) }, InvalidTransactionError, 'Unsufficient funds.')
+		})
+	})
+
 	describe('validateAccount', () => {
 		it('Should be two blocks lenght.', () => {
 			const bc = new CitizenBlockchain()

@@ -3,7 +3,7 @@ import { assert } from 'chai';
 
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
 
-import { Block, BirthBlock, REF_HASH, InitializationBlock } from '../src/Block.js';
+import { Block, BirthBlock, REF_HASH, InitializationBlock, EcoBirthBlock, EcoInitializationBlock, ECOREF_HASH, BlockMaker } from '../src/Block.js';
 import { dateToInt, infinityDate, intToDate } from '../src/crypto.js';
 import { makeBlockObj, makeBlock, makeTransactions, makeTransaction, referentPk, targetPk, targetSk, mySk, referentSk, myPk } from './testUtils.js';
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
@@ -1028,5 +1028,128 @@ describe('InitializationBlock', () => {
 
             assert.isNull(result)
         })
+    })
+})
+
+describe('EcoBirthBlock', () => {
+    describe('constructor', () => {
+        it('Should create block with ECOREF_HASH as previousHash.', () => {
+            const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+            assert.equal(block.previousHash, ECOREF_HASH)
+        })
+
+        it('Should have empty money and invests.', () => {
+            const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+            assert.deepEqual(block.money, [])
+            assert.deepEqual(block.invests, [])
+        })
+
+        it('Should have 3 transactions: Init, SetAdmin, SetActor.', () => {
+            const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+            assert.equal(block.transactions.length, 3)
+            assert.equal(block.transactions[0].type, TXTYPE.SETACTOR)
+            assert.equal(block.transactions[1].type, TXTYPE.SETADMIN)
+            assert.equal(block.transactions[2].type, TXTYPE.INIT)
+        })
+
+        it('SetActor transaction should have ratio 1.', () => {
+            const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+            assert.equal(block.transactions[0].ratio, 1)
+        })
+
+        it('Should be signed.', () => {
+            const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+            assert.ok(block.signature)
+            assert.ok(block.isSigned())
+        })
+
+        it('Should deserialize from exported object.', () => {
+            const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+            const block2 = new EcoBirthBlock(block.export())
+            assert.equal(block2.previousHash, ECOREF_HASH)
+            assert.deepEqual(block2.money, [])
+            assert.equal(block2.transactions.length, 3)
+        })
+    })
+
+    describe('toString', () => {
+        it('Should return [EcoBirthBlock].', () => {
+            const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+            assert.equal(block.toString(), '[EcoBirthBlock]')
+        })
+    })
+
+    describe('getMyPublicKey', () => {
+        it('Should return the signer (ecosystem public key).', () => {
+            const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+            assert.equal(block.getMyPublicKey(), myPk)
+        })
+    })
+})
+
+describe('EcoInitializationBlock', () => {
+    const makePreviousEcoBirthBlock = () => new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+
+    describe('constructor', () => {
+        it('Should have empty money and invests.', () => {
+            const prev = makePreviousEcoBirthBlock()
+            const block = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
+            assert.deepEqual(block.money, [])
+            assert.deepEqual(block.invests, [])
+        })
+
+        it('Should set previousHash to previous block signature.', () => {
+            const prev = makePreviousEcoBirthBlock()
+            const block = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
+            assert.equal(block.previousHash, prev.signature)
+        })
+
+        it('Should carry forward role transactions from previous block (SetAdmin + SetActor).', () => {
+            const prev = makePreviousEcoBirthBlock()
+            const block = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
+            assert.equal(block.transactions.length, 2)
+            const types = block.transactions.map(tx => tx.type)
+            assert.include(types, TXTYPE.SETADMIN)
+            assert.include(types, TXTYPE.SETACTOR)
+        })
+
+        it('Should be signed.', () => {
+            const prev = makePreviousEcoBirthBlock()
+            const block = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
+            assert.ok(block.isSigned())
+        })
+
+        it('Should deserialize from exported object with role transactions.', () => {
+            const prev = makePreviousEcoBirthBlock()
+            const block = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
+            const block2 = new EcoInitializationBlock(block.export())
+            assert.deepEqual(block2.money, [])
+            assert.equal(block2.transactions.length, 2)
+            assert.ok(block2.isSigned())
+        })
+    })
+
+    describe('toString', () => {
+        it('Should return [EcoInitializationBlock].', () => {
+            const prev = makePreviousEcoBirthBlock()
+            const block = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
+            assert.equal(block.toString(), '[EcoInitializationBlock]')
+        })
+    })
+
+    describe('getMyPublicKey', () => {
+        it('Should return null.', () => {
+            const prev = makePreviousEcoBirthBlock()
+            const block = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
+            assert.isNull(block.getMyPublicKey())
+        })
+    })
+})
+
+describe('BlockMaker (eco)', () => {
+    it('Should return EcoBirthBlock when previousHash is ECOREF_HASH.', () => {
+        const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+        const result = BlockMaker.make(block.export())
+        assert.instanceOf(result, EcoBirthBlock)
     })
 })

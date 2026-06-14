@@ -5,14 +5,18 @@ import { MerkleTree } from 'merkletreejs'
 import { secp256k1 } from 'ethereum-cryptography/secp256k1.js'
 
 import { dateToInt, infinityDate, intToDate, publicFromPrivate } from "./crypto.js"
-import { CreateTransaction, InitTransaction, TransactionMaker, TXTYPE } from './Transaction.js'
+import { CreateTransaction, InitTransaction, SetAdminTransaction, SetActorTransaction, TransactionMaker, TXTYPE } from './Transaction.js'
 import { UnauthorizedError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
 
 export const REF_HASH = 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5'
+export const ECOREF_HASH = 'ec051c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a1'
 
 export class BlockMaker {
     static make(blockObj) {
+        if (blockObj.p === ECOREF_HASH) {
+            return new EcoBirthBlock(blockObj)
+        }
         if (blockObj.p ===  REF_HASH) {
             return new BirthBlock(blockObj)
         }
@@ -314,6 +318,95 @@ export class InitializationBlock extends Block {
             this.root.length === 64 &&
             this.money.length === 1 &&
             this.invests.length === 1 &&
+            this.total === 0 &&
+            secp256k1.verify(signature, messageHash, publicKey)
+    }
+}
+
+export class EcoBirthBlock extends Block {
+    constructor(objOrSk, adminPk = null, name = null, date = new Date()) {
+        if (typeof objOrSk === 'object' && adminPk === null && name === null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                d: dateToInt(date),
+                p: ECOREF_HASH,
+                s: publicFromPrivate(objOrSk),
+                r: 0,
+                m: [],
+                i: [],
+                t: 0,
+                h: null,
+                x: []
+            })
+            this.add(new InitTransaction(objOrSk, name, date))
+            this.add(new SetAdminTransaction(objOrSk, adminPk, date))
+            this.add(new SetActorTransaction(objOrSk, adminPk, 1, date))
+            this.sign(objOrSk, date)
+        }
+    }
+
+    toString() { return '[EcoBirthBlock]' }
+
+    getMyPublicKey() { return this.signer }
+
+    isValid() {
+        const signature = this.signature
+        const messageHash = this.hash()
+        const publicKey = this.signer
+
+        for (let tx of this.transactions) {
+            if (!tx.isValid()) return false
+        }
+
+        return this.previousHash === ECOREF_HASH &&
+            this.version === Blockchain.VERSION &&
+            this.transactions.length === 3 &&
+            this.money.length === 0 &&
+            this.invests.length === 0 &&
+            this.total === 0 &&
+            secp256k1.verify(signature, messageHash, publicKey)
+    }
+}
+
+export class EcoInitializationBlock extends Block {
+    constructor(objOrSk, previousBlock = null, date = new Date()) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null
+            && previousBlock === null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                d: dateToInt(date),
+                p: previousBlock.signature,
+                s: publicFromPrivate(objOrSk),
+                r: 0,
+                m: [], i: [], t: 0, h: null, x: []
+            })
+            const roleTxTypes = new Set([TXTYPE.SETADMIN, TXTYPE.SETACTOR, TXTYPE.SETPAYER])
+            for (const tx of previousBlock.transactions) {
+                if (roleTxTypes.has(tx.type)) {
+                    this.transactions.push(tx)
+                }
+            }
+            this.sign(objOrSk, date)
+        }
+    }
+
+    toString() { return '[EcoInitializationBlock]' }
+
+    getMyPublicKey() { return null }
+
+    isValid() {
+        const signature = this.signature
+        const messageHash = this.hash()
+        const publicKey = this.signer
+
+        return this.version === Blockchain.VERSION &&
+            this.root.length === 64 &&
+            this.money.length === 0 &&
+            this.invests.length === 0 &&
             this.total === 0 &&
             secp256k1.verify(signature, messageHash, publicKey)
     }

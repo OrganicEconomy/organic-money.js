@@ -1,100 +1,245 @@
-import { InvalidTransactionError, UnauthorizedError} from './errors.js'
+import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
-import { randomPrivateKey, aesEncrypt, aesDecrypt, publicFromPrivate, 
-	dateToInt, intToDate, intToIndex, formatMoneyIndex, formatInvestIndex,
-	buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
+import { randomPrivateKey, publicFromPrivate, dateToInt } from './crypto.js'
+import { EcoBirthBlock, EcoInitializationBlock, ECOREF_HASH, BlockMaker } from './Block.js'
+import {
+    SetAdminTransaction, UnsetAdminTransaction,
+    SetActorTransaction, UnsetActorTransaction,
+    SetPayerTransaction, UnsetPayerTransaction,
+    PayerOrderTransaction, OrderTransaction, EarnTransaction,
+    EngageTransaction, TXTYPE
+} from './Transaction.js'
 
 export class EcosystemBlockchain extends Blockchain {
-	ECOREF_HASH = 'ec051c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a1'
-	/**
-	 * Return true if the Blockchain has only one Block
-	 * which is a Birth Block
-	 */
-	isWaitingValidation() {
-		return this.blocks.length === 1 &&
-			this.lastblock.previousHash === this.ECOREF_HASH
-	}
 
-	/**
-	 * Return true if the Blockchain has been validated by
-	 * a referent
-	 */
-	isValidated() {
-		return !this.isEmpty() && this.blocks.length >= 2 &&
-			this.blocks[this.blocks.length - 1].previousHash === this.ECOREF_HASH
-	}
+    constructor(blocks = []) {
+        super([])
+        blocks = blocks || []
+        for (let i = 0; i < blocks.length; i++) {
+            const obj = blocks[i]
+            const isInit = i < blocks.length - 1 && blocks[i + 1].p === ECOREF_HASH
+            if (isInit)  this.bks.push(new EcoInitializationBlock(obj))
+            else              this.bks.push(BlockMaker.make(obj))
+        }
+    }
 
-	/**
-	 * Return the birthblock based on given informations
-	 */
-	makeBirthBlock(privateKey, adminKey, name, date = new Date()) {
-		const publicKey = publicFromPrivate(privateKey)
-		let block = {
-			version: Blockchain.VERSION,
-			closedate: dateToInt(date),
-			previousHash: this.ECOREF_HASH,
-			signer: publicKey,
-			merkleroot: 0,
-			money: [],
-			invests: [],
-			total: 0,
-			transactions: [
-				Blockchain.signtx({
-					version: Blockchain.VERSION,
-					date: dateToInt(date),
-					source: publicKey,
-					target: name,
-					signer: 0,
-					money: [],
-					invests: [],
-					type: Blockchain.TXTYPE.INIT
-				}, privateKey),
-				Blockchain.signtx({
-					version: Blockchain.VERSION,
-					date: dateToInt(date),
-					source: publicKey,
-					target: adminKey,
-					signer: 0,
-					money: [],
-					invests: [],
-					type: Blockchain.TXTYPE.SETADMIN
-				}, privateKey)
-			]
-		}
-		block = Blockchain.signblock(block, privateKey)
-		this.addBlock(block)
-		return block
-	}
+    isWaitingValidation() {
+        return this.blocks.length === 1 && this.lastblock instanceof EcoBirthBlock
+    }
 
-	/**
-	 * Initalize Blockchain and return its private key
-	 * If no newPrivateKey is given, make one
-	 * If no date is given, use today
-	 */
-	startBlockchain(name, signerPrivateKey, adminKey, newPrivateKey = null, date = new Date()) {
-		newPrivateKey = newPrivateKey || randomPrivateKey()
-		const birthblock = this.makeBirthBlock(newPrivateKey, adminKey, name, date)
-		this.validateAccount(signerPrivateKey, date)
-		return newPrivateKey
-	}
+    isValidated() {
+        return this.blocks.length >= 2
+            && this.blocks[this.blocks.length - 2] instanceof EcoInitializationBlock
+            && this.blocks[this.blocks.length - 1] instanceof EcoBirthBlock
+    }
 
-	/**
-	 * Return a validated Blockchain
-	 */
-	validateAccount(privateKey, date = new Date()) {
-		let initializationBlock = {
-			closedate: dateToInt(date),
-			previousHash: this.lastblock.hash,
-			signer: publicFromPrivate(privateKey),
-			merkleroot: 0,
-			money: [],
-			invests: [],
-			total: 0,
-			transactions: [],
-			version: Blockchain.VERSION
-		}
-		initializationBlock = Blockchain.signblock(initializationBlock, privateKey)
-		this.addBlock(initializationBlock)
-		return initializationBlock
-	}
+    makeBirthBlock(privateKey, adminPk, name, date = new Date()) {
+        privateKey = privateKey || randomPrivateKey()
+        const block = new EcoBirthBlock(privateKey, adminPk, name, date)
+        this.addBlock(block)
+        return privateKey
+    }
+
+    validateAccount(secretKey, date = new Date()) {
+        const block = new EcoInitializationBlock(secretKey, this.lastblock, date)
+        this.addBlock(block)
+        return block
+    }
+
+    startBlockchain(name, signerSk, adminPk, secretKey = null, date = new Date()) {
+        secretKey = this.makeBirthBlock(secretKey, adminPk, name, date)
+        this.validateAccount(signerSk, date)
+        return secretKey
+    }
+
+    getAdmins() {
+        const state = new Map()
+        for (const tx of this.lastblock.transactions.slice().reverse()) {
+            if (tx.type === TXTYPE.SETADMIN)   state.set(tx.target, true)
+            if (tx.type === TXTYPE.UNSETADMIN) state.set(tx.target, false)
+        }
+        return new Set([...state].filter(([, v]) => v).map(([k]) => k))
+    }
+
+    getActors() {
+        const state = new Map()
+        for (const tx of this.lastblock.transactions.slice().reverse()) {
+            if (tx.type === TXTYPE.SETACTOR)   state.set(tx.target, tx.ratio)
+            if (tx.type === TXTYPE.UNSETACTOR) state.set(tx.target, null)
+        }
+        return new Map([...state].filter(([, v]) => v !== null))
+    }
+
+    getPayers() {
+        const state = new Map()
+        for (const tx of this.lastblock.transactions.slice().reverse()) {
+            if (tx.type === TXTYPE.SETPAYER)   state.set(tx.target, tx.cap)
+            if (tx.type === TXTYPE.UNSETPAYER) state.set(tx.target, null)
+        }
+        return new Map([...state].filter(([, v]) => v !== null))
+    }
+
+    isAdmin(pk)  { return this.getAdmins().has(pk) }
+    isActor(pk)  { return this.getActors().has(pk) }
+    isPayer(pk)  { return this.getPayers().has(pk) }
+
+    newBlock() {
+        const oldTransactions = this.lastblock.transactions
+        const activeAdmins = this.getAdmins()
+        const activeActors = this.getActors()
+        const activePayers = this.getPayers()
+
+        super.newBlock()
+
+        const newBlock = this.lastblock
+        const copiedAdmins = new Set()
+        const copiedActors = new Set()
+        const copiedPayers = new Set()
+
+        for (const tx of oldTransactions) {
+            if (tx.type === TXTYPE.SETADMIN && activeAdmins.has(tx.target) && !copiedAdmins.has(tx.target)) {
+                newBlock.transactions.push(tx)
+                copiedAdmins.add(tx.target)
+            }
+            if (tx.type === TXTYPE.SETACTOR && activeActors.has(tx.target) && !copiedActors.has(tx.target)) {
+                newBlock.transactions.push(tx)
+                copiedActors.add(tx.target)
+            }
+            if (tx.type === TXTYPE.SETPAYER && activePayers.has(tx.target) && !copiedPayers.has(tx.target)) {
+                newBlock.transactions.push(tx)
+                copiedPayers.add(tx.target)
+            }
+        }
+    }
+
+    #assertAdmin(sk) {
+        const pk = publicFromPrivate(sk)
+        if (!this.isAdmin(pk)) throw new UnauthorizedError('Only admins can perform this action.')
+        return pk
+    }
+
+    #assertIsMe(sk) {
+        if (publicFromPrivate(sk) !== this.getMyPublicKey())
+            throw new UnauthorizedError('Private key does not match blockchain owner.')
+    }
+
+    setAdmin(adminSk, targetPk, date = new Date()) {
+        this.#assertAdmin(adminSk)
+        const tx = new SetAdminTransaction(adminSk, targetPk, date)
+        this.addTransaction(tx)
+        return tx
+    }
+
+    unsetAdmin(adminSk, targetPk, date = new Date()) {
+        this.#assertAdmin(adminSk)
+        if (this.getAdmins().size <= 1) throw new InvalidTransactionError('Cannot remove the last admin.')
+        const tx = new UnsetAdminTransaction(adminSk, targetPk, date)
+        this.addTransaction(tx)
+        return tx
+    }
+
+    setActor(adminSk, targetPk, ratio, date = new Date()) {
+        this.#assertAdmin(adminSk)
+        if (ratio === 0) {
+            const otherWithRatio = [...this.getActors().entries()].some(([pk, r]) => pk !== targetPk && r > 0)
+            if (!otherWithRatio) throw new InvalidTransactionError('At least one actor must have a ratio > 0.')
+        }
+        const tx = new SetActorTransaction(adminSk, targetPk, ratio, date)
+        this.addTransaction(tx)
+        return tx
+    }
+
+    unsetActor(adminSk, targetPk, date = new Date()) {
+        this.#assertAdmin(adminSk)
+        if (this.isAdmin(targetPk)) throw new InvalidTransactionError('Cannot remove actor who is still admin.')
+        if (this.isPayer(targetPk)) throw new InvalidTransactionError('Cannot remove actor who is still payer.')
+        const actorRatio = this.getActors().get(targetPk)
+        if (actorRatio > 0) {
+            const otherWithRatio = [...this.getActors().entries()].some(([pk, r]) => pk !== targetPk && r > 0)
+            if (!otherWithRatio) throw new InvalidTransactionError('At least one actor must have a ratio > 0.')
+        }
+        const tx = new UnsetActorTransaction(adminSk, targetPk, date)
+        this.addTransaction(tx)
+        return tx
+    }
+
+    setPayer(adminSk, targetPk, cap, date = new Date()) {
+        this.#assertAdmin(adminSk)
+        const tx = new SetPayerTransaction(adminSk, targetPk, cap, date)
+        this.addTransaction(tx)
+        return tx
+    }
+
+    unsetPayer(adminSk, targetPk, date = new Date()) {
+        this.#assertAdmin(adminSk)
+        const tx = new UnsetPayerTransaction(adminSk, targetPk, date)
+        this.addTransaction(tx)
+        return tx
+    }
+
+    receiveInvests(engageTx) {
+        if (engageTx.type !== TXTYPE.ENGAGE || !engageTx.isValid())
+            throw new InvalidTransactionError('Invalid transaction')
+        if (engageTx.target !== this.getMyPublicKey())
+            throw new InvalidTransactionError('Transaction not targeting this ecosystem')
+        if (engageTx.invests.length === 0)
+            throw new InvalidTransactionError('No invests in transaction')
+        this.addTransaction(engageTx)
+        this.lastblock.invests = this.lastblock.invests.concat(engageTx.invests)
+        return engageTx
+    }
+
+    payerOrder(payerSk, targetPk, invests, date = new Date()) {
+        const payerPk = publicFromPrivate(payerSk)
+        if (!this.isPayer(payerPk)) throw new UnauthorizedError('Only payers can create payment orders.')
+        const cap = this.getPayers().get(payerPk)
+        if (cap > 0 && invests.length > cap)
+            throw new InvalidTransactionError('Order exceeds payer capacity.')
+        const allInvestsAvailable = invests.every(i => this.lastblock.invests.includes(i))
+        if (!allInvestsAvailable)
+            throw new InvalidTransactionError('Ecosystem does not have these invests available.')
+        const tx = new PayerOrderTransaction(payerSk, targetPk, invests, date)
+        this.addTransaction(tx)
+        return tx
+    }
+
+    order(ecoSk, targetPk, invests, date = new Date()) {
+        this.#assertIsMe(ecoSk)
+        const allInvestsAvailable = invests.every(i => this.lastblock.invests.includes(i))
+        if (!allInvestsAvailable)
+            throw new InvalidTransactionError('Ecosystem does not have these invests available.')
+        const tx = new OrderTransaction(ecoSk, targetPk, invests, date)
+        this.addTransaction(tx)
+        this.removeInvests(invests)
+        return tx
+    }
+
+    earn(heartSk, actorPk, money, date = new Date()) {
+        this.#assertIsMe(heartSk)
+        const tx = new EarnTransaction(heartSk, actorPk, money, date)
+        this.addTransaction(tx)
+        this.removeMoney(money)
+        return tx
+    }
+
+    distributeSalary(heartSk, date = new Date()) {
+        this.#assertIsMe(heartSk)
+        const actors = this.getActors()
+        const totalRatio = [...actors.values()].reduce((sum, r) => sum + r, 0)
+        if (totalRatio === 0) return []
+        const availableMoney = this.lastblock.money
+        const cycles = Math.floor(availableMoney.length / totalRatio)
+        if (cycles === 0) return []
+
+        const earns = []
+        let offset = 0
+        for (const [actorPk, ratio] of actors) {
+            if (ratio === 0) continue
+            const money = availableMoney.slice(offset, offset + ratio * cycles)
+            offset += ratio * cycles
+            const tx = this.earn(heartSk, actorPk, money, date)
+            earns.push(tx)
+        }
+        return earns
+    }
 }

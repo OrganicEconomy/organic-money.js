@@ -1,385 +1,668 @@
 import { describe, it } from 'mocha';
 import { assert } from 'chai';
 
-import { EcosystemBlockchain } from '../src/index.js';
-import { Blockchain } from '../src/Blockchain.js';
-import { privateKey1, publicKey1, privateKey2, publicKey2, privateKey3, publicKey3 } from './testUtils.js'
-import { dateToInt } from '../src/crypto.js'
+import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
+import { EcosystemBlockchain } from '../src/EcosystemBlockchain.js'
+import { EcoBirthBlock, EcoInitializationBlock } from '../src/Block.js'
+import { EngageTransaction, SetAdminTransaction, TXTYPE } from '../src/Transaction.js'
+import { publicFromPrivate, dateToInt, buildInvestIndexes, buildMoneyIndexes } from '../src/crypto.js'
+import { mySk, myPk, targetSk, targetPk, referentSk, referentPk } from './testUtils.js'
+const adminSk = targetSk, adminPk = targetPk
 
-/**
+const DATE1 = new Date('2025-01-01')
+const DATE2 = new Date('2025-01-02')
+const DATE3 = new Date('2025-01-03')
+
+function makeStartedEco(secretKey = mySk) {
+    const bc = new EcosystemBlockchain()
+    bc.startBlockchain('My Eco', referentSk, adminPk, secretKey, DATE1)
+    return bc
+}
+
+function makeEngageTx(signerSk, ecoPublicKey, date = DATE2) {
+    const invests = buildInvestIndexes(date, 1)
+    const tx = new EngageTransaction({ d: dateToInt(date), p: ecoPublicKey, i: invests, s: publicFromPrivate(signerSk) })
+    tx.sign(signerSk)
+    return tx
+}
+
 describe('EcosystemBlockchain', () => {
-    const validBirthBlock = () => {
-        // A valid birth block for new ecosystem with publicKey3,
-        // created the 12/01/2025 and subscribing
-        // by the user with publicKey1
-        const res = {
-            version: Blockchain.VERSION,
-            closedate: 20250112,
-            previousHash: Blockchain.ECOREF_HASH,
-            signer: publicKey3,
-            money: [],
-            invests: [],
-            total: 0,
-            merkleroot: 0,
-            transactions: [
-                {
-                    version: Blockchain.VERSION,
-                    date: 20250112,
-                    source: publicKey1,
-                    target: 'my brand new ecosystem',
-                    money: [],
-                    invests: [],
-                    type: Blockchain.TXTYPE.INIT,
-                    signer: 0,
-                    hash: 0
-                },
-                {
-                    version: Blockchain.VERSION,
-                    date: 20250112,
-                    source: publicKey1,
-                    target: publicKey1,
-                    money: [],
-                    invests: [],
-                    type: Blockchain.TXTYPE.SETADMIN,
-                    signer: 0,
-                    hash: 0
-                }
-            ]
-        }
-        Blockchain.signblock(res, privateKey3);
-        return res;
-    }
 
-    const validInitBlock = () => {
-        const res = {
-            closedate: 20250113,
-            previousHash: validBirthBlock().hash,
-            merkleroot: 0,
-            signer: publicKey2,
-            total: 0,
-            version: 1,
-            money: [],
-            invests: [],
-            transactions: []
-        }
-        Blockchain.signblock(res, privateKey2);
-        return res;
-    }
+    describe('startBlockchain', () => {
+        it('Should have 2 blocks after startBlockchain.', () => {
+            const bc = makeStartedEco()
+            assert.equal(bc.blocks.length, 2)
+        })
 
-    const validCashBlock = () => {
-        const res = {
-            closedate: 20250114,
-            previousHash: validInitBlock().hash,
-            merkleroot: 0,
-            signer: publicKey1,
-            total: 0,
-            version: 1,
-            money: [20241228000, 20241228001, 20250101002, 20250101003],
-            invests: [],
-            transactions: [
-                {
-                    version: Blockchain.VERSION,
-                    date: 20250114,
-                    source: publicKey2,
-                    target: publicKey3,
-                    money: [20241228000, 20241228001, 20250101002, 20250101003],
-                    invests: [],
-                    type: Blockchain.TXTYPE.PAY,
-                    signer: 0,
-                    hash: 0
-                }
-            ]
-        }
-        Blockchain.signblock(res, privateKey1);
-        return res;
-    }
+        it('Should have an EcoInitializationBlock as lastblock.', () => {
+            const bc = makeStartedEco()
+            assert.instanceOf(bc.lastblock, EcoInitializationBlock)
+        })
 
-    const validInvestBlock = () => {
-        const res = {
-            closedate: 20250114,
-            previousHash: validInitBlock().hash,
-            merkleroot: 0,
-            signer: publicKey1,
-            total: 0,
-            version: 1,
-            money: [],
-            invests: [20241228000, 20241228001, 20250101002, 20250101003],
-            transactions: [
-                {
-                    version: Blockchain.VERSION,
-                    date: 20250114,
-                    source: publicKey2,
-                    target: publicKey3,
-                    money: [],
-                    invests: [20241228000, 20241228001, 20250101002, 20250101003],
-                    type: Blockchain.TXTYPE.ENGAGE,
-                    signer: 0,
-                    hash: 0
-                }
-            ]
-        }
-        Blockchain.signblock(res, privateKey1);
-        return res;
-    }
+        it('Should have an EcoBirthBlock as the oldest block.', () => {
+            const bc = makeStartedEco()
+            assert.instanceOf(bc.blocks[bc.blocks.length - 1], EcoBirthBlock)
+        })
+
+        it('Should return the secretKey.', () => {
+            const bc = new EcosystemBlockchain()
+            const sk = bc.startBlockchain('My Eco', referentSk, adminPk, mySk, DATE1)
+            assert.equal(sk, mySk)
+        })
+
+        it('Should generate a secretKey if none given.', () => {
+            const bc = new EcosystemBlockchain()
+            const sk = bc.startBlockchain('My Eco', referentSk, adminPk, null, DATE1)
+            assert.ok(sk)
+            assert.equal(sk.length, 64)
+        })
+
+        it('getMyPublicKey should return the ecosystem public key.', () => {
+            const bc = makeStartedEco()
+            assert.equal(bc.getMyPublicKey(), myPk)
+        })
+
+        it('getAdmins should contain the first admin after startBlockchain.', () => {
+            const bc = makeStartedEco()
+            assert.isTrue(bc.getAdmins().has(adminPk))
+            assert.equal(bc.getAdmins().size, 1)
+        })
+
+        it('getActors should contain the first admin with ratio 1 after startBlockchain.', () => {
+            const bc = makeStartedEco()
+            assert.isTrue(bc.getActors().has(adminPk))
+            assert.equal(bc.getActors().get(adminPk), 1)
+        })
+
+        it('getPayers should be empty after startBlockchain.', () => {
+            const bc = makeStartedEco()
+            assert.equal(bc.getPayers().size, 0)
+        })
+    })
+
+    describe('makeBirthBlock / validateAccount', () => {
+        it('makeBirthBlock should add one EcoBirthBlock.', () => {
+            const bc = new EcosystemBlockchain()
+
+            bc.makeBirthBlock(mySk, adminPk, 'My Eco', DATE1)
+
+            assert.equal(bc.blocks.length, 1)
+            assert.instanceOf(bc.lastblock, EcoBirthBlock)
+        })
+
+        it('validateAccount should add an EcoInitializationBlock.', () => {
+            const bc = new EcosystemBlockchain()
+            bc.makeBirthBlock(mySk, adminPk, 'My Eco', DATE1)
+
+            bc.validateAccount(referentSk, DATE1)
+
+            assert.equal(bc.blocks.length, 2)
+            assert.instanceOf(bc.lastblock, EcoInitializationBlock)
+        })
+    })
 
     describe('isWaitingValidation', () => {
-        it('Should return false for empty blockchain', () => {
+        it('Should return false for empty blockchain.', () => {
             const bc = new EcosystemBlockchain()
-            const result = bc.isWaitingValidation()
 
-            assert.isNotOk(result)
+            assert.isFalse(bc.isWaitingValidation())
         })
 
-        it('Should return false for already valid blockchain', () => {
-            const bc = new EcosystemBlockchain([validInitBlock(), validBirthBlock()])
-            const result = bc.isWaitingValidation()
+        it('Should return true after makeBirthBlock.', () => {
+            const bc = new EcosystemBlockchain()
 
-            assert.isNotOk(result)
+            bc.makeBirthBlock(mySk, adminPk, 'My Eco', DATE1)
+
+            assert.isTrue(bc.isWaitingValidation())
         })
 
-        it('Should return false if the block is not a birth one', () => {
-            const bc = new EcosystemBlockchain([validInitBlock()])
-            const result = bc.isWaitingValidation()
+        it('Should return false after validateAccount.', () => {
+            const bc = makeStartedEco()
 
-            assert.isNotOk(result)
-        })
-
-        it('Should return true for blockchain effectively waiting for validation', () => {
-            const bc = new EcosystemBlockchain([validBirthBlock()])
-            const result = bc.isWaitingValidation()
-
-            assert.ok(result)
+            assert.isFalse(bc.isWaitingValidation())
         })
     })
 
     describe('isValidated', () => {
-        it('Should return false for empty blockchain', () => {
+        it('Should return false for empty blockchain.', () => {
             const bc = new EcosystemBlockchain()
-            const result = bc.isValidated()
 
-            assert.isNotOk(result)
+            assert.isFalse(bc.isValidated())
         })
 
-        it('Should return false if the first block is not a birth one', () => {
-            const bc = new EcosystemBlockchain([validInitBlock()])
-            const result = bc.isValidated()
+        it('Should return false after makeBirthBlock only.', () => {
+            const bc = new EcosystemBlockchain()
 
-            assert.isNotOk(result)
+            bc.makeBirthBlock(mySk, adminPk, 'My Eco', DATE1)
+
+            assert.isFalse(bc.isValidated())
         })
 
-        it('Should return true for a valid blockchain', () => {
-            const bc = new EcosystemBlockchain([validInitBlock(), validBirthBlock()])
-            const result = bc.isValidated()
+        it('Should return true after startBlockchain.', () => {
+            const bc = makeStartedEco()
 
-            assert.ok(result)
-        })
-
-        it('Should return true for a long time valid', () => {
-            const bc = new EcosystemBlockchain([validCashBlock(), validInitBlock(), validBirthBlock()])
-            const result = bc.isValidated()
-
-            assert.ok(result)
+            assert.isTrue(bc.isValidated())
         })
     })
 
-    describe('makeBirthBlock', () => {
-        it('Should return corectly filled block', () => {
-            const bc = new EcosystemBlockchain()
-            const birthdate = new Date('2002-12-12')
-            const today = new Date('2025-02-25')
-            const name = 'new ecosystem name'
+    describe('getAdmins / isAdmin', () => {
+        it('isAdmin should return true for the initial admin.', () => {
+            const bc = makeStartedEco()
 
-            const block = bc.makeBirthBlock(privateKey1, publicKey2, name, today)
-            delete block.hash
-            delete block.transactions[0].hash
-            delete block.transactions[1].hash
-
-            const expected = {
-                version: Blockchain.VERSION,
-                closedate: dateToInt(today),
-                previousHash: Blockchain.ECOREF_HASH,
-                signer: publicKey1, // The ecosystem signs only this first block
-                money: [],
-                invests: [],
-                total: 0,
-                merkleroot: 0,
-                transactions: [
-                    {
-                        version: Blockchain.VERSION,
-                        date: dateToInt(today),
-                        source: publicKey1, // The ecosystem sets its name
-                        target: name,
-                        money: [],
-                        invests: [],
-                        type: Blockchain.TXTYPE.INIT,
-                        signer: 0
-                    },
-                    {
-                        version: Blockchain.VERSION,
-                        date: dateToInt(today),
-                        source: publicKey1, // the ecosystem
-                        target: publicKey2, // setting admin id
-                        money: [],
-                        invests: [],
-                        type: Blockchain.TXTYPE.SETADMIN,
-                        signer: 0
-                    }
-                ]
-            }
-
-            assert.deepEqual(block, expected)
+            assert.isTrue(bc.isAdmin(adminPk))
         })
 
-        it('Should return a signed block.', () => {
-            const bc = new EcosystemBlockchain()
-            const birthdate = new Date('2002-12-12')
-            const today = new Date('2025-02-25')
-            const name = 'my ecosystem'
-            const block = bc.makeBirthBlock(privateKey1, publicKey2, name, today)
+        it('isAdmin should return false for a non-admin.', () => {
+            const bc = makeStartedEco()
 
-            const signature = Blockchain.isValidBlock(block, publicKey1)
-
-            assert.ok(signature)
+            assert.isFalse(bc.isAdmin(referentPk))
         })
 
-        it('Should return a block with signed transactions.', () => {
-            const bc = new EcosystemBlockchain()
-            const birthdate = new Date('2002-12-12')
-            const today = new Date('2025-02-25')
-            const name = 'my ecosystem'
-            const block = bc.makeBirthBlock(privateKey1, publicKey2, name, today)
+        it('getAdmins should include a newly set admin.', () => {
+            const bc = makeStartedEco()
 
-            const signature1 = Blockchain.isValidTransaction(block.transactions[0])
-            const signature2 = Blockchain.isValidTransaction(block.transactions[1])
+            bc.setAdmin(adminSk, referentPk, DATE2)
 
-            assert.ok(signature1)
-            assert.ok(signature2)
+            assert.isTrue(bc.isAdmin(referentPk))
+            assert.isTrue(bc.isAdmin(adminPk))
+            assert.equal(bc.getAdmins().size, 2)
+        })
+
+        it('getAdmins should no longer include an unset admin.', () => {
+            const bc = makeStartedEco()
+
+            bc.setAdmin(adminSk, referentPk, DATE2)
+            bc.unsetAdmin(adminSk, adminPk, DATE2)
+
+            assert.isFalse(bc.isAdmin(adminPk))
+            assert.isTrue(bc.isAdmin(referentPk))
+        })
+
+        it('unsetAdmin should throw if trying to remove the last admin.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.unsetAdmin(adminSk, adminPk, DATE2))
         })
     })
 
-    describe('startBlockchain', () => {
-        it('Should make a ready to go blockchain', () => {
-            const bc = new EcosystemBlockchain()
-            const today = new Date('2025-02-01')
-            const name = 'Gus'
+    describe('getActors / isActor', () => {
+        it('isActor should return true for the initial actor.', () => {
+            const bc = makeStartedEco()
 
-            bc.startBlockchain(name, privateKey3, publicKey2, privateKey1, today)
-            for (let block of bc.blocks) {
-                delete block.hash
-                delete block.previousHash
-                for (let tx of block.transactions) {
-                    delete tx.hash
-                }
-            }
+            assert.isTrue(bc.isActor(adminPk))
+        })
 
-            const expected = [
-                {
-                    closedate: 20250201,
-                    signer: publicKey3,
-                    total: 0,
-                    money: [],
-                    invests: [],
-                    version: 1,
-                    transactions: [],
-                    merkleroot: 0
-                },
-                {
-                    version: Blockchain.VERSION,
-                    closedate: 20250201,
-                    signer: publicKey1,
-                    money: [],
-                    invests: [],
-                    total: 0,
-                    merkleroot: 0,
-                    transactions: [
-                        {
-                            version: Blockchain.VERSION,
-                            date: 20250201,
-                            source: publicKey1,
-                            target: name,
-                            money: [],
-                            invests: [],
-                            type: Blockchain.TXTYPE.INIT,
-                            signer: 0
-                        },
-                        {
-                            version: Blockchain.VERSION,
-                            date: 20250201,
-                            source: publicKey1,
-                            target: publicKey2,
-                            money: [],
-                            invests: [],
-                            type: Blockchain.TXTYPE.SETADMIN,
-                            signer: 0
-                        }
-                    ]
-                }
+        it('isActor should return false for a non-actor.', () => {
+            const bc = makeStartedEco()
+
+            assert.isFalse(bc.isActor(referentPk))
+        })
+
+        it('setActor should update the ratio of an existing actor.', () => {
+            const bc = makeStartedEco()
+
+            bc.setActor(adminSk, adminPk, 3, DATE2)
+
+            assert.equal(bc.getActors().get(adminPk), 3)
+        })
+
+        it('setActor should add a new actor.', () => {
+            const bc = makeStartedEco()
+
+            bc.setActor(adminSk, referentPk, 2, DATE2)
+
+            assert.isTrue(bc.isActor(referentPk))
+            assert.equal(bc.getActors().get(referentPk), 2)
+        })
+
+        it('unsetActor should throw if actor is still admin.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.unsetActor(adminSk, adminPk, DATE2))
+        })
+
+        it('unsetActor should throw if actor is still payer.', () => {
+            const bc = makeStartedEco()
+
+            bc.setActor(adminSk, referentPk, 2, DATE2)
+            bc.setPayer(adminSk, referentPk, 0, DATE2)
+
+            assert.throws(() => bc.unsetActor(adminSk, referentPk, DATE2))
+        })
+
+        it('unsetActor should throw if it would leave no actor with ratio > 0.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.unsetActor(adminSk, adminPk, DATE2), InvalidTransactionError)
+        })
+
+        it('setActor should throw if it would leave no actor with ratio > 0.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.setActor(adminSk, adminPk, 0, DATE2), InvalidTransactionError)
+        })
+
+        it('unsetActor should remove the actor.', () => {
+            const bc = makeStartedEco()
+
+            bc.setActor(adminSk, referentPk, 2, DATE2)
+            bc.unsetActor(adminSk, referentPk, DATE2)
+
+            assert.isFalse(bc.isActor(referentPk))
+        })
+
+        it('volunteers (ratio 0) should be included in getActors.', () => {
+            const bc = makeStartedEco()
+            bc.setActor(adminSk, referentPk, 0, DATE2)
+
+            assert.isTrue(bc.getActors().has(referentPk))
+            assert.equal(bc.getActors().get(referentPk), 0)
+        })
+    })
+
+    describe('getPayers / isPayer', () => {
+        it('isPayer should return false initially.', () => {
+            const bc = makeStartedEco()
+
+            assert.isFalse(bc.isPayer(referentPk))
+        })
+
+        it('setPayer should add a payer.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 10, DATE2)
+            assert.isTrue(bc.isPayer(referentPk))
+
+            assert.equal(bc.getPayers().get(referentPk), 10)
+        })
+
+        it('setPayer with cap 0 (unlimited) should be included.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            assert.isTrue(bc.isPayer(referentPk))
+
+            assert.equal(bc.getPayers().get(referentPk), 0)
+        })
+
+        it('unsetPayer should remove the payer.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 10, DATE2)
+            bc.unsetPayer(adminSk, referentPk, DATE2)
+
+            assert.isFalse(bc.isPayer(referentPk))
+        })
+    })
+
+    describe('setAdmin / unsetAdmin authorization', () => {
+        it('setAdmin should throw if caller is not admin.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.setAdmin(referentSk, referentPk, DATE2))
+        })
+
+        it('unsetAdmin should throw if caller is not admin.', () => {
+            const bc = makeStartedEco()
+
+            bc.setAdmin(adminSk, referentPk, DATE2)
+
+            assert.throws(() => bc.unsetAdmin(mySk, adminPk, DATE2))
+        })
+    })
+
+    describe('setActor / unsetActor authorization', () => {
+        it('setActor should throw if caller is not admin.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.setActor(referentSk, referentPk, 2, DATE2))
+        })
+    })
+
+    describe('setPayer / unsetPayer authorization', () => {
+        it('setPayer should throw if caller is not admin.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.setPayer(referentSk, referentPk, 10, DATE2))
+        })
+    })
+
+    describe('newBlock (role carry-forward)', () => {
+        it('Should preserve admins after newBlock is triggered.', () => {
+            const bc = makeStartedEco()
+
+            bc.setAdmin(adminSk, referentPk, DATE2)
+            bc.closeLastBlock(mySk, DATE2)
+            bc.setActor(referentSk, referentPk, 1, DATE3)
+
+            assert.isTrue(bc.isAdmin(adminPk))
+            assert.isTrue(bc.isAdmin(referentPk))
+        })
+
+        it('Should preserve actors after newBlock is triggered.', () => {
+            const bc = makeStartedEco()
+
+            bc.setActor(adminSk, adminPk, 5, DATE2)
+            bc.closeLastBlock(mySk, DATE2)
+            bc.setAdmin(adminSk, referentPk, DATE3)
+
+            assert.equal(bc.getActors().get(adminPk), 5)
+        })
+
+        it('Should preserve payers after newBlock is triggered.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 100, DATE2)
+            bc.closeLastBlock(mySk, DATE2)
+            bc.setAdmin(adminSk, referentPk, DATE3)
+
+            assert.isTrue(bc.isPayer(referentPk))
+            assert.equal(bc.getPayers().get(referentPk), 100)
+        })
+    })
+
+    describe('receiveInvests', () => {
+        it('Should throw if not an EngageTransaction.', () => {
+            const bc = makeStartedEco()
+
+            const tx = new SetAdminTransaction(adminSk, referentPk, DATE2)
+
+            assert.throws(() => bc.receiveInvests(tx))
+        })
+
+        it('Should throw if transaction is not targeting this ecosystem.', () => {
+            const bc = makeStartedEco()
+
+            const invests = buildInvestIndexes(DATE2, 1)
+            const tx = new EngageTransaction({ d: dateToInt(DATE2), p: referentPk, i: invests, s: adminPk })
+            tx.sign(adminSk)
+
+            assert.throws(() => bc.receiveInvests(tx))
+        })
+
+        it('Should throw if no invests in transaction (money-only engagement).', () => {
+            const bc = makeStartedEco()
+
+            const money = buildMoneyIndexes(DATE2, 1)
+            const tx = new EngageTransaction({ d: dateToInt(DATE2), p: myPk, m: money, s: adminPk })
+            tx.sign(adminSk)
+
+            assert.throws(() => bc.receiveInvests(tx))
+        })
+
+        it('Should add invests to lastblock.invests.', () => {
+            const bc = makeStartedEco()
+
+            const engageTx = makeEngageTx(adminSk, myPk)
+            bc.receiveInvests(engageTx)
+
+            assert.deepEqual(bc.lastblock.invests, engageTx.invests)
+        })
+
+        it('Should record the transaction in the blockchain.', () => {
+            const bc = makeStartedEco()
+
+            const engageTx = makeEngageTx(adminSk, myPk)
+            bc.receiveInvests(engageTx)
+
+            assert.include(bc.lastblock.transactions, engageTx)
+        })
+
+        it('Should return the transaction.', () => {
+            const bc = makeStartedEco()
+
+            const engageTx = makeEngageTx(adminSk, myPk)
+            const result = bc.receiveInvests(engageTx)
+
+            assert.equal(result, engageTx)
+        })
+    })
+
+    describe('payerOrder', () => {
+        it('Should throw UnauthorizedError if caller is not a payer.', () => {
+            const bc = makeStartedEco()
+
+            const invests = buildInvestIndexes(DATE2, 1)
+
+            assert.throws(() => bc.payerOrder(referentSk, myPk, invests, DATE2))
+        })
+
+        it('Should throw InvalidTransactionError if invests not in lastblock.invests.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            const invests = buildInvestIndexes(DATE2, 1)
+
+            assert.throws(() => bc.payerOrder(referentSk, myPk, invests, DATE2))
+        })
+
+        it('Should throw if invests exceed payer cap.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 1, DATE2)
+            const invests = buildInvestIndexes(DATE2, 2)
+            bc.lastblock.invests = invests
+
+            assert.throws(() => bc.payerOrder(referentSk, myPk, invests, DATE2))
+        })
+
+        it('Should not throw if cap is 0 (unlimited) even with many invests.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            const invests = buildInvestIndexes(DATE2, 2)
+            bc.lastblock.invests = invests
+            const tx = bc.payerOrder(referentSk, myPk, invests, DATE2)
+
+            assert.ok(tx.isValid())
+        })
+
+        it('Should create a PayerOrderTransaction when invests are available.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            const engageTx = makeEngageTx(referentSk, myPk)
+            bc.receiveInvests(engageTx)
+            const tx = bc.payerOrder(referentSk, myPk, engageTx.invests, DATE2)
+
+            assert.equal(tx.type, TXTYPE.PAYERORDER)
+            assert.equal(tx.signer, referentPk)
+            assert.equal(tx.target, myPk)
+            assert.ok(tx.isValid())
+        })
+    })
+
+    describe('order', () => {
+        it('Should throw UnauthorizedError if ecoSk does not match getMyPublicKey.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.order(referentSk, myPk, buildInvestIndexes(DATE2, 1), DATE2))
+        })
+
+        it('Should throw InvalidTransactionError if invests not in lastblock.invests.', () => {
+            const bc = makeStartedEco()
+
+            const invests = buildInvestIndexes(DATE2, 1)
+
+            assert.throws(() => bc.order(mySk, myPk, invests, DATE2))
+        })
+
+        it('Should create an OrderTransaction and remove invests from lastblock.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            const engageTx = makeEngageTx(referentSk, myPk)
+            bc.receiveInvests(engageTx)
+            bc.payerOrder(referentSk, myPk, engageTx.invests, DATE2)
+            const tx = bc.order(mySk, myPk, engageTx.invests, DATE2)
+
+            assert.equal(tx.type, TXTYPE.ORDER)
+            assert.equal(tx.signer, myPk)
+            assert.ok(tx.isValid())
+            assert.notDeepInclude(bc.lastblock.invests, engageTx.invests[0])
+        })
+    })
+
+    describe('earn', () => {
+        it('Should throw UnauthorizedError if heartSk does not match getMyPublicKey.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.earn(referentSk, adminPk, [20250101000], DATE2))
+        })
+
+        it('Should create an EarnTransaction and remove money from lastblock.', () => {
+            const bc = makeStartedEco()
+
+            bc.lastblock.money = [20250101000, 20250101001, 20250101002]
+            const tx = bc.earn(mySk, adminPk, [20250101000], DATE2)
+
+            assert.equal(tx.type, TXTYPE.EARN)
+            assert.equal(tx.target, adminPk)
+            assert.deepEqual(tx.money, [20250101000])
+            assert.ok(tx.isValid())
+            assert.notInclude(bc.lastblock.money, 20250101000)
+        })
+    })
+
+    describe('distributeSalary', () => {
+        it('Should throw UnauthorizedError if heartSk does not match getMyPublicKey.', () => {
+            const bc = makeStartedEco()
+
+            bc.lastblock.money = [20250101000]
+
+            assert.throws(() => bc.distributeSalary(referentSk, DATE2))
+        })
+
+        it('Should return empty array if no money available.', () => {
+            const bc = makeStartedEco()
+            bc.setActor(adminSk, adminPk, 3, DATE2)
+            const earns = bc.distributeSalary(mySk, DATE2)
+            assert.deepEqual(earns, [])
+        })
+
+        it('Should distribute money to actors proportionally.', () => {
+            const bc = makeStartedEco()
+
+            bc.setActor(adminSk, adminPk, 3, DATE2)
+            bc.setActor(adminSk, referentPk, 2, DATE2)
+            bc.lastblock.money = [
+                20250101000, 20250101001, 20250101002,
+                20250101003, 20250101004
             ]
+            const earns = bc.distributeSalary(mySk, DATE2)
 
-            assert.deepEqual(bc.blocks, expected)
+            assert.equal(earns.length, 2)
+            const earnForTarget = earns.find(e => e.target === adminPk)
+            const earnForReferent = earns.find(e => e.target === referentPk)
+            assert.equal(earnForTarget.money.length, 3)
+            assert.equal(earnForReferent.money.length, 2)
         })
 
-        it('Should use todays date if none given', () => {
-            const bc = new EcosystemBlockchain()
-            const birthdate = new Date('2002-12-12')
-            const today = dateToInt(new Date())
-            const name = 'Gus'
+        it('Should do multiple cycles if money allows it.', () => {
+            const bc = makeStartedEco()
 
-            bc.startBlockchain(name, privateKey3, publicKey2, privateKey1)
+            bc.setActor(adminSk, adminPk, 3, DATE2)
+            bc.setActor(adminSk, referentPk, 2, DATE2)
+            bc.lastblock.money = [
+                20250101000, 20250101001, 20250101002, 20250101003, 20250101004,
+                20250101005, 20250101006, 20250101007, 20250101008, 20250101009
+            ]
+            const earns = bc.distributeSalary(mySk, DATE2)
 
-            assert.equal(bc.lastblock.closedate, today)
-            assert.equal(bc.blocks[1].closedate, today)
-            assert.equal(bc.blocks[1].transactions[1].date, today)
+            const earnForTarget = earns.find(e => e.target === adminPk)
+            const earnForReferent = earns.find(e => e.target === referentPk)
+            assert.equal(earnForTarget.money.length, 6)
+            assert.equal(earnForReferent.money.length, 4)
         })
 
-        it('Should make and return a new private key if none given.', () => {
-            const bc = new EcosystemBlockchain()
-            const birthdate = new Date('2002-12-12')
-            const name = 'Gus'
+        it('Should not distribute money that does not complete a cycle.', () => {
+            const bc = makeStartedEco()
 
-            const result = bc.startBlockchain(name, privateKey2, publicKey3)
+            bc.setActor(adminSk, adminPk, 3, DATE2)
+            bc.setActor(adminSk, referentPk, 2, DATE2)
+            bc.lastblock.money = [
+                20250101000, 20250101001, 20250101002,
+                20250101003, 20250101004, 20250101005, 20250101006
+            ]
+            const earns = bc.distributeSalary(mySk, DATE2)
 
-            assert.equal(result.length, 64)
+            const earnForTarget = earns.find(e => e.target === adminPk)
+            const earnForReferent = earns.find(e => e.target === referentPk)
+            assert.equal(earnForTarget.money.length, 3)
+            assert.equal(earnForReferent.money.length, 2)
+            assert.equal(bc.lastblock.money.length, 2)
+        })
+
+        it('Should remove distributed money from lastblock.', () => {
+            const bc = makeStartedEco()
+
+            bc.setActor(adminSk, adminPk, 2, DATE2)
+            bc.lastblock.money = [20250101000, 20250101001]
+            bc.distributeSalary(mySk, DATE2)
+
+            assert.equal(bc.lastblock.money.length, 0)
         })
     })
 
-    describe('validateAccount', () => {
-        it('Should return a valid initialization block', () => {
-            const bc = new EcosystemBlockchain()
-            const birthdate = new Date('2002-12-12')
-            const today = new Date('2025-02-25')
-            const name = 'my new ecosystem'
-            const block = bc.makeBirthBlock(privateKey1, publicKey3, name, today)
+    describe('pay (not available on EcosystemBlockchain)', () => {
+        it('Should not have a pay method.', () => {
+            const bc = makeStartedEco()
+            assert.isUndefined(bc.pay)
+        })
+    })
 
-            bc.validateAccount(privateKey2, new Date('2025-01-03'))
-            delete bc.lastblock.hash
-            delete bc.lastblock.previousHash
+    describe('serialization round-trip', () => {
+        it('Should deserialize to an EcosystemBlockchain with isValidated() = true.', () => {
+            const bc = makeStartedEco()
 
-            const expectedInitializationBlock = {
-                closedate: 20250103,
-                signer: publicKey2,
-                total: 0,
-                money: [],
-                invests: [],
-                version: 1,
-                transactions: [],
-                merkleroot: 0
-            }
+            const exported = bc.export()
+            const bc2 = new EcosystemBlockchain(exported)
 
-            assert.deepEqual(bc.lastblock, expectedInitializationBlock)
+            assert.isTrue(bc2.isValidated())
         })
 
-        it('Should return a signed initialization block', () => {
-            const bc = new EcosystemBlockchain()
-            const birthdate = new Date('2002-12-12')
-            const today = new Date('2025-02-25')
-            const name = 'my new ecosystem'
-            const block = bc.makeBirthBlock(privateKey1, publicKey3, name, today)
+        it('Should preserve roles after deserialization.', () => {
+            const bc = makeStartedEco()
 
-            bc.validateAccount(privateKey2, new Date('2025-01-03'))
+            bc.setAdmin(adminSk, referentPk, DATE2)
+            bc.setActor(adminSk, referentPk, 5, DATE2)
+            const exported = bc.export()
+            const bc2 = new EcosystemBlockchain(exported)
 
-            assert.ok(Blockchain.isValidBlock(bc.lastblock, publicKey2))
+            assert.isTrue(bc2.isAdmin(adminPk))
+            assert.isTrue(bc2.isAdmin(referentPk))
+            assert.equal(bc2.getActors().get(referentPk), 5)
+        })
+
+        it('Should preserve EcoBirthBlock and EcoInitializationBlock types after deserialization.', () => {
+            const bc = makeStartedEco()
+
+            const exported = bc.export()
+            const bc2 = new EcosystemBlockchain(exported)
+
+            assert.instanceOf(bc2.lastblock, EcoInitializationBlock)
+            assert.instanceOf(bc2.blocks[bc2.blocks.length - 1], EcoBirthBlock)
+        })
+
+        it('Should preserve all transaction types and money/invests across two blocks.', () => {
+            const bc = makeStartedEco()
+
+            bc.setActor(adminSk, referentPk, 3, DATE2)
+            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            const engageTx = makeEngageTx(adminSk, myPk, DATE2)
+            bc.receiveInvests(engageTx)
+            bc.payerOrder(referentSk, myPk, engageTx.invests, DATE2)
+            bc.order(mySk, myPk, engageTx.invests, DATE2)
+            bc.lastblock.money = buildMoneyIndexes(DATE2, 6)
+            bc.earn(mySk, adminPk, bc.lastblock.money.slice(0, 3), DATE2)
+
+            bc.closeLastBlock(mySk, DATE2)
+            bc.setActor(adminSk, adminPk, 2, DATE3)
+
+            const exported = bc.export()
+            const bc2 = new EcosystemBlockchain(exported)
+
+            assert.deepEqual(bc2, bc)
         })
     })
 })
-*/

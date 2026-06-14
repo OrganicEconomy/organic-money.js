@@ -1,7 +1,7 @@
 import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { intToDate, dateToInt, infinityDate } from './crypto.js'
 
-import { PayTransaction, TXTYPE } from './Transaction.js'
+import { TXTYPE } from './Transaction.js'
 import { Block, BlockMaker } from './Block.js'
 
 export class Blockchain {
@@ -177,13 +177,15 @@ export class Blockchain {
 		return true
 	}
 
-	/**
-	 * Remove given money from the available ones.
-	 * That means those Money have been spended.
-	 */
 	removeMoney(money) {
 		const result = this.lastblock.money.filter(x => !money.includes(x))
 		this.lastblock.money = result;
+		return result
+	}
+
+	removeInvests(invests) {
+		const result = this.lastblock.invests.filter(x => !invests.includes(x))
+		this.lastblock.invests = result
 		return result
 	}
 
@@ -261,24 +263,4 @@ export class Blockchain {
 	 *                           MAIN METHODS
 	 **********************************************************************/
 
-	/**
-	 * Add and return the transaction holding the payment with :
-	 *    - mySk to sign the transaction
-	 *    - target pubkey
-	 *    - given amount
-	 *    - given date or today
-	 * Throws an error if Blockchain can't afford it
-	 */
-	pay(mySk, targetPk, amount, d = new Date()) {
-		const money = this.getAvailableMoney(amount);
-		if (money.length === 0) {
-			throw new InvalidTransactionError('Unsufficient funds.')
-		}
-		const transaction = new PayTransaction (mySk, targetPk, d, money)
-
-		this.addTransaction(transaction)
-		this.removeMoney(money)
-
-		return transaction
-	}
 }

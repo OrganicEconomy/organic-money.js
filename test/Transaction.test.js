@@ -254,7 +254,7 @@ describe('TransactionMaker', () => {
         it('Should throw error for invalid transacrion type.', () => {
             assert.throws(() => { 
                 TransactionMaker.make(makeTransactionObj({ type: -12 }))
-            }, Error, 'Invalid transaction type -12. Allowed are {"INIT":1,"CREATE":2,"PAY":3,"ENGAGE":4,"PAPER":5,"SETADMIN":6,"SETACTOR":7,"SETPAYER":8,"UNSETADMIN":9,"UNSETACTOR":10,"UNSETPAYER":11}')
+            }, Error, 'Invalid transaction type -12. Allowed are {"INIT":1,"CREATE":2,"PAY":3,"ENGAGE":4,"PAPER":5,"SETADMIN":6,"SETACTOR":7,"SETPAYER":8,"UNSETADMIN":9,"UNSETACTOR":10,"UNSETPAYER":11,"PAYERORDER":12,"ORDER":13,"EARN":14}')
         })
 
         it('Should return a CreateTransaction for TXTYPE.CREATE.', () => {
@@ -963,6 +963,15 @@ describe('SetAdminTransaction', () => {
 })
 
 describe('SetActorTransaction', () => {
+    describe('constructor', () => {
+        it('Should throw if q is missing from object.', () => {
+            const obj = new SetActorTransaction(mySk, targetPk, 3, new Date()).export()
+            delete obj.q
+
+            assert.throws(() => new SetActorTransaction(obj), Error)
+        })
+    })
+
     describe('toString', () => {
         it('Should return [SetActorTransaction]', () => {
             const tx = makeTransaction({
@@ -999,7 +1008,8 @@ describe('SetActorTransaction', () => {
         it('Should return false if type is NOT TXTYPE.SETACTOR.', () => {
             const tx = new SetActorTransaction(makeTransactionObj({
                 type: TXTYPE.CREATE,
-                moneycount: 1
+                moneycount: 1,
+                q: 1
         }))
 
             const result = tx.isValid()
@@ -1029,21 +1039,71 @@ describe('SetActorTransaction', () => {
             assert.isFalse(result)
         })
 
+        it('Should return false if ratio is negative.', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, -1, new Date())
+            assert.isFalse(tx.isValid())
+        })
+
+        it('Should return false if ratio is not an integer.', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, 1.5, new Date())
+            assert.isFalse(tx.isValid())
+        })
+
+        it('Should return true if ratio is 0 (volunteer).', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, 0, new Date())
+            assert.isTrue(tx.isValid())
+        })
+
         it('Should return true if all is fine.', () => {
-            const tx = new SetActorTransaction(makeTransactionObj({
-                type: TXTYPE.SETACTOR,
-                moneycount: 0,
-                investscount: 0
-            }))
+            const tx = new SetActorTransaction(mySk, targetPk, 1, new Date())
+            assert.isTrue(tx.isValid())
+        })
+    })
 
-            const result = tx.isValid()
+    describe('constructor', () => {
+        it('Should store ratio when created with (sk, targetPk, ratio, date).', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, 3, new Date())
+            assert.equal(tx.ratio, 3)
+        })
 
-            assert.isTrue(result)
+        it('Should read ratio from q field when created from object.', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, 5, new Date())
+            const tx2 = new SetActorTransaction(tx.export())
+            assert.equal(tx2.ratio, 5)
+        })
+    })
+
+    describe('q field (ratio)', () => {
+        it('Should include ratio in hash — different ratio produces different hash.', () => {
+            const d = new Date('2025-01-01')
+            const tx1 = new SetActorTransaction(mySk, targetPk, 1, d)
+            const tx2 = new SetActorTransaction(mySk, targetPk, 2, d)
+            assert.notDeepEqual(tx1.hash(), tx2.hash())
+        })
+
+        it('Should include q in export.', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, 3, new Date())
+            assert.equal(tx.export().q, 3)
+        })
+
+        it('Should preserve ratio after round-trip export/reconstruct.', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, 7, new Date())
+            const tx2 = new SetActorTransaction(tx.export())
+            assert.equal(tx2.ratio, 7)
         })
     })
 })
 
 describe('SetPayerTransaction', () => {
+    describe('constructor', () => {
+        it('Should throw if q is missing from object.', () => {
+            const obj = new SetPayerTransaction(mySk, targetPk, 5, new Date()).export()
+            delete obj.q
+
+            assert.throws(() => new SetPayerTransaction(obj), Error)
+        })
+    })
+
     describe('toString', () => {
         it('Should return [SetPayerTransaction]', () => {
             const tx = makeTransaction({
@@ -1080,7 +1140,8 @@ describe('SetPayerTransaction', () => {
         it('Should return false if type is NOT TXTYPE.SETPAYER.', () => {
             const tx = new SetPayerTransaction(makeTransactionObj({
                 type: TXTYPE.CREATE,
-                moneycount: 1
+                moneycount: 1,
+                q: 1
         }))
 
             const result = tx.isValid()
@@ -1110,16 +1171,57 @@ describe('SetPayerTransaction', () => {
             assert.isFalse(result)
         })
 
+        it('Should return false if cap is negative.', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, -1, new Date())
+            assert.isFalse(tx.isValid())
+        })
+
+        it('Should return false if cap is not an integer.', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, 1.5, new Date())
+            assert.isFalse(tx.isValid())
+        })
+
+        it('Should return true if cap is 0 (unlimited).', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, 0, new Date())
+            assert.isTrue(tx.isValid())
+        })
+
         it('Should return true if all is fine.', () => {
-            const tx = new SetPayerTransaction(makeTransactionObj({
-                type: TXTYPE.SETPAYER,
-                moneycount: 0,
-                investscount: 0
-            }))
+            const tx = new SetPayerTransaction(mySk, targetPk, 100, new Date())
+            assert.isTrue(tx.isValid())
+        })
+    })
 
-            const result = tx.isValid()
+    describe('constructor', () => {
+        it('Should store cap when created with (sk, targetPk, cap, date).', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, 50, new Date())
+            assert.equal(tx.cap, 50)
+        })
 
-            assert.isTrue(result)
+        it('Should read cap from q field when created from object.', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, 200, new Date())
+            const tx2 = new SetPayerTransaction(tx.export())
+            assert.equal(tx2.cap, 200)
+        })
+    })
+
+    describe('q field (cap)', () => {
+        it('Should include cap in hash — different cap produces different hash.', () => {
+            const d = new Date('2025-01-01')
+            const tx1 = new SetPayerTransaction(mySk, targetPk, 10, d)
+            const tx2 = new SetPayerTransaction(mySk, targetPk, 20, d)
+            assert.notDeepEqual(tx1.hash(), tx2.hash())
+        })
+
+        it('Should include q in export.', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, 50, new Date())
+            assert.equal(tx.export().q, 50)
+        })
+
+        it('Should preserve cap after round-trip export/reconstruct.', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, 300, new Date())
+            const tx2 = new SetPayerTransaction(tx.export())
+            assert.equal(tx2.cap, 300)
         })
     })
 })

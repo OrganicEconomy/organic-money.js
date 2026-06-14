@@ -17,7 +17,10 @@ export const TXTYPE = {
     SETPAYER: 8,
     UNSETADMIN: 9,
     UNSETACTOR: 10,
-    UNSETPAYER: 11
+    UNSETPAYER: 11,
+    PAYERORDER: 12,
+    ORDER: 13,
+    EARN: 14
 }
 
 export class TransactionMaker {
@@ -45,6 +48,12 @@ export class TransactionMaker {
                 return new UnsetActorTransaction(txObj)
             case TXTYPE.UNSETPAYER:
                 return new UnsetPayerTransaction(txObj)
+            case TXTYPE.PAYERORDER:
+                return new PayerOrderTransaction(txObj)
+            case TXTYPE.ORDER:
+                return new OrderTransaction(txObj)
+            case TXTYPE.EARN:
+                return new EarnTransaction(txObj)
             default:
                 throw new Error(`Invalid transaction type ${txObj.t}. Allowed are ${JSON.stringify(TXTYPE)}`)
         }
@@ -330,54 +339,158 @@ export class PaperTransaction extends Transaction {
 }
 
 export class SetAdminTransaction extends Transaction {
-    toString() {
-        return '[SetAdminTransaction]'
+    constructor(objOrSk, targetPk = null, date = null) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.SETADMIN,
+                m: [],
+                i: [],
+                d: dateToInt(date || new Date()),
+                s: publicFromPrivate(objOrSk),
+                p: targetPk,
+                h: ""
+            })
+            this.sign(objOrSk)
+        }
     }
+
+    toString() { return '[SetAdminTransaction]' }
 
     isValid() {
         return super.isValid() &&
         this.type == TXTYPE.SETADMIN &&
         this.money.length === 0 &&
-        this .invests.length === 0 &&
+        this.invests.length === 0 &&
         !! this.target &&
         this.target.length === 66
     }
 }
 
 export class SetActorTransaction extends Transaction {
-    toString() {
-        return '[SetActorTransaction]'
+    constructor(objOrSk, targetPk = null, ratio = 0, date = null) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+            if (objOrSk.q === undefined) throw new Error('SetActorTransaction: missing q field')
+            this.ratio = objOrSk.q
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.SETACTOR,
+                m: [],
+                i: [],
+                d: dateToInt(date || new Date()),
+                s: publicFromPrivate(objOrSk),
+                p: targetPk,
+                h: ""
+            })
+            this.ratio = ratio
+            this.sign(objOrSk)
+        }
     }
+
+    toString() { return '[SetActorTransaction]' }
+
+    hash() {
+        const tx = {
+            d: dateToInt(this.date),
+            m: this.money,
+            i: this.invests,
+            s: this.signer,
+            t: this.type,
+            p: this.target,
+            v: this.version,
+            q: this.ratio
+        }
+        return sha256(encode(tx))
+    }
+
+    export() { return { ...super.export(), q: this.ratio } }
 
     isValid() {
         return super.isValid() &&
         this.type == TXTYPE.SETACTOR &&
         this.money.length === 0 &&
-        this .invests.length === 0 &&
+        this.invests.length === 0 &&
         !! this.target &&
-        this.target.length === 66
+        this.target.length === 66 &&
+        Number.isInteger(this.ratio) && this.ratio >= 0
     }
 }
 
 export class SetPayerTransaction extends Transaction {
-    toString() {
-        return '[SetPayerTransaction]'
+    constructor(objOrSk, targetPk = null, cap = 0, date = null) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+            if (objOrSk.q === undefined) throw new Error('SetPayerTransaction: missing q field')
+            this.cap = objOrSk.q
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.SETPAYER,
+                m: [],
+                i: [],
+                d: dateToInt(date || new Date()),
+                s: publicFromPrivate(objOrSk),
+                p: targetPk,
+                h: ""
+            })
+            this.cap = cap
+            this.sign(objOrSk)
+        }
     }
+
+    toString() { return '[SetPayerTransaction]' }
+
+    hash() {
+        const tx = {
+            d: dateToInt(this.date),
+            m: this.money,
+            i: this.invests,
+            s: this.signer,
+            t: this.type,
+            p: this.target,
+            v: this.version,
+            q: this.cap
+        }
+        return sha256(encode(tx))
+    }
+
+    export() { return { ...super.export(), q: this.cap } }
 
     isValid() {
         return super.isValid() &&
         this.type == TXTYPE.SETPAYER &&
         this.money.length === 0 &&
-        this .invests.length === 0 &&
+        this.invests.length === 0 &&
         !! this.target &&
-        this.target.length === 66
+        this.target.length === 66 &&
+        Number.isInteger(this.cap) && this.cap >= 0
     }
 }
 
 export class UnsetAdminTransaction extends Transaction {
-    toString() {
-        return '[UnsetAdminTransaction]'
+    constructor(objOrSk, targetPk = null, date = null) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.UNSETADMIN,
+                m: [],
+                i: [],
+                d: dateToInt(date || new Date()),
+                s: publicFromPrivate(objOrSk),
+                p: targetPk,
+                h: ""
+            })
+            this.sign(objOrSk)
+        }
     }
+
+    toString() { return '[UnsetAdminTransaction]' }
 
     isValid() {
         return super.isValid() &&
@@ -390,9 +503,25 @@ export class UnsetAdminTransaction extends Transaction {
 }
 
 export class UnsetActorTransaction extends Transaction {
-    toString() {
-        return '[UnsetActorTransaction]'
+    constructor(objOrSk, targetPk = null, date = null) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.UNSETACTOR,
+                m: [],
+                i: [],
+                d: dateToInt(date || new Date()),
+                s: publicFromPrivate(objOrSk),
+                p: targetPk,
+                h: ""
+            })
+            this.sign(objOrSk)
+        }
     }
+
+    toString() { return '[UnsetActorTransaction]' }
 
     isValid() {
         return super.isValid() &&
@@ -405,9 +534,25 @@ export class UnsetActorTransaction extends Transaction {
 }
 
 export class UnsetPayerTransaction extends Transaction {
-    toString() {
-        return '[UnsetPayerTransaction]'
+    constructor(objOrSk, targetPk = null, date = null) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.UNSETPAYER,
+                m: [],
+                i: [],
+                d: dateToInt(date || new Date()),
+                s: publicFromPrivate(objOrSk),
+                p: targetPk,
+                h: ""
+            })
+            this.sign(objOrSk)
+        }
     }
+
+    toString() { return '[UnsetPayerTransaction]' }
 
     isValid() {
         return super.isValid() &&
@@ -415,6 +560,96 @@ export class UnsetPayerTransaction extends Transaction {
             this.money.length === 0 &&
             this.invests.length === 0 &&
             !!this.target &&
+            this.target.length === 66
+    }
+}
+
+export class PayerOrderTransaction extends Transaction {
+    constructor(objOrSk, targetPk = null, invests = [], date = null) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.PAYERORDER,
+                m: [],
+                i: invests,
+                d: dateToInt(date || new Date()),
+                s: publicFromPrivate(objOrSk),
+                p: targetPk,
+                h: ""
+            })
+            this.sign(objOrSk)
+        }
+    }
+
+    toString() { return '[PayerOrderTransaction]' }
+
+    isValid() {
+        return super.isValid() &&
+            this.type === TXTYPE.PAYERORDER &&
+            this.money.length === 0 &&
+            !! this.target &&
+            this.target.length === 66
+    }
+}
+
+export class OrderTransaction extends Transaction {
+    constructor(objOrSk, targetPk = null, invests = [], date = null) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.ORDER,
+                m: [],
+                i: invests,
+                d: dateToInt(date || new Date()),
+                s: publicFromPrivate(objOrSk),
+                p: targetPk,
+                h: ""
+            })
+            this.sign(objOrSk)
+        }
+    }
+
+    toString() { return '[OrderTransaction]' }
+
+    isValid() {
+        return super.isValid() &&
+            this.type === TXTYPE.ORDER &&
+            this.money.length === 0 &&
+            !! this.target &&
+            this.target.length === 66
+    }
+}
+
+export class EarnTransaction extends Transaction {
+    constructor(objOrSk, targetPk = null, money = [], date = null) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.EARN,
+                m: money,
+                i: [],
+                d: dateToInt(date || new Date()),
+                s: publicFromPrivate(objOrSk),
+                p: targetPk,
+                h: ""
+            })
+            this.sign(objOrSk)
+        }
+    }
+
+    toString() { return '[EarnTransaction]' }
+
+    isValid() {
+        return super.isValid() &&
+            this.type === TXTYPE.EARN &&
+            this.invests.length === 0 &&
+            !! this.target &&
             this.target.length === 66
     }
 }

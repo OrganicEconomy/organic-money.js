@@ -317,6 +317,21 @@ describe('Blockchain', () => {
 		})
 	})
 
+	describe('removeInvests', () => {
+		it('Should filter properly.', () => {
+			const tx1 = makeTransaction({ date: new Date("2025-01-01"), investscount: 1 })
+			const tx2 = makeTransaction({ date: new Date("2025-01-02"), investscount: 4 })
+			const bc = new Blockchain([makeBlockObj({ signed: true, date: new Date('2025-01-01') })])
+			bc.addTransaction(tx1)
+			bc.addTransaction(tx2)
+
+			const toRemove = [tx1.invests[0], tx2.invests[0]]
+			const result = bc.removeInvests(toRemove)
+
+			assert.deepEqual(result, tx2.invests.slice(1))
+		})
+	})
+
 	describe('addTransaction', () => {
 		it('Should add the given transaction to last block', () => {
 			const blockObj1 = makeBlockObj({ signed: true })
@@ -504,98 +519,6 @@ describe('Blockchain', () => {
 			const result = bc.getMyPublicKey()
 
 			assert.equal(result, targetPk)
-		})
-	})
-
-	describe('pay', () => {
-
-		it('Should make valid transaction.', () => {
-			const bc = new Blockchain([
-				makeBlockObj({
-					date: new Date('2025-01-01'),
-					moneycount: 3
-				}),
-				makeBlockObj({
-					signed: true,
-					date: new Date('2025-01-01')
-				})
-			])
-
-			bc.pay(mySk, targetPk, 3, new Date('2025-01-03'))
-			const transaction = bc.lastblock.lastTransaction
-
-			assert.isTrue(transaction.isValid())
-
-			const expected = {
-				version: Blockchain.VERSION,
-				type: TXTYPE.PAY,
-				date: new Date('2025-01-03'),
-				money: [20250101000, 20250101001, 20250101002],
-				invests: [],
-				target: targetPk,
-				signer: myPk
-			}
-
-			assert.equal(transaction.version, expected.version)
-			assert.equal(transaction.type, expected.type)
-			assert.equal(transaction.date.getTime(), expected.date.getTime())
-			assert.deepEqual(transaction.money, expected.money)
-			assert.deepEqual(transaction.invests, expected.invests)
-			assert.equal(transaction.target, expected.target)
-			assert.equal(transaction.signer, expected.signer)
-		})
-
-		it('Should decrease money of the block.', () => {
-			const bc = new Blockchain([
-				makeBlockObj({
-					date: new Date('2025-01-03'),
-					moneycount: 5,
-					type: TXTYPE.CREATE
-				}),
-				makeBlockObj({
-					signed: true,
-					date: new Date('2025-01-02')
-				})
-			])
-
-			assert.equal(bc.lastblock.money.length, 5)
-
-			bc.pay(mySk, targetPk, 3, new Date('2025-01-03'))
-
-			const result = bc.lastblock.money
-			const expected = [20250103003, 20250103004]
-
-			assert.equal(bc.lastblock.money.length, 2)
-			assert.deepEqual(result, expected)
-		})
-
-		it('Should increase total if I am the target.', () => {
-			const bc = new Blockchain([
-				makeBlockObj({
-					date: new Date('2025-01-03'),
-					moneycount: 4,
-					total: 26,
-					transactions: [makeTransaction({
-						type: TXTYPE.CREATE,
-						signer: myPk
-					})]
-				}),
-				makeBlockObj({
-					signed: true,
-					date: new Date('2025-01-02')
-
-				})
-			])
-
-			bc.pay(mySk, myPk, 4, new Date('2025-01-03'))
-
-			assert.equal(bc.lastblock.total, 30)
-		})
-
-		it('Should throw error if blockchain can t afford it.', () => {
-			const bc = new Blockchain([makeBlockObj(), makeBlockObj({ signed: true, date: new Date('2026-01-19') })])
-
-			assert.throws(() => { bc.pay(mySk, targetPk, 2) }, InvalidTransactionError, 'Unsufficient funds.')
 		})
 	})
 

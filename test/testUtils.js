@@ -19,7 +19,9 @@ export const referentSk = privateKey3
 
 
 export function makeTransactionObj(options = {}) {
-    return makeTransaction(options).export()
+    const obj = makeTransaction(options).export()
+    if ("q" in options) obj.q = options.q
+    return obj
 }
 
 export function makeTransaction(options = {}) {
@@ -27,6 +29,7 @@ export function makeTransaction(options = {}) {
     const type = "type" in options ? options.type : TXTYPE.CREATE
     const date = "date" in options ? options.date : new Date()
     const isCreate = type === TXTYPE.CREATE
+    const needsQ = type === TXTYPE.SETACTOR || type === TXTYPE.SETPAYER
     const tx = TransactionMaker.make({
         v: "version" in options ? options.version : 1,
         d: dateToInt(date),
@@ -35,7 +38,8 @@ export function makeTransaction(options = {}) {
         m: "money" in options ? options.money : (isCreate ? buildMoneyIndexes(date, 1) : []),
         i: "invests" in options ? options.invests : (isCreate ? buildInvestIndexes(date, 1) : []),
         t: type,
-        h: "signature" in options ? options.signature : 'notsetyet'
+        h: "signature" in options ? options.signature : 'notsetyet',
+        ...((needsQ || "q" in options) && { q: "q" in options ? options.q : 1 })
     })
     if ("moneycount" in options) {
         tx.money = buildMoneyIndexes(date, options.moneycount)

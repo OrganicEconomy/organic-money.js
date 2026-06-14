@@ -418,6 +418,67 @@ describe('EcosystemBlockchain', () => {
         })
     })
 
+    describe('receiveMoney', () => {
+        it('Should throw if not an EngageTransaction.', () => {
+            const bc = makeStartedEco()
+
+            const tx = new SetAdminTransaction(adminSk, referentPk, DATE2)
+
+            assert.throws(() => bc.receiveMoney(tx))
+        })
+
+        it('Should throw if transaction is not targeting this ecosystem.', () => {
+            const bc = makeStartedEco()
+
+            const money = buildMoneyIndexes(DATE2, 1)
+            const tx = new EngageTransaction({ d: dateToInt(DATE2), p: referentPk, m: money, s: adminPk })
+            tx.sign(adminSk)
+
+            assert.throws(() => bc.receiveMoney(tx))
+        })
+
+        it('Should throw if no money in transaction (invest-only engagement).', () => {
+            const bc = makeStartedEco()
+
+            const tx = makeEngageTx(adminSk, myPk)
+
+            assert.throws(() => bc.receiveMoney(tx))
+        })
+
+        it('Should add money to lastblock.money.', () => {
+            const bc = makeStartedEco()
+
+            const money = buildMoneyIndexes(DATE2, 1)
+            const tx = new EngageTransaction({ d: dateToInt(DATE2), p: myPk, m: money, s: adminPk })
+            tx.sign(adminSk)
+            bc.receiveMoney(tx)
+
+            assert.deepEqual(bc.lastblock.money, money)
+        })
+
+        it('Should record the transaction in the blockchain.', () => {
+            const bc = makeStartedEco()
+
+            const money = buildMoneyIndexes(DATE2, 1)
+            const tx = new EngageTransaction({ d: dateToInt(DATE2), p: myPk, m: money, s: adminPk })
+            tx.sign(adminSk)
+            bc.receiveMoney(tx)
+
+            assert.include(bc.lastblock.transactions, tx)
+        })
+
+        it('Should return the transaction.', () => {
+            const bc = makeStartedEco()
+
+            const money = buildMoneyIndexes(DATE2, 1)
+            const tx = new EngageTransaction({ d: dateToInt(DATE2), p: myPk, m: money, s: adminPk })
+            tx.sign(adminSk)
+            const result = bc.receiveMoney(tx)
+
+            assert.equal(result, tx)
+        })
+    })
+
     describe('getAffordableInvestsAmount', () => {
         it('Should return 0 when there are no invests.', () => {
             const bc = makeStartedEco()
@@ -732,6 +793,23 @@ describe('EcosystemBlockchain', () => {
             bc.distributeSalary(mySk, DATE2)
 
             assert.equal(bc.lastblock.money.length, 0)
+        })
+
+        it('Should not distribute money whose date has not been reached yet.', () => {
+            const bc = makeStartedEco()
+
+            bc.setActor(adminSk, adminPk, 1, DATE2)
+            bc.lastblock.money = [
+                20250101000,
+                20250103000,
+            ]
+            const earns = bc.distributeSalary(mySk, DATE2)
+
+            assert.equal(earns.length, 1)
+            assert.equal(earns[0].money.length, 1)
+            assert.equal(earns[0].money[0], 20250101000)
+            assert.equal(bc.lastblock.money.length, 1)
+            assert.equal(bc.lastblock.money[0], 20250103000)
         })
     })
 

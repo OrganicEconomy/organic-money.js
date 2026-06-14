@@ -194,6 +194,18 @@ export class EcosystemBlockchain extends Blockchain {
         return engageTx
     }
 
+    receiveMoney(engageTx) {
+        if (engageTx.type !== TXTYPE.ENGAGE || !engageTx.isValid())
+            throw new InvalidTransactionError('Invalid transaction')
+        if (engageTx.target !== this.getMyPublicKey())
+            throw new InvalidTransactionError('Transaction not targeting this ecosystem')
+        if (engageTx.money.length === 0)
+            throw new InvalidTransactionError('No money in transaction')
+        this.addTransaction(engageTx)
+        this.lastblock.money = this.lastblock.money.concat(engageTx.money)
+        return engageTx
+    }
+
     receivePayerOrder(ecoSk, tx) {
         this.#assertIsMe(ecoSk)
         if (tx.type !== TXTYPE.PAYERORDER || !tx.isValid())
@@ -253,7 +265,8 @@ export class EcosystemBlockchain extends Blockchain {
         const actors = this.getActors()
         const totalRatio = [...actors.values()].reduce((sum, r) => sum + r, 0)
         if (totalRatio === 0) return []
-        const availableMoney = this.lastblock.money
+        const dateInt = dateToInt(date)
+        const availableMoney = this.lastblock.money.filter(id => unitIdToDateInt(id) <= dateInt)
         const cycles = Math.floor(availableMoney.length / totalRatio)
         if (cycles === 0) return []
 

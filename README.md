@@ -150,8 +150,8 @@ An `EcosystemBlockchain` represents a collective entity (cooperative, associatio
 
 Two separate economic flows pass through an ecosystem:
 
-- **Invest flow** — citizens engage invests into the ecosystem over a period of days. The engagement transaction carries invest IDs for the current day and all future days of the commitment; the ecosystem records them all at once (`receiveInvests`), but only invests whose date has been reached can be used in orders. Payers send invest orders (`payerOrder`); the ecosystem validates them and executes the actual payment via `order`, which converts the mature invests into money (1 invest = 1 money, invest ID transformed to money ID) and sends them directly to the target as an EARN transaction — the target can be a citizen or another ecosystem.
-- **Money flow** — citizen clients pay the ecosystem with money (PAY). The ecosystem then distributes that money to its actors as salary (EARN), proportional to their ratios.
+- **Invest flow** — citizens engage invests into the ecosystem over a period of days. The engagement transaction carries invest IDs for the current day and all future days of the commitment; the ecosystem records them all at once (`receiveInvests`), but only invests whose date has been reached can be used in orders. A payer creates and signs an invest order on their own blockchain (`CitizenBlockchain.payerOrder`), then sends it to the ecosystem via `receivePayerOrder`. The ecosystem then executes the actual payment via `order`, which converts the mature invests into money (1 invest = 1 money, invest ID transformed to money ID by stripping the `9` separator) and sends them directly to the target as an EARN transaction — the target can be a citizen or another ecosystem.
+- **Money flow** — citizens can engage money directly to an ecosystem (`engageMoney`), which the ecosystem receives via `receiveMoney`. All money (including future-dated units) is stored and only the mature portion is distributed to actors. The ecosystem distributes money to its actors proportionally via `distributeSalary`; only money whose date has been reached is distributed — future-dated money stays in the wallet until its date arrives.
 
 The founding admin is automatically registered as admin and actor (ratio 1) when the ecosystem is created.
 
@@ -166,12 +166,14 @@ sequenceDiagram
     Note over C,Su: Invest flow
     C->>Eco: engageInvests(ecoPk, amount, days)
     Eco->>Eco: receiveInvests(engageTx)
-    P->>Eco: payerOrder(supplierPk, invests)
-    Eco->>Su: order(supplierPk, invests) → EARN with converted money
+    P->>P: payerOrder(payerSk, ecoPk, supplierPk, invests)
+    P->>Eco: receivePayerOrder(ecoSk, payerOrderTx)
+    Eco->>Su: order(ecoSk, supplierPk, invests) → EARN with converted money
 
     Note over C,Ac: Money flow
-    C->>Eco: pay(ecoPk, amount)
-    Eco->>Ac: earn(actorPk, money)
+    C->>Eco: engageMoney(citizenSk, ecoPk, amount, days)
+    Eco->>Eco: receiveMoney(engageTx)
+    Eco->>Ac: distributeSalary(ecoSk) → EARN mature money only
 ```
 
 ### Paper Money
@@ -401,11 +403,24 @@ eco.receiveInvests(engageTx)
 console.log(eco.invests.length) // invests now available in the ecosystem
 ```
 
+#### Receive citizen money engagements
+
+```js
+// A citizen engages money directly to the ecosystem (e.g. for a purchase or subscription)
+const engageTx = citizenBlockchain.engageMoney(citizenSk, ecoPk, 1, 30)
+
+// The ecosystem records the commitment and adds all money IDs (including future-dated) to its wallet
+eco.receiveMoney(engageTx)
+```
+
 #### Issue invest orders
 
 ```js
-// Alice (payer) authorizes an invest order through the ecosystem
-eco.payerOrder(aliceSk, supplierPk, eco.invests.slice(0, 5))
+// Alice (payer) creates and signs the order on her own blockchain
+const payerOrderTx = aliceBlockchain.payerOrder(aliceSk, ecoPk, supplierPk, eco.invests.slice(0, 5))
+
+// Alice sends the signed order to the ecosystem; it validates and records it
+eco.receivePayerOrder(ecoSk, payerOrderTx)
 
 // The ecosystem executes the order: invests are converted to money (invest ID → money ID, 1:1)
 // and sent to the target (citizen or ecosystem) as an EARN transaction
@@ -418,7 +433,8 @@ supplierBlockchain.addTransaction(earnTx)
 #### Distribute earnings to actors
 
 ```js
-// Distribute all available money in the ecosystem's wallet, proportional to actor ratios
+// Distribute mature money in the ecosystem's wallet, proportional to actor ratios
+// Only money whose date has been reached is distributed — future-dated money stays in the wallet
 // adminPk (ratio 1) and alicePk (ratio 2): alicePk gets twice as much
 const earns = eco.distributeSalary(ecoSk)
 
@@ -589,9 +605,12 @@ console.log(eco.invests.length)  // 60 (30 from Alice + 30 from Bob)
 
 // ── 4. Alice (payer) issues an invest order to a supplier ─────────────────────
 const supplierPk = publicFromPrivate(randomPrivateKey())
-eco.payerOrder(aliceSk, supplierPk, eco.invests.slice(0, 10))
 
-console.log(eco.invests.length)  // 60 (payerOrder records the order, invests stay until order() removes them)
+// Alice signs the order on her own blockchain and sends it to the ecosystem
+const payerOrderTx = alice.payerOrder(aliceSk, ecoPk, supplierPk, eco.invests.slice(0, 10))
+eco.receivePayerOrder(ecoSk, payerOrderTx)
+
+console.log(eco.invests.length)  // 60 (invests stay until order() removes them)
 
 // ── 5. The ecosystem finalizes an order (removes invests from its wallet) ─────
 eco.order(ecoSk, supplierPk, eco.invests.slice(0, 5))
@@ -631,9 +650,8 @@ console.log(ecoRestored.isAdmin(alicePk))  // true — roles preserved
 | 9 | `UNSETADMIN` | Remove an ecosystem admin | `target` |
 | 10 | `UNSETACTOR` | Remove an ecosystem actor | `target` |
 | 11 | `UNSETPAYER` | Remove an ecosystem payer | `target` |
-| 12 | `PAYERORDER` | Payer issues an invest order | `invests[]`, `target` |
-| 13 | `ORDER` | Ecosystem issues an invest order | `invests[]`, `target` |
-| 14 | `EARN` | Distribute earnings to an actor | `money[]`, `target` |
+| 12 | `PAYERORDER` | Payer issues an invest order (signed by payer on their blockchain) | `invests[]`, `target`, `e` (ecosystem pk) |
+| 13 | `EARN` | Distribute earnings to an actor or supplier | `money[]`, `target` |
 
 ---
 
@@ -741,7 +759,7 @@ npm run watch
 | `Blockchain.test.js` | Transaction lifecycle, block sealing, state propagation |
 | `CitizenBlockchain.test.js` | Money creation, payments, engagements, paper money, level system |
 | `EcosystemBlockchain.test.js` | Role management, invest orders, salary distribution |
-| `Transaction.test.js` | All 14 transaction types, serialization, validation |
+| `Transaction.test.js` | All 13 transaction types, serialization, validation |
 | `crypto.test.js` | SECP256K1 signing, AES encryption, date utilities |
 
 ---

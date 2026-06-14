@@ -128,7 +128,7 @@ A citizen's **level** controls how many units they generate per day:
 level = floor(∛economic_experience) + 1
 ```
 
-**Economic experience** is the cumulative count of money units ever received by the citizen (via PAY transactions). It is stored as the `total` field in each block. This encourages economic participation and gives a natural catch-up mechanic: anyone can grow, but growth requires genuine exchange.
+**Economic experience** is the cumulative count of money units ever received by the citizen (via PAY and EARN transactions). It is stored as the `total` field in each block. This encourages economic participation and gives a natural catch-up mechanic: anyone can grow, but growth requires genuine exchange.
 
 | Level | Units/day | Economic experience to reach |
 |-------|-----------|------------------------------|
@@ -140,7 +140,7 @@ level = floor(∛economic_experience) + 1
 
 ### Ecosystems
 
-An `EcosystemBlockchain` represents a collective entity (cooperative, association, business). It has three roles:
+An `EcosystemBlockchain` represents a collective entity (cooperative, association, business). Citizen can have one or more of those three roles:
 
 | Role | Description | Key field |
 |------|-------------|-----------|
@@ -148,7 +148,7 @@ An `EcosystemBlockchain` represents a collective entity (cooperative, associatio
 | **Actor** | Contributor who receives a proportional salary | `ratio` |
 | **Payer** | Authorized to issue invest orders (optionally capped) | `cap` |
 
-Citizens **engage** their invests into an ecosystem. The ecosystem's payers and admins can then create **orders** that delegate those invests to suppliers or collaborators. The ecosystem distributes its available money as **earnings** to actors, proportional to their ratios.
+Citizens **engage** their invests into an ecosystem. Payers send invest orders to the ecosystem (`payerOrder`); the ecosystem checks their validity and sends the real payment order to the target (`order`), at which point the invests are removed from the wallet. The ecosystem distributes its available money as **earnings** to actors, proportional to their ratios.
 
 The founding admin is automatically registered as admin and actor (ratio 1) when the ecosystem is created.
 

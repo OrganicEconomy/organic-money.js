@@ -4,7 +4,7 @@ import { assert } from 'chai';
 import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { EcosystemBlockchain } from '../src/EcosystemBlockchain.js'
 import { EcoBirthBlock, EcoInitializationBlock } from '../src/Block.js'
-import { EngageTransaction, SetAdminTransaction, TXTYPE } from '../src/Transaction.js'
+import { EngageTransaction, SetAdminTransaction, PayerOrderTransaction, TXTYPE } from '../src/Transaction.js'
 import { publicFromPrivate, dateToInt, buildInvestIndexes, buildMoneyIndexes } from '../src/crypto.js'
 import { mySk, myPk, targetSk, targetPk, referentSk, referentPk } from './testUtils.js'
 const adminSk = targetSk, adminPk = targetPk
@@ -450,22 +450,34 @@ describe('EcosystemBlockchain', () => {
         })
     })
 
-    describe('payerOrder', () => {
-        it('Should throw UnauthorizedError if caller is not a payer.', () => {
+    describe('receivePayerOrder', () => {
+        it('Should throw if not a PayerOrderTransaction.', () => {
             const bc = makeStartedEco()
 
-            const invests = buildInvestIndexes(DATE2, 1)
+            const tx = new SetAdminTransaction(adminSk, referentPk, DATE2)
 
-            assert.throws(() => bc.payerOrder(referentSk, myPk, invests, DATE2))
+            assert.throws(() => bc.receivePayerOrder(tx))
         })
 
-        it('Should throw InvalidTransactionError if invests not in lastblock.invests.', () => {
+        it('Should throw if ecosystem does not match this ecosystem.', () => {
             const bc = makeStartedEco()
 
             bc.setPayer(adminSk, referentPk, 0, DATE2)
             const invests = buildInvestIndexes(DATE2, 1)
+            bc.lastblock.invests = invests
+            const tx = new PayerOrderTransaction(referentSk, targetPk, invests, referentPk, DATE2)
 
-            assert.throws(() => bc.payerOrder(referentSk, myPk, invests, DATE2))
+            assert.throws(() => bc.receivePayerOrder(tx))
+        })
+
+        it('Should throw if signer is not a payer.', () => {
+            const bc = makeStartedEco()
+
+            const invests = buildInvestIndexes(DATE2, 1)
+            bc.lastblock.invests = invests
+            const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
+
+            assert.throws(() => bc.receivePayerOrder(tx))
         })
 
         it('Should throw if invests exceed payer cap.', () => {
@@ -474,33 +486,19 @@ describe('EcosystemBlockchain', () => {
             bc.setPayer(adminSk, referentPk, 1, DATE2)
             const invests = buildInvestIndexes(DATE2, 2)
             bc.lastblock.invests = invests
+            const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
 
-            assert.throws(() => bc.payerOrder(referentSk, myPk, invests, DATE2))
+            assert.throws(() => bc.receivePayerOrder(tx))
         })
 
-        it('Should not throw if cap is 0 (unlimited) even with many invests.', () => {
+        it('Should throw if invests not in lastblock.invests.', () => {
             const bc = makeStartedEco()
 
             bc.setPayer(adminSk, referentPk, 0, DATE2)
-            const invests = buildInvestIndexes(DATE2, 2)
-            bc.lastblock.invests = invests
-            const tx = bc.payerOrder(referentSk, myPk, invests, DATE2)
+            const invests = buildInvestIndexes(DATE2, 1)
+            const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
 
-            assert.ok(tx.isValid())
-        })
-
-        it('Should create a PayerOrderTransaction when invests are available.', () => {
-            const bc = makeStartedEco()
-
-            bc.setPayer(adminSk, referentPk, 0, DATE2)
-            const engageTx = makeEngageTx(referentSk, myPk)
-            bc.receiveInvests(engageTx)
-            const tx = bc.payerOrder(referentSk, myPk, engageTx.invests, DATE2)
-
-            assert.equal(tx.type, TXTYPE.PAYERORDER)
-            assert.equal(tx.signer, referentPk)
-            assert.equal(tx.target, myPk)
-            assert.ok(tx.isValid())
+            assert.throws(() => bc.receivePayerOrder(tx))
         })
 
         it('Should throw if invests are not yet mature.', () => {
@@ -509,12 +507,37 @@ describe('EcosystemBlockchain', () => {
             bc.setPayer(adminSk, referentPk, 0, DATE2)
             const futureInvests = buildInvestIndexes(DATE3, 1)
             bc.lastblock.invests = futureInvests
+            const tx = new PayerOrderTransaction(referentSk, targetPk, futureInvests, myPk, DATE2)
 
-            assert.throws(
-                () => bc.payerOrder(referentSk, myPk, futureInvests, DATE2),
-                InvalidTransactionError,
-                'Some invests are not yet available.'
-            )
+            assert.throws(() => bc.receivePayerOrder(tx), InvalidTransactionError, 'Some invests are not yet available.')
+        })
+
+        it('Should add the transaction to blockchain and return it.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            const engageTx = makeEngageTx(referentSk, myPk)
+            bc.receiveInvests(engageTx)
+            const tx = new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2)
+            const result = bc.receivePayerOrder(tx)
+
+            assert.equal(tx.type, TXTYPE.PAYERORDER)
+            assert.equal(tx.signer, referentPk)
+            assert.equal(tx.ecosystem, myPk)
+            assert.ok(tx.isValid())
+            assert.include(bc.lastblock.transactions, tx)
+            assert.equal(result, tx)
+        })
+
+        it('Should not throw if cap is 0 (unlimited) even with many invests.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            const invests = buildInvestIndexes(DATE2, 2)
+            bc.lastblock.invests = invests
+            const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
+
+            assert.doesNotThrow(() => bc.receivePayerOrder(tx))
         })
 
         it('Should succeed when invest date equals order date.', () => {
@@ -523,8 +546,9 @@ describe('EcosystemBlockchain', () => {
             bc.setPayer(adminSk, referentPk, 0, DATE2)
             const invests = buildInvestIndexes(DATE2, 1)
             bc.lastblock.invests = invests
+            const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
 
-            assert.doesNotThrow(() => bc.payerOrder(referentSk, myPk, invests, DATE2))
+            assert.doesNotThrow(() => bc.receivePayerOrder(tx))
         })
     })
 
@@ -549,7 +573,7 @@ describe('EcosystemBlockchain', () => {
             bc.setPayer(adminSk, referentPk, 0, DATE2)
             const engageTx = makeEngageTx(referentSk, myPk)
             bc.receiveInvests(engageTx)
-            bc.payerOrder(referentSk, myPk, engageTx.invests, DATE2)
+            bc.receivePayerOrder(new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2))
             const tx = bc.order(mySk, targetPk, engageTx.invests, DATE2)
 
             assert.equal(tx.type, TXTYPE.EARN)
@@ -729,7 +753,7 @@ describe('EcosystemBlockchain', () => {
             bc.setPayer(adminSk, referentPk, 0, DATE2)
             const engageTx = makeEngageTx(adminSk, myPk, DATE2)
             bc.receiveInvests(engageTx)
-            bc.payerOrder(referentSk, myPk, engageTx.invests, DATE2)
+            bc.receivePayerOrder(new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2))
             bc.order(mySk, myPk, engageTx.invests, DATE2)
             bc.lastblock.money = buildMoneyIndexes(DATE2, 6)
             bc.earn(mySk, adminPk, bc.lastblock.money.slice(0, 3), DATE2)

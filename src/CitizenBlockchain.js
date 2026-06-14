@@ -3,7 +3,7 @@ import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { randomPrivateKey, publicFromPrivate, 
 	dateToInt, buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
 import { BirthBlock, InitializationBlock } from './Block.js'
-import { CreateTransaction, EngageTransaction, PaperTransaction, PayTransaction, TXTYPE } from './Transaction.js'
+import { CreateTransaction, EngageTransaction, PaperTransaction, PayTransaction, PayerOrderTransaction, TXTYPE } from './Transaction.js'
 
 export class CitizenBlockchain extends Blockchain {
 
@@ -120,6 +120,14 @@ export class CitizenBlockchain extends Blockchain {
 			dateIndex.setDate(dateIndex.getDate() + 1)
 		}
 		return indexes
+	}
+
+	payerOrder(mySk, ecosystemPk, supplierPk, invests, date = new Date()) {
+		if (publicFromPrivate(mySk) !== this.getMyPublicKey())
+			throw new UnauthorizedError('Private key does not match blockchain owner.')
+		const tx = new PayerOrderTransaction(mySk, supplierPk, invests, ecosystemPk, date)
+		this.addTransaction(tx)
+		return tx
 	}
 
 	pay(mySk, targetPk, amount, d = new Date()) {

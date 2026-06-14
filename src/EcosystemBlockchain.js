@@ -194,20 +194,23 @@ export class EcosystemBlockchain extends Blockchain {
         return engageTx
     }
 
-    payerOrder(payerSk, targetPk, invests, date = new Date()) {
-        const payerPk = publicFromPrivate(payerSk)
-        if (!this.isPayer(payerPk)) throw new UnauthorizedError('Only payers can create payment orders.')
-        const cap = this.getPayers().get(payerPk)
-        if (cap > 0 && invests.length > cap)
+    receivePayerOrder(tx) {
+        if (tx.type !== TXTYPE.PAYERORDER || !tx.isValid())
+            throw new InvalidTransactionError('Invalid transaction.')
+        if (tx.ecosystem !== this.getMyPublicKey())
+            throw new InvalidTransactionError('Transaction not intended for this ecosystem.')
+        if (!this.isPayer(tx.signer))
+            throw new UnauthorizedError('Only payers can create payment orders.')
+        const cap = this.getPayers().get(tx.signer)
+        if (cap > 0 && tx.invests.length > cap)
             throw new InvalidTransactionError('Order exceeds payer capacity.')
-        const allInvestsAvailable = invests.every(i => this.lastblock.invests.includes(i))
+        const allInvestsAvailable = tx.invests.every(i => this.lastblock.invests.includes(i))
         if (!allInvestsAvailable)
             throw new InvalidTransactionError('Ecosystem does not have these invests available.')
-        const orderDateInt = dateToInt(date)
-        const allInvestsMature = invests.every(i => unitIdToDateInt(i) <= orderDateInt)
+        const orderDateInt = dateToInt(tx.date)
+        const allInvestsMature = tx.invests.every(i => unitIdToDateInt(i) <= orderDateInt)
         if (!allInvestsMature)
             throw new InvalidTransactionError('Some invests are not yet available.')
-        const tx = new PayerOrderTransaction(payerSk, targetPk, invests, date)
         this.addTransaction(tx)
         return tx
     }

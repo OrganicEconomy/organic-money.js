@@ -5,8 +5,8 @@ import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js';
 import { Blockchain } from '../src/Blockchain.js';
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js';
 import { mySk, myPk, targetSk, targetPk, makeBlock, makeBlockObj, makeTransaction, referentSk, referentPk } from './testUtils.js'
-import { dateToInt, intToDate, randomPrivateKey } from '../src/crypto.js'
-import { TXTYPE } from '../src/Transaction.js'
+import { dateToInt, intToDate, randomPrivateKey, buildInvestIndexes } from '../src/crypto.js'
+import { TXTYPE, PayerOrderTransaction } from '../src/Transaction.js'
 
 
 describe('CitizenBlockchain', () => {
@@ -1001,5 +1001,49 @@ describe('CitizenBlockchain', () => {
 			assert.deepEqual(bc.lastblock.invests, [202601129000])
 		})
 	})
-	
+
+	describe('payerOrder', () => {
+		const DATE2 = new Date('2025-01-02')
+
+		it('Should throw UnauthorizedError if SK does not match blockchain owner.', () => {
+			const bc = level3CitizenBlockchain()
+
+			assert.throws(
+				() => bc.payerOrder(targetSk, referentPk, targetPk, [], DATE2),
+				UnauthorizedError
+			)
+		})
+
+		it('Should create a PayerOrderTransaction with correct fields.', () => {
+			const bc = level3CitizenBlockchain()
+			const invests = buildInvestIndexes(DATE2, 1)
+
+			const tx = bc.payerOrder(mySk, referentPk, targetPk, invests, DATE2)
+
+			assert.equal(tx.type, TXTYPE.PAYERORDER)
+			assert.equal(tx.signer, myPk)
+			assert.equal(tx.target, targetPk)
+			assert.equal(tx.ecosystem, referentPk)
+			assert.ok(tx.isValid())
+		})
+
+		it('Should add the transaction to the citizen blockchain.', () => {
+			const bc = level3CitizenBlockchain()
+			const invests = buildInvestIndexes(DATE2, 1)
+
+			const tx = bc.payerOrder(mySk, referentPk, targetPk, invests, DATE2)
+
+			assert.include(bc.lastblock.transactions, tx)
+		})
+
+		it('Should return the transaction.', () => {
+			const bc = level3CitizenBlockchain()
+			const invests = buildInvestIndexes(DATE2, 1)
+
+			const result = bc.payerOrder(mySk, referentPk, targetPk, invests, DATE2)
+
+			assert.instanceOf(result, PayerOrderTransaction)
+		})
+	})
+
 })

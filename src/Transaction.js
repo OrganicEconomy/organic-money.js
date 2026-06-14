@@ -563,9 +563,11 @@ export class UnsetPayerTransaction extends Transaction {
 }
 
 export class PayerOrderTransaction extends Transaction {
-    constructor(objOrSk, targetPk = null, invests = [], date = null) {
+    constructor(objOrSk, targetPk = null, invests = [], ecosystemPk = null, date = null) {
         if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
             super(objOrSk)
+            if (objOrSk.e === undefined) throw new Error('PayerOrderTransaction: missing e field')
+            this.ecosystem = objOrSk.e
         } else {
             super({
                 v: Blockchain.VERSION,
@@ -577,9 +579,26 @@ export class PayerOrderTransaction extends Transaction {
                 p: targetPk,
                 h: ""
             })
+            this.ecosystem = ecosystemPk
             this.sign(objOrSk)
         }
     }
+
+    hash() {
+        const tx = {
+            d: dateToInt(this.date),
+            m: this.money,
+            i: this.invests,
+            s: this.signer,
+            t: this.type,
+            p: this.target,
+            v: this.version,
+            e: this.ecosystem
+        }
+        return sha256(encode(tx))
+    }
+
+    export() { return { ...super.export(), e: this.ecosystem } }
 
     toString() { return '[PayerOrderTransaction]' }
 
@@ -588,7 +607,9 @@ export class PayerOrderTransaction extends Transaction {
             this.type === TXTYPE.PAYERORDER &&
             this.money.length === 0 &&
             !! this.target &&
-            this.target.length === 66
+            this.target.length === 66 &&
+            !! this.ecosystem &&
+            this.ecosystem.length === 66
     }
 }
 

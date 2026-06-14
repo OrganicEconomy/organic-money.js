@@ -157,15 +157,16 @@ The founding admin is automatically registered as admin and actor (ratio 1) when
 
 ```mermaid
 sequenceDiagram
-    participant C as Citizen client
+    participant C as Citizen
+    participant P as Citizen (Payer)
     participant Eco as Ecosystem
     participant Su as Supplier
     participant Ac as Actor
 
-    Note over C,Eco: Invest flow
+    Note over C,Su: Invest flow
     C->>Eco: engageInvests(ecoPk, amount, days)
     Eco->>Eco: receiveInvests(engageTx)
-    Eco->>Su: payerOrder(supplierPk, invests)
+    P->>Eco: payerOrder(supplierPk, invests)
     Eco->>Su: order(supplierPk, invests)
 
     Note over C,Ac: Money flow

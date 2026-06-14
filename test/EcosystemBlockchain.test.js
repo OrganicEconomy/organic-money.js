@@ -595,13 +595,27 @@ describe('EcosystemBlockchain', () => {
             )
         })
 
-        it('Should succeed when invest date equals order date.', () => {
+        it('Should throw if no payerOrder authorizes these invests.', () => {
             const bc = makeStartedEco()
 
             const invests = buildInvestIndexes(DATE2, 1)
             bc.lastblock.invests = invests
 
-            assert.doesNotThrow(() => bc.order(mySk, myPk, invests, DATE2))
+            assert.throws(
+                () => bc.order(mySk, targetPk, invests, DATE2),
+                InvalidTransactionError
+            )
+        })
+
+        it('Should succeed when invest date equals order date.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            const invests = buildInvestIndexes(DATE2, 1)
+            bc.lastblock.invests = invests
+            bc.receivePayerOrder(new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2))
+
+            assert.doesNotThrow(() => bc.order(mySk, targetPk, invests, DATE2))
         })
     })
 
@@ -754,7 +768,7 @@ describe('EcosystemBlockchain', () => {
             const engageTx = makeEngageTx(adminSk, myPk, DATE2)
             bc.receiveInvests(engageTx)
             bc.receivePayerOrder(new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2))
-            bc.order(mySk, myPk, engageTx.invests, DATE2)
+            bc.order(mySk, targetPk, engageTx.invests, DATE2)
             bc.lastblock.money = buildMoneyIndexes(DATE2, 6)
             bc.earn(mySk, adminPk, bc.lastblock.money.slice(0, 3), DATE2)
 

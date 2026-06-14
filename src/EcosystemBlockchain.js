@@ -224,6 +224,11 @@ export class EcosystemBlockchain extends Blockchain {
         const allInvestsMature = invests.every(i => unitIdToDateInt(i) <= orderDateInt)
         if (!allInvestsMature)
             throw new InvalidTransactionError('Some invests are not yet available.')
+        const authorizedInvests = this.lastblock.transactions
+            .filter(tx => tx.type === TXTYPE.PAYERORDER && tx.target === targetPk)
+            .flatMap(tx => tx.invests)
+        if (!invests.every(i => authorizedInvests.includes(i)))
+            throw new InvalidTransactionError('No payer authorization for these invests.')
         const money = invests.map(investIdToMoneyId)
         this.removeInvests(invests)
         this.lastblock.money = this.lastblock.money.concat(money)

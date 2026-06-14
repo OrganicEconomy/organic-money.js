@@ -194,6 +194,12 @@ export class EcosystemBlockchain extends Blockchain {
         return engageTx
     }
 
+    receiveEarn(earnTx) {
+        super.receiveEarn(earnTx)
+        this.lastblock.money = this.lastblock.money.concat(earnTx.money)
+        return earnTx
+    }
+
     receiveMoney(engageTx) {
         if (engageTx.type !== TXTYPE.ENGAGE || !engageTx.isValid())
             throw new InvalidTransactionError('Invalid transaction')

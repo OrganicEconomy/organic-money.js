@@ -95,6 +95,15 @@ export class Blockchain {
 		}
 	}
 
+	receiveEarn(earnTx) {
+		if (earnTx.type !== TXTYPE.EARN || !earnTx.isValid())
+			throw new InvalidTransactionError('Invalid transaction')
+		if (earnTx.target !== this.getMyPublicKey())
+			throw new InvalidTransactionError('Transaction not targeting this blockchain')
+		this.addTransaction(earnTx)
+		return earnTx
+	}
+
 	export() {
 		return this.blocks.map(bk => bk.export())
 	}

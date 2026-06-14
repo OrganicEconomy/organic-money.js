@@ -6,7 +6,7 @@ import { Blockchain } from '../src/Blockchain.js';
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js';
 import { mySk, myPk, targetSk, targetPk, makeBlock, makeBlockObj, makeTransaction, referentSk, referentPk } from './testUtils.js'
 import { dateToInt, intToDate, randomPrivateKey, buildInvestIndexes } from '../src/crypto.js'
-import { TXTYPE, PayerOrderTransaction } from '../src/Transaction.js'
+import { TXTYPE, PayerOrderTransaction, EarnTransaction } from '../src/Transaction.js'
 
 
 describe('CitizenBlockchain', () => {
@@ -1043,6 +1043,54 @@ describe('CitizenBlockchain', () => {
 			const result = bc.payerOrder(mySk, referentPk, targetPk, invests, DATE2)
 
 			assert.instanceOf(result, PayerOrderTransaction)
+		})
+	})
+
+	describe('receiveEarn', () => {
+		const DATE2 = new Date('2025-01-03')
+
+		it('Should throw if not an EarnTransaction.', () => {
+			const bc = level3CitizenBlockchain()
+
+			const tx = new PayerOrderTransaction(mySk, targetPk, [], referentPk, DATE2)
+
+			assert.throws(() => bc.receiveEarn(tx))
+		})
+
+		it('Should throw if not targeting this citizen.', () => {
+			const bc = level3CitizenBlockchain()
+
+			const tx = new EarnTransaction(referentSk, targetPk, [20250101000], DATE2)
+
+			assert.throws(() => bc.receiveEarn(tx))
+		})
+
+		it('Should increment total by money.length.', () => {
+			const bc = level3CitizenBlockchain()
+			const totalBefore = bc.lastblock.total
+
+			const tx = new EarnTransaction(referentSk, myPk, [20250101000, 20250101001], DATE2)
+			bc.receiveEarn(tx)
+
+			assert.equal(bc.lastblock.total, totalBefore + 2)
+		})
+
+		it('Should record the transaction in the blockchain.', () => {
+			const bc = level3CitizenBlockchain()
+
+			const tx = new EarnTransaction(referentSk, myPk, [20250101000], DATE2)
+			bc.receiveEarn(tx)
+
+			assert.include(bc.lastblock.transactions, tx)
+		})
+
+		it('Should return the transaction.', () => {
+			const bc = level3CitizenBlockchain()
+
+			const tx = new EarnTransaction(referentSk, myPk, [20250101000], DATE2)
+			const result = bc.receiveEarn(tx)
+
+			assert.equal(result, tx)
 		})
 	})
 

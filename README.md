@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![npm version](https://img.shields.io/npm/v/organic-money)](https://www.npmjs.com/package/organic-money)
-[![Tests](https://github.com/GuziEconomy/organic-money.js/actions/workflows/test.yml/badge.svg)](https://github.com/GuziEconomy/organic-money.js/actions)
+[![Tests](https://img.shields.io/badge/tests-mocha-green)](https://github.com/GuziEconomy/organic-money.js)
 
 **organic-money.js** is the core cryptographic library of the [Organic Economy](https://economie-organique.fr) — a peer-to-peer monetary system where every citizen controls their own signed blockchain. Money creation grows naturally with each citizen's economic participation, and the protocol is fully compatible with both digital transactions and printed paper currency.
 
@@ -93,7 +93,7 @@ sequenceDiagram
 
 ### Citizens and Blockchains
 
-Each citizen owns a `CitizenBlockchain` — a chain of cryptographically signed blocks. A new account must be validated by any existing validated citizen (the **referent**) who co-signs the birth block.
+Each citizen owns a `CitizenBlockchain` — a chain of cryptographically signed blocks. A new account must be validated by any existing validated citizen (the **referent**) who signs the birth block.
 
 ```mermaid
 stateDiagram-v2
@@ -176,7 +176,7 @@ sequenceDiagram
 
 ### Paper Money
 
-A citizen can convert digital money into a **paper transaction** — a cryptographically signed document representing printed currency. The paper's `target` is the public key of the **local ecosystem** responsible for paper handling. When another citizen redeems the paper, their block must be co-signed by that same ecosystem.
+A citizen can convert digital money into a **paper transaction** — a cryptographically signed document representing printed currency. The paper's `target` is the public key of the **local ecosystem** responsible for paper handling. When another citizen redeems the paper, their block must be signed by that same ecosystem.
 
 ```mermaid
 sequenceDiagram
@@ -188,8 +188,8 @@ sequenceDiagram
     Note over Alice: Money removed from Alice's wallet
     Alice-->>Bob: hands physical paper
 
-    Bob->>Bob: cashPaper(paperTx)
     Bob->>LocalEco: redemption request
+    Bob->>Bob: cashPaper(paperTx)
     LocalEco->>Bob: signs Bob's block (closeLastBlock)
     Note over Bob: Economic experience (total) incremented
 ```
@@ -226,7 +226,7 @@ npm run build
 ```js
 import { CitizenBlockchain, randomPrivateKey, publicFromPrivate } from 'organic-money'
 
-// The referent is any existing validated citizen who co-signs the new account
+// The referent is any existing validated citizen who signs the new account
 const referentSk = '...' // loaded from secure storage
 
 const blockchain = new CitizenBlockchain()
@@ -310,7 +310,7 @@ const paperTx = blockchain.generatePaper(citizenSk, 10, localEcoPk)
 #### Cash a paper
 
 ```js
-// The block containing this transaction must be co-signed by the local ecosystem
+// The block containing this transaction must be signed by the local ecosystem
 blockchain.cashPaper(paperTx)
 ```
 
@@ -336,6 +336,7 @@ const restored = new CitizenBlockchain(data)
 ```js
 import { EcosystemBlockchain, randomPrivateKey, publicFromPrivate } from 'organic-money'
 
+// Admin should be a citizen, here we use random for example
 const adminSk = randomPrivateKey()
 const adminPk = publicFromPrivate(adminSk)
 
@@ -393,10 +394,11 @@ console.log(eco.invests.length) // invests now available in the ecosystem
 #### Issue invest orders
 
 ```js
-// A payer delegates invests from the ecosystem's wallet to a supplier
-eco.payerOrder(aliceSk, supplierPk, eco.invests.slice(0, 5))
+// Payer delegates invests from the ecosystem's wallet to a supplier
+const payOrderTx = citizenBlockchain.payerOrder(aliceSk, supplierPk, eco.invests.slice(0, 5))
 
-// The ecosystem itself can also create orders (using its own private key)
+// The ecosystem records the payerOrder and then create corresponding order (using its own private key)
+eco.addaddTransaction(payOrderTx)
 eco.order(ecoSk, targetPk, eco.invests.slice(0, 3))
 ```
 
@@ -472,12 +474,17 @@ const referentSk = randomPrivateKey()
 const referent = new CitizenBlockchain()
 referent.startBlockchain('Referent', new Date('1980-01-01'), referentSk)
 
-// ── 2. Alice creates her account, validated by the referent ───────────────────
+// ── 2. Alice creates her birth block (on her own device) ─────────────────────
 const yesterday = new Date(Date.now() - 86400000)
 
 const alice = new CitizenBlockchain()
-const aliceSk = alice.startBlockchain('Alice', new Date('1990-03-15'), referentSk, null, yesterday)
+const aliceSk = alice.makeBirthBlock('Alice', new Date('1990-03-15'), null, yesterday)
 const alicePk = publicFromPrivate(aliceSk)
+// Alice sends her birth block to the referent for validation
+
+// ── 2b. The referent validates Alice's account ────────────────────────────────
+alice.validateAccount(referentSk, yesterday)
+// The referent's InitializationBlock is added; the account is now active
 
 console.log(alice.isValidated())          // true
 console.log(alice.getLevel())             // 1 — starts at level 1

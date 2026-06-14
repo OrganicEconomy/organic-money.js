@@ -148,25 +148,29 @@ An `EcosystemBlockchain` represents a collective entity (cooperative, associatio
 | **Actor** | Contributor who receives a proportional salary | `ratio` |
 | **Payer** | Authorized to issue invest orders (optionally capped) | `cap` |
 
-Citizens **engage** their invests into an ecosystem. Payers send invest orders to the ecosystem (`payerOrder`); the ecosystem checks their validity and sends the real payment order to the target (`order`), at which point the invests are removed from the wallet. The ecosystem distributes its available money as **earnings** to actors, proportional to their ratios.
+Two separate economic flows pass through an ecosystem:
+
+- **Invest flow** — citizens engage invests into the ecosystem. Payers send invest orders (`payerOrder`); the ecosystem validates and executes them (`order`), delegating the invests to a supplier. Invests are only for ordering.
+- **Money flow** — citizen clients pay the ecosystem with money (PAY). The ecosystem then distributes that money to its actors as salary (EARN), proportional to their ratios.
 
 The founding admin is automatically registered as admin and actor (ratio 1) when the ecosystem is created.
 
 ```mermaid
 sequenceDiagram
-    participant C as Citizen
+    participant C as Citizen client
     participant Eco as Ecosystem
-    participant S as Supplier / Actor
+    participant Su as Supplier
+    participant Ac as Actor
 
+    Note over C,Eco: Invest flow
     C->>Eco: engageInvests(ecoPk, amount, days)
-    Eco->>Eco: receiveInvests(engageTx)\ninvests added to wallet
-    Note over Eco: Invests accumulate
+    Eco->>Eco: receiveInvests(engageTx)
+    Eco->>Su: payerOrder(supplierPk, invests)
+    Eco->>Su: order(supplierPk, invests)
 
-    Eco->>S: payerOrder(supplierPk, invests)
-    Note over S: Supplier receives invest tokens
-
-    Eco->>S: earn(actorPk, money)
-    Note over S: Actor receives salary
+    Note over C,Ac: Money flow
+    C->>Eco: pay(ecoPk, amount)
+    Eco->>Ac: earn(actorPk, money)
 ```
 
 ### Paper Money

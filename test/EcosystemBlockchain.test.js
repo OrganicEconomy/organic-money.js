@@ -456,7 +456,7 @@ describe('EcosystemBlockchain', () => {
 
             const tx = new SetAdminTransaction(adminSk, referentPk, DATE2)
 
-            assert.throws(() => bc.receivePayerOrder(tx))
+            assert.throws(() => bc.receivePayerOrder(mySk,tx))
         })
 
         it('Should throw if ecosystem does not match this ecosystem.', () => {
@@ -467,7 +467,7 @@ describe('EcosystemBlockchain', () => {
             bc.lastblock.invests = invests
             const tx = new PayerOrderTransaction(referentSk, targetPk, invests, referentPk, DATE2)
 
-            assert.throws(() => bc.receivePayerOrder(tx))
+            assert.throws(() => bc.receivePayerOrder(mySk,tx))
         })
 
         it('Should throw if signer is not a payer.', () => {
@@ -477,7 +477,7 @@ describe('EcosystemBlockchain', () => {
             bc.lastblock.invests = invests
             const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
 
-            assert.throws(() => bc.receivePayerOrder(tx))
+            assert.throws(() => bc.receivePayerOrder(mySk,tx))
         })
 
         it('Should throw if invests exceed payer cap.', () => {
@@ -488,7 +488,22 @@ describe('EcosystemBlockchain', () => {
             bc.lastblock.invests = invests
             const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
 
-            assert.throws(() => bc.receivePayerOrder(tx))
+            assert.throws(() => bc.receivePayerOrder(mySk,tx))
+        })
+
+        it('Should throw if cumulative payerOrders from same payer exceed cap.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 3, DATE2)
+            const invests1 = buildInvestIndexes(DATE1, 2)
+            const invests2 = buildInvestIndexes(DATE2, 2)
+            bc.lastblock.invests = [...invests1, ...invests2]
+            bc.receivePayerOrder(mySk,new PayerOrderTransaction(referentSk, targetPk, invests1, myPk, DATE2))
+
+            assert.throws(
+                () => bc.receivePayerOrder(mySk,new PayerOrderTransaction(referentSk, targetPk, invests2, myPk, DATE2)),
+                InvalidTransactionError
+            )
         })
 
         it('Should throw if invests not in lastblock.invests.', () => {
@@ -498,7 +513,7 @@ describe('EcosystemBlockchain', () => {
             const invests = buildInvestIndexes(DATE2, 1)
             const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
 
-            assert.throws(() => bc.receivePayerOrder(tx))
+            assert.throws(() => bc.receivePayerOrder(mySk,tx))
         })
 
         it('Should throw if invests are not yet mature.', () => {
@@ -509,7 +524,7 @@ describe('EcosystemBlockchain', () => {
             bc.lastblock.invests = futureInvests
             const tx = new PayerOrderTransaction(referentSk, targetPk, futureInvests, myPk, DATE2)
 
-            assert.throws(() => bc.receivePayerOrder(tx), InvalidTransactionError, 'Some invests are not yet available.')
+            assert.throws(() => bc.receivePayerOrder(mySk,tx), InvalidTransactionError, 'Some invests are not yet available.')
         })
 
         it('Should add the transaction to blockchain and return it.', () => {
@@ -519,7 +534,7 @@ describe('EcosystemBlockchain', () => {
             const engageTx = makeEngageTx(referentSk, myPk)
             bc.receiveInvests(engageTx)
             const tx = new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2)
-            const result = bc.receivePayerOrder(tx)
+            const result = bc.receivePayerOrder(mySk,tx)
 
             assert.equal(tx.type, TXTYPE.PAYERORDER)
             assert.equal(tx.signer, referentPk)
@@ -537,7 +552,7 @@ describe('EcosystemBlockchain', () => {
             bc.lastblock.invests = invests
             const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
 
-            assert.doesNotThrow(() => bc.receivePayerOrder(tx))
+            assert.doesNotThrow(() => bc.receivePayerOrder(mySk,tx))
         })
 
         it('Should succeed when invest date equals order date.', () => {
@@ -548,7 +563,7 @@ describe('EcosystemBlockchain', () => {
             bc.lastblock.invests = invests
             const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
 
-            assert.doesNotThrow(() => bc.receivePayerOrder(tx))
+            assert.doesNotThrow(() => bc.receivePayerOrder(mySk,tx))
         })
     })
 
@@ -573,7 +588,7 @@ describe('EcosystemBlockchain', () => {
             bc.setPayer(adminSk, referentPk, 0, DATE2)
             const engageTx = makeEngageTx(referentSk, myPk)
             bc.receiveInvests(engageTx)
-            bc.receivePayerOrder(new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2))
+            bc.receivePayerOrder(mySk,new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2))
             const tx = bc.order(mySk, targetPk, engageTx.invests, DATE2)
 
             assert.equal(tx.type, TXTYPE.EARN)
@@ -613,7 +628,7 @@ describe('EcosystemBlockchain', () => {
             bc.setPayer(adminSk, referentPk, 0, DATE2)
             const invests = buildInvestIndexes(DATE2, 1)
             bc.lastblock.invests = invests
-            bc.receivePayerOrder(new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2))
+            bc.receivePayerOrder(mySk,new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2))
 
             assert.doesNotThrow(() => bc.order(mySk, targetPk, invests, DATE2))
         })
@@ -767,7 +782,7 @@ describe('EcosystemBlockchain', () => {
             bc.setPayer(adminSk, referentPk, 0, DATE2)
             const engageTx = makeEngageTx(adminSk, myPk, DATE2)
             bc.receiveInvests(engageTx)
-            bc.receivePayerOrder(new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2))
+            bc.receivePayerOrder(mySk,new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2))
             bc.order(mySk, targetPk, engageTx.invests, DATE2)
             bc.lastblock.money = buildMoneyIndexes(DATE2, 6)
             bc.earn(mySk, adminPk, bc.lastblock.money.slice(0, 3), DATE2)

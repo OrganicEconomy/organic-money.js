@@ -194,7 +194,8 @@ export class EcosystemBlockchain extends Blockchain {
         return engageTx
     }
 
-    receivePayerOrder(tx) {
+    receivePayerOrder(ecoSk, tx) {
+        this.#assertIsMe(ecoSk)
         if (tx.type !== TXTYPE.PAYERORDER || !tx.isValid())
             throw new InvalidTransactionError('Invalid transaction.')
         if (tx.ecosystem !== this.getMyPublicKey())
@@ -211,6 +212,10 @@ export class EcosystemBlockchain extends Blockchain {
         const allInvestsMature = tx.invests.every(i => unitIdToDateInt(i) <= orderDateInt)
         if (!allInvestsMature)
             throw new InvalidTransactionError('Some invests are not yet available.')
+        if (cap > 0) {
+            const capUpdate = new SetPayerTransaction(ecoSk, tx.signer, cap - tx.invests.length, tx.date)
+            this.addTransaction(capUpdate)
+        }
         this.addTransaction(tx)
         return tx
     }

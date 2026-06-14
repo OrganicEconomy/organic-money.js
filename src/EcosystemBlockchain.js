@@ -83,6 +83,11 @@ export class EcosystemBlockchain extends Blockchain {
     isActor(pk)  { return this.getActors().has(pk) }
     isPayer(pk)  { return this.getPayers().has(pk) }
 
+    getAffordableInvestsAmount(date = new Date()) {
+        const dateInt = dateToInt(date)
+        return this.lastblock.invests.filter(i => unitIdToDateInt(i) <= dateInt).length
+    }
+
     newBlock() {
         const oldTransactions = this.lastblock.transactions
         const activeAdmins = this.getAdmins()

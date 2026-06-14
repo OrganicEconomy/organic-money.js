@@ -379,6 +379,16 @@ eco.isActor(alicePk)  // boolean
 eco.isPayer(alicePk)  // boolean
 ```
 
+#### Query available invests
+
+```js
+// Count invests whose date has been reached (usable in orders today)
+eco.getAffordableInvestsAmount()
+
+// Count invests that will be mature by a future date
+eco.getAffordableInvestsAmount(new Date('2025-03-01'))
+```
+
 #### Receive citizen investments
 
 ```js

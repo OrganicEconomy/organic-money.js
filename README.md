@@ -116,7 +116,7 @@ Each citizen generates two types of units per day:
 202511129004  → 4th invest unit created on November 12, 2025
 ```
 
-The ID encodes both the creation date and type, making provenance trivially auditable. Gaps from missed days are automatically filled when `createMoneyAndInvests` is next called.
+The ID encodes both the creation date and type, making provenance trivially auditable. Because the date is embedded in the ID, a future invest ID (committed today for a date not yet reached) cannot be used in an order until that date arrives. Gaps from missed days are automatically filled when `createMoneyAndInvests` is next called.
 
 When a citizen pays another, the money IDs are removed from the sender's wallet. The receiver records the transaction to increase their economic experience, which drives their level progression. A citizen's spendable balance (`block.money`) contains only money they have created themselves.
 
@@ -150,7 +150,7 @@ An `EcosystemBlockchain` represents a collective entity (cooperative, associatio
 
 Two separate economic flows pass through an ecosystem:
 
-- **Invest flow** — citizens engage invests into the ecosystem. Payers send invest orders (`payerOrder`); the ecosystem validates and executes them (`order`), delegating the invests to a supplier. Invests are only for ordering.
+- **Invest flow** — citizens engage invests into the ecosystem over a period of days. The engagement transaction carries invest IDs for the current day and all future days of the commitment; the ecosystem records them all at once (`receiveInvests`), but only invests whose date has been reached can be used in orders. Payers send invest orders (`payerOrder`); the ecosystem validates and executes them (`order`), delegating the mature invests to a supplier.
 - **Money flow** — citizen clients pay the ecosystem with money (PAY). The ecosystem then distributes that money to its actors as salary (EARN), proportional to their ratios.
 
 The founding admin is automatically registered as admin and actor (ratio 1) when the ecosystem is created.

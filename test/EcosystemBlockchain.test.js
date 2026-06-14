@@ -470,6 +470,30 @@ describe('EcosystemBlockchain', () => {
             assert.equal(tx.target, myPk)
             assert.ok(tx.isValid())
         })
+
+        it('Should throw if invests are not yet mature.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            const futureInvests = buildInvestIndexes(DATE3, 1)
+            bc.lastblock.invests = futureInvests
+
+            assert.throws(
+                () => bc.payerOrder(referentSk, myPk, futureInvests, DATE2),
+                InvalidTransactionError,
+                'Some invests are not yet available.'
+            )
+        })
+
+        it('Should succeed when invest date equals order date.', () => {
+            const bc = makeStartedEco()
+
+            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            const invests = buildInvestIndexes(DATE2, 1)
+            bc.lastblock.invests = invests
+
+            assert.doesNotThrow(() => bc.payerOrder(referentSk, myPk, invests, DATE2))
+        })
     })
 
     describe('order', () => {
@@ -500,6 +524,28 @@ describe('EcosystemBlockchain', () => {
             assert.equal(tx.signer, myPk)
             assert.ok(tx.isValid())
             assert.notDeepInclude(bc.lastblock.invests, engageTx.invests[0])
+        })
+
+        it('Should throw if invests are not yet mature.', () => {
+            const bc = makeStartedEco()
+
+            const futureInvests = buildInvestIndexes(DATE3, 1)
+            bc.lastblock.invests = futureInvests
+
+            assert.throws(
+                () => bc.order(mySk, myPk, futureInvests, DATE2),
+                InvalidTransactionError,
+                'Some invests are not yet available.'
+            )
+        })
+
+        it('Should succeed when invest date equals order date.', () => {
+            const bc = makeStartedEco()
+
+            const invests = buildInvestIndexes(DATE2, 1)
+            bc.lastblock.invests = invests
+
+            assert.doesNotThrow(() => bc.order(mySk, myPk, invests, DATE2))
         })
     })
 

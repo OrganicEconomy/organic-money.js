@@ -1,6 +1,6 @@
 import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
-import { randomPrivateKey, publicFromPrivate, dateToInt } from './crypto.js'
+import { randomPrivateKey, publicFromPrivate, dateToInt, unitIdToDateInt } from './crypto.js'
 import { EcoBirthBlock, EcoInitializationBlock, ECOREF_HASH, BlockMaker } from './Block.js'
 import {
     SetAdminTransaction, UnsetAdminTransaction,
@@ -198,6 +198,10 @@ export class EcosystemBlockchain extends Blockchain {
         const allInvestsAvailable = invests.every(i => this.lastblock.invests.includes(i))
         if (!allInvestsAvailable)
             throw new InvalidTransactionError('Ecosystem does not have these invests available.')
+        const orderDateInt = dateToInt(date)
+        const allInvestsMature = invests.every(i => unitIdToDateInt(i) <= orderDateInt)
+        if (!allInvestsMature)
+            throw new InvalidTransactionError('Some invests are not yet available.')
         const tx = new PayerOrderTransaction(payerSk, targetPk, invests, date)
         this.addTransaction(tx)
         return tx
@@ -208,6 +212,10 @@ export class EcosystemBlockchain extends Blockchain {
         const allInvestsAvailable = invests.every(i => this.lastblock.invests.includes(i))
         if (!allInvestsAvailable)
             throw new InvalidTransactionError('Ecosystem does not have these invests available.')
+        const orderDateInt = dateToInt(date)
+        const allInvestsMature = invests.every(i => unitIdToDateInt(i) <= orderDateInt)
+        if (!allInvestsMature)
+            throw new InvalidTransactionError('Some invests are not yet available.')
         const tx = new OrderTransaction(ecoSk, targetPk, invests, date)
         this.addTransaction(tx)
         this.removeInvests(invests)

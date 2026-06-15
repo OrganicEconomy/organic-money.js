@@ -194,6 +194,16 @@ export class EcosystemBlockchain extends Blockchain {
         return engageTx
     }
 
+    receivePay(payTx) {
+        if (payTx.type !== TXTYPE.PAY || !payTx.isValid())
+            throw new InvalidTransactionError('Invalid transaction')
+        if (payTx.target !== this.getMyPublicKey())
+            throw new InvalidTransactionError('Transaction not targeting this ecosystem')
+        this.addTransaction(payTx)
+        this.lastblock.money = this.lastblock.money.concat(payTx.money)
+        return payTx
+    }
+
     receiveEarn(earnTx) {
         super.receiveEarn(earnTx)
         this.lastblock.money = this.lastblock.money.concat(earnTx.money)

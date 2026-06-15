@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>organic-money.js — Référence fonctionnelle complète</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', serif;
+    font-size: 11pt;
+    line-height: 1.7;
+    color: #1a1a1a;
+    background: #fff;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 3rem;
+  }
+
+  h1 { font-size: 22pt; margin-bottom: 0.3rem; }
+  h2 { font-size: 15pt; margin-top: 2.5rem; margin-bottom: 0.8rem; border-bottom: 2px solid #2c5f2e; padding-bottom: 0.3rem; color: #2c5f2e; }
+  h3 { font-size: 12pt; margin-top: 1.6rem; margin-bottom: 0.5rem; color: #444; }
+  h4 { font-size: 11pt; margin-top: 1.2rem; margin-bottom: 0.3rem; color: #555; font-style: italic; }
+
+  p { margin-bottom: 0.8rem; }
+
+  ul, ol { margin: 0.4rem 0 0.8rem 1.6rem; }
+  li { margin-bottom: 0.2rem; }
+
+  code {
+    font-family: 'Courier New', monospace;
+    font-size: 9.5pt;
+    background: #f4f4f4;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    color: #c0392b;
+  }
+
+  .fn {
+    font-family: 'Courier New', monospace;
+    font-size: 9.5pt;
+    background: #eef6ee;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    color: #2c5f2e;
+    font-weight: bold;
+  }
+
+  .tx-type {
+    font-family: 'Courier New', monospace;
+    font-size: 9pt;
+    background: #fdf3e7;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    color: #8B4513;
+    font-weight: bold;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0 1.2rem;
+    font-size: 10pt;
+  }
+  th {
+    background: #2c5f2e;
+    color: #fff;
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+  }
+  td { padding: 0.35rem 0.6rem; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f9f9f9; }
+
+  .flow-box {
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    border-left: 4px solid #2c5f2e;
+    padding: 0.8rem 1rem;
+    margin: 1rem 0;
+    font-size: 10pt;
+  }
+  .flow-box .step { margin-bottom: 0.3rem; }
+  .flow-box .actor { font-weight: bold; color: #2c5f2e; min-width: 200px; display: inline-block; }
+  .flow-box .arrow { color: #999; margin: 0 0.3rem; }
+
+  .note {
+    background: #fffbe6;
+    border: 1px solid #f0d060;
+    border-radius: 4px;
+    padding: 0.6rem 1rem;
+    margin: 0.8rem 0;
+    font-size: 10pt;
+  }
+
+  .section-intro {
+    background: #f0f7f0;
+    border-radius: 4px;
+    padding: 0.6rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 10.5pt;
+  }
+
+  .cover {
+    text-align: center;
+    padding: 4rem 0 3rem;
+    border-bottom: 3px solid #2c5f2e;
+    margin-bottom: 2rem;
+  }
+  .cover .subtitle { font-size: 13pt; color: #555; margin-top: 0.5rem; }
+  .cover .meta { font-size: 10pt; color: #888; margin-top: 1.5rem; }
+
+  .toc { margin: 1.5rem 0; }
+  .toc ul { list-style: none; margin: 0; }
+  .toc > ul > li { margin-bottom: 0.4rem; font-weight: bold; }
+  .toc > ul > li > ul { font-weight: normal; margin-top: 0.2rem; margin-left: 1.2rem; }
+  .toc > ul > li > ul > li { margin-bottom: 0.1rem; }
+
+  @media print {
+    body { padding: 1.5cm 2cm; font-size: 10.5pt; }
+    h2 { page-break-before: auto; }
+    .flow-box { break-inside: avoid; }
+    table { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- COUVERTURE -->
+<div class="cover">
+  <h1>organic-money.js</h1>
+  <div class="subtitle">Référence fonctionnelle complète</div>
+  <div class="subtitle" style="font-size:11pt; margin-top:0.3rem;">Blockchains, transactions et parcours métier</div>
+  <div class="meta">Bibliothèque JavaScript — Protocole Monnaie Organique<br>GuziEconomy · Version courante · Juin 2026</div>
+</div>
+
+<!-- TABLE DES MATIÈRES -->
+<h2>Table des matières</h2>
+<div class="toc">
+<ul>
+  <li>1. Vue d'ensemble du système</li>
+  <li>2. Concepts fondamentaux
+    <ul>
+      <li>2.1 Money et Invests</li>
+      <li>2.2 Le système de niveaux</li>
+      <li>2.3 Blocs et transactions</li>
+      <li>2.4 Clés cryptographiques</li>
+    </ul>
+  </li>
+  <li>3. Types de transactions</li>
+  <li>4. La blockchain citoyen (CitizenBlockchain)
+    <ul>
+      <li>4.1 Cycle de vie</li>
+      <li>4.2 Fonctions disponibles</li>
+    </ul>
+  </li>
+  <li>5. La blockchain écosystème (EcosystemBlockchain)
+    <ul>
+      <li>5.1 Cycle de vie</li>
+      <li>5.2 Rôles : Admin, Acteur, Payeur</li>
+      <li>5.3 Fonctions disponibles</li>
+    </ul>
+  </li>
+  <li>6. Parcours de transactions complets
+    <ul>
+      <li>6.1 Création et validation d'un compte citoyen</li>
+      <li>6.2 Création d'un écosystème</li>
+      <li>6.3 Création journalière de money et invests</li>
+      <li>6.4 Paiement entre citoyens</li>
+      <li>6.5 Argent papier : émission et encaissement</li>
+      <li>6.6 Engagement d'invests vers un écosystème</li>
+      <li>6.7 Engagement de money vers un écosystème</li>
+      <li>6.8 Ordre de paiement via un payeur</li>
+      <li>6.9 Distribution de salaires</li>
+      <li>6.10 Réception d'un EARN par un citoyen</li>
+      <li>6.11 Réception d'un EARN par un écosystème</li>
+    </ul>
+  </li>
+  <li>7. Gestion des rôles dans un écosystème</li>
+  <li>8. Persistance et sérialisation</li>
+  <li>9. Utilitaires cryptographiques</li>
+  <li>10. Règles de cohérence et contraintes globales</li>
+</ul>
+</div>
+
+
+<!-- ============================================================ -->
+<h2>1. Vue d'ensemble du système</h2>
+
+<p>
+<strong>organic-money.js</strong> est la bibliothèque JavaScript du protocole Monnaie Organique. Elle implémente un système monétaire pair-à-pair dans lequel chaque citoyen possède sa propre blockchain cryptographique, indépendante de tout serveur central.
+</p>
+
+<p>
+Deux types de blockchains coexistent dans le système :
+</p>
+
+<table>
+  <tr><th>Type</th><th>Classe</th><th>Rôle</th></tr>
+  <tr>
+    <td>Blockchain citoyen</td>
+    <td><code>CitizenBlockchain</code></td>
+    <td>Compte personnel d'un citoyen. Contient ses money, ses invests, ses transactions, et son expérience économique (total).</td>
+  </tr>
+  <tr>
+    <td>Blockchain écosystème</td>
+    <td><code>EcosystemBlockchain</code></td>
+    <td>Compte collectif d'une entité (coopérative, association, commerce). Gère des rôles (admins, acteurs, payeurs), des invests reçus, et distribue des salaires.</td>
+  </tr>
+</table>
+
+<p>
+Les deux héritent d'une base commune <code>Blockchain</code> qui implémente la mécanique de blocs, l'ajout de transactions, la signature, et la sérialisation.
+</p>
+
+<p>
+L'unité monétaire de base est la <strong>money</strong>. Les <strong>invests</strong> sont des jetons d'engagement que les citoyens confient aux écosystèmes pour des projets collectifs. Un invest peut être converti en money (1 pour 1) lorsqu'un écosystème exécute un ordre de paiement. Les deux types d'unités sont identifiés par des entiers qui encodent la date de création et un index séquentiel.
+</p>
+
+
+<!-- ============================================================ -->
+<h2>2. Concepts fondamentaux</h2>
+
+<h3>2.1 Money et Invests</h3>
+
+<p>
+Chaque citoyen génère chaque jour un certain nombre d'unités monétaires, déterminé par son niveau. Ces unités sont de deux types :
+</p>
+
+<table>
+  <tr><th>Type</th><th>Format d'identifiant</th><th>Exemple</th><th>Usage</th></tr>
+  <tr>
+    <td><strong>Money</strong></td>
+    <td><code>YYYYMMDDXXX</code> (11 chiffres)</td>
+    <td><code>20250614003</code></td>
+    <td>Monnaie dépensable directement</td>
+  </tr>
+  <tr>
+    <td><strong>Invests</strong></td>
+    <td><code>YYYYMMDD9XXX</code> (12 chiffres)</td>
+    <td><code>202506149003</code></td>
+    <td>Jetons d'engagement vers les écosystèmes</td>
+  </tr>
+</table>
+
+<p>
+Le séparateur <code>9</code> dans les identifiants invest permet de distinguer les deux types à la seule lecture de l'entier. La date encodée dans l'identifiant rend la provenance et la maturité de chaque unité vérifiables sans lookup externe.
+</p>
+
+<p>
+<strong>Maturité :</strong> une unité (money ou invest) dont la date encodée est postérieure à la date courante est dite <em>future</em>. Elle peut être engagée à l'avance dans un engagement de durée, mais elle ne peut pas être utilisée dans un ordre ou une distribution tant que sa date n'est pas atteinte. La vérification se fait via la fonction utilitaire <span class="fn">unitIdToDateInt(id)</span>.
+</p>
+
+<p>
+<strong>Conversion invest → money :</strong> lorsqu'un écosystème exécute un ordre de paiement, les invests sont convertis en money 1 pour 1. L'identifiant est transformé en retirant le séparateur <code>9</code> : <code>202506149003</code> devient <code>20250614003</code>. Cette conversion est effectuée par la fonction <span class="fn">investIdToMoneyId(id)</span>.
+</p>
+
+<h3>2.2 Le système de niveaux</h3>
+
+<p>
+Le niveau d'un citoyen détermine le nombre d'unités (money + invests) qu'il génère chaque jour. Il progresse en recevant de la money d'autres participants.
+</p>
+
+<table>
+  <tr><th>Niveau</th><th>Unités / jour</th><th>Expérience économique requise</th></tr>
+  <tr><td>1</td><td>1</td><td>0 (niveau de départ)</td></tr>
+  <tr><td>2</td><td>2</td><td>1</td></tr>
+  <tr><td>3</td><td>3</td><td>8</td></tr>
+  <tr><td>4</td><td>4</td><td>27</td></tr>
+  <tr><td>n</td><td>n</td><td>(n − 1)³</td></tr>
+</table>
+
+<p>
+L'<strong>expérience économique</strong> (champ <code>total</code> dans chaque bloc) est le cumul de toutes les unités money reçues par le citoyen, via des transactions PAY, EARN ou PAPER. Le niveau est calculé à la volée : <code>niveau = ⌊∛total⌋ + 1</code>, via la méthode <span class="fn">getLevel()</span>.
+</p>
+
+<h3>2.3 Blocs et transactions</h3>
+
+<p>
+Chaque blockchain est une suite ordonnée de blocs. Le bloc courant (dernier en date, en tête de liste) est ouvert : on peut y ajouter des transactions. Quand un bloc est signé (<em>fermé</em>), toute nouvelle transaction provoque la création automatique d'un nouveau bloc ouvert.
+</p>
+
+<p>
+Chaque bloc conserve un état complet au moment de sa fermeture :
+</p>
+<ul>
+  <li>La liste des money disponibles (non dépensées)</li>
+  <li>La liste des invests disponibles (non engagés)</li>
+  <li>Le total d'expérience économique (citoyens uniquement)</li>
+  <li>La liste des transactions du bloc</li>
+  <li>Le hash du bloc précédent (chaînage)</li>
+</ul>
+
+<p>
+Lors de la création d'un nouveau bloc (transition de bloc), certaines données sont automatiquement reportées : les money et invests restants, l'expérience économique, et — pour les écosystèmes — les transactions de rôles encore actifs.
+</p>
+
+<h3>2.4 Clés cryptographiques</h3>
+
+<p>
+Le protocole utilise la courbe elliptique <strong>SECP256K1</strong> (même courbe que Bitcoin). Chaque entité (citoyen ou écosystème) possède :
+</p>
+<ul>
+  <li>Une <strong>clé privée</strong> (32 octets hex, 64 caractères) : ne quitte jamais l'appareil du propriétaire.</li>
+  <li>Une <strong>clé publique compressée</strong> (33 octets hex, 66 caractères) : identifiant public de la blockchain.</li>
+</ul>
+
+<p>
+Toute transaction est signée par la clé privée de son émetteur. La signature est vérifiable par quiconque possède la clé publique correspondante. Les identifiants de clés publiques servent de cibles (<em>target</em>) dans les transactions.
+</p>
+
+
+<!-- ============================================================ -->
+<h2>3. Types de transactions</h2>
+
+<p>
+Treize types de transactions sont définis dans l'énumération <code>TXTYPE</code>. Chaque transaction comporte des champs communs (version, date, type, signataire, signature) et des champs spécifiques à son type.
+</p>
+
+<table>
+  <tr><th>#</th><th>Constante</th><th>Classe</th><th>Émis par</th><th>Rôle</th></tr>
+  <tr>
+    <td>1</td>
+    <td><span class="tx-type">INIT</span></td>
+    <td><code>InitTransaction</code></td>
+    <td>Bloc de naissance</td>
+    <td>Initialise un compte citoyen ou écosystème (nom, date de naissance).</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td><span class="tx-type">CREATE</span></td>
+    <td><code>CreateTransaction</code></td>
+    <td>Citoyen</td>
+    <td>Génère les unités money et invests pour une période donnée. Contient les listes d'IDs générés.</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td><span class="tx-type">PAY</span></td>
+    <td><code>PayTransaction</code></td>
+    <td>Citoyen</td>
+    <td>Transfère des money d'un citoyen à un autre. Les money sont retirées du wallet de l'émetteur.</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td><span class="tx-type">ENGAGE</span></td>
+    <td><code>EngageTransaction</code></td>
+    <td>Citoyen</td>
+    <td>Engage des money et/ou des invests vers un écosystème sur une période de N jours. Contient l'ensemble des IDs pour tous les jours de l'engagement.</td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td><span class="tx-type">PAPER</span></td>
+    <td><code>PaperTransaction</code></td>
+    <td>Citoyen</td>
+    <td>Convertit des money en billet papier signé. La cible est l'écosystème local gérant les papiers.</td>
+  </tr>
+  <tr>
+    <td>6</td>
+    <td><span class="tx-type">SETADMIN</span></td>
+    <td><code>SetAdminTransaction</code></td>
+    <td>Admin d'écosystème</td>
+    <td>Nomme un admin dans un écosystème.</td>
+  </tr>
+  <tr>
+    <td>7</td>
+    <td><span class="tx-type">SETACTOR</span></td>
+    <td><code>SetActorTransaction</code></td>
+    <td>Admin d'écosystème</td>
+    <td>Nomme un acteur avec un ratio de distribution salariale.</td>
+  </tr>
+  <tr>
+    <td>8</td>
+    <td><span class="tx-type">SETPAYER</span></td>
+    <td><code>SetPayerTransaction</code></td>
+    <td>Admin ou écosystème (auto)</td>
+    <td>Nomme un payeur avec un plafond optionnel. Également émise automatiquement par l'écosystème lors d'un <code>receivePayerOrder</code> pour décrémenter le cap consommé.</td>
+  </tr>
+  <tr>
+    <td>9</td>
+    <td><span class="tx-type">UNSETADMIN</span></td>
+    <td><code>UnsetAdminTransaction</code></td>
+    <td>Admin d'écosystème</td>
+    <td>Révoque un admin (au moins un doit toujours rester).</td>
+  </tr>
+  <tr>
+    <td>10</td>
+    <td><span class="tx-type">UNSETACTOR</span></td>
+    <td><code>UnsetActorTransaction</code></td>
+    <td>Admin d'écosystème</td>
+    <td>Révoque un acteur (interdit si encore admin ou payeur).</td>
+  </tr>
+  <tr>
+    <td>11</td>
+    <td><span class="tx-type">UNSETPAYER</span></td>
+    <td><code>UnsetPayerTransaction</code></td>
+    <td>Admin d'écosystème</td>
+    <td>Révoque un payeur.</td>
+  </tr>
+  <tr>
+    <td>12</td>
+    <td><span class="tx-type">PAYERORDER</span></td>
+    <td><code>PayerOrderTransaction</code></td>
+    <td>Citoyen (payeur)</td>
+    <td>Ordre de paiement signé par un payeur sur <em>sa propre</em> blockchain, puis transmis à l'écosystème. Lié cryptographiquement à un écosystème cible via le champ <code>e</code> (clé publique de l'écosystème incluse dans le hash signé).</td>
+  </tr>
+  <tr>
+    <td>13</td>
+    <td><span class="tx-type">EARN</span></td>
+    <td><code>EarnTransaction</code></td>
+    <td>Écosystème</td>
+    <td>Distribution de money à un acteur, un citoyen ou un autre écosystème. Produit de <code>order()</code> ou <code>distributeSalary()</code>.</td>
+  </tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2>4. La blockchain citoyen (CitizenBlockchain)</h2>
+
+<h3>4.1 Cycle de vie</h3>
+
+<div class="section-intro">
+Un compte citoyen passe par trois états : <strong>vide</strong> → <strong>en attente de validation</strong> → <strong>validé et actif</strong>. La validation requiert la signature d'un citoyen existant (le référent).
+</div>
+
+<table>
+  <tr><th>État</th><th>Condition</th><th>Méthode de test</th></tr>
+  <tr><td>Vide</td><td>Aucun bloc</td><td><span class="fn">isEmpty()</span></td></tr>
+  <tr><td>En attente</td><td>1 seul bloc (BirthBlock non signé par référent)</td><td><span class="fn">isWaitingValidation()</span></td></tr>
+  <tr><td>Validé / actif</td><td>Au moins 2 blocs dont un InitializationBlock</td><td><span class="fn">isValidated()</span></td></tr>
+</table>
+
+<h3>4.2 Fonctions disponibles</h3>
+
+<h4>Initialisation du compte</h4>
+<table>
+  <tr><th>Fonction</th><th>Rôle</th></tr>
+  <tr>
+    <td><span class="fn">startBlockchain(name, birthdate, signerSk, secretKey, date)</span></td>
+    <td>Crée et valide le compte en une seule opération. Appelle <span class="fn">makeBirthBlock</span> puis <span class="fn">validateAccount</span>. Retourne la clé privée du citoyen.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">makeBirthBlock(name, birthdate, secretKey, date)</span></td>
+    <td>Crée le bloc de naissance (BirthBlock) signé par la clé du citoyen. Retourne la clé privée (générée si absente).</td>
+  </tr>
+  <tr>
+    <td><span class="fn">validateAccount(secretKey, date)</span></td>
+    <td>Ajoute un InitializationBlock signé par le référent. La délégation d'autorisation est à la charge de l'appelant.</td>
+  </tr>
+</table>
+
+<h4>Création des unités monétaires</h4>
+<table>
+  <tr><th>Fonction</th><th>Rôle</th></tr>
+  <tr>
+    <td><span class="fn">createMoneyAndInvests(privateKey, date)</span></td>
+    <td>Génère les money et invests pour tous les jours depuis la dernière création jusqu'à <code>date</code>. Ajoute une transaction <span class="tx-type">CREATE</span>. Interdit si <code>date</code> est dans le futur. Ne fait rien si la création a déjà été faite à cette date.</td>
+  </tr>
+</table>
+
+<h4>Paiement et transferts</h4>
+<table>
+  <tr><th>Fonction</th><th>Rôle</th></tr>
+  <tr>
+    <td><span class="fn">pay(mySk, targetPk, amount, date)</span></td>
+    <td>Paye <code>amount</code> money à <code>targetPk</code>. Crée une <span class="tx-type">PAY</span>, retire les money du wallet. Lève une erreur si fonds insuffisants.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">receiveEarn(earnTx)</span></td>
+    <td>Reçoit une transaction <span class="tx-type">EARN</span> ciblant ce citoyen. Enregistre la transaction et incrémente <code>total</code> (expérience économique) du nombre de money reçues.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">generatePaper(myPrivateKey, amount, referentPublicKey, date)</span></td>
+    <td>Convertit <code>amount</code> money en billet papier. Crée une <span class="tx-type">PAPER</span>, retire les money du wallet. La cible est la clé publique de l'écosystème local.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">cashPaper(tx)</span></td>
+    <td>(héritée de Blockchain) Encaisse un billet papier reçu. Enregistre la transaction <span class="tx-type">PAPER</span> et incrémente <code>total</code>.</td>
+  </tr>
+</table>
+
+<h4>Engagements</h4>
+<table>
+  <tr><th>Fonction</th><th>Rôle</th></tr>
+  <tr>
+    <td><span class="fn">engageInvests(myPrivateKey, targetPublicKey, dailyAmount, days, date)</span></td>
+    <td>Engage <code>dailyAmount</code> invests par jour pendant <code>days</code> jours vers un écosystème. Crée une <span class="tx-type">ENGAGE</span> contenant tous les IDs (présents et futurs). Les invests engagés sont marqués comme indisponibles.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">engageMoney(myPrivateKey, targetPublicKey, dailyAmount, days, date)</span></td>
+    <td>Identique à <span class="fn">engageInvests</span> mais pour la money. Crée une <span class="tx-type">ENGAGE</span> avec des money IDs.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">payerOrder(mySk, ecosystemPk, supplierPk, invests, date)</span></td>
+    <td>Crée et signe une <span class="tx-type">PAYERORDER</span> sur la blockchain du citoyen. L'écosystème cible est lié cryptographiquement via le champ <code>e</code> inclus dans le hash signé. Retourne la transaction à transmettre à l'écosystème.</td>
+  </tr>
+</table>
+
+<h4>Consultation de l'état</h4>
+<table>
+  <tr><th>Fonction</th><th>Rôle</th></tr>
+  <tr><td><span class="fn">getLevel()</span></td><td>Retourne le niveau courant du citoyen (<code>⌊∛total⌋ + 1</code>).</td></tr>
+  <tr><td><span class="fn">getAvailableMoneyAmount()</span></td><td>Nombre de money disponibles (non engagées, non dépensées).</td></tr>
+  <tr><td><span class="fn">getAffordableMoneyAmount(date)</span></td><td>Money engageables à <code>date</code> (niveau moins money déjà engagées ce jour).</td></tr>
+  <tr><td><span class="fn">getAffordableInvestAmount(date)</span></td><td>Invests engageables à <code>date</code>.</td></tr>
+  <tr><td><span class="fn">getEngagedInvests(date)</span></td><td>Liste des invests déjà engagés (pour <code>date</code> ou globalement).</td></tr>
+  <tr><td><span class="fn">getEngagedMoney(date)</span></td><td>Liste des money déjà engagées.</td></tr>
+  <tr><td><span class="fn">getMoneyBeforeNextLevel(asPercent)</span></td><td>Nombre (ou %) de money à recevoir avant le prochain niveau.</td></tr>
+  <tr><td><span class="fn">hasLevelUpOnLastTx()</span></td><td>Vrai si la dernière transaction PAY a provoqué un passage de niveau.</td></tr>
+  <tr><td><span class="fn">getLastCreationTransaction()</span></td><td>Retourne la dernière transaction <span class="tx-type">CREATE</span> de la chaîne.</td></tr>
+</table>
+
+<h4>Gestion des blocs (héritées de Blockchain)</h4>
+<table>
+  <tr><th>Fonction</th><th>Rôle</th></tr>
+  <tr><td><span class="fn">closeLastBlock(privateKey, date)</span></td><td>Ferme et signe le bloc courant.</td></tr>
+  <tr><td><span class="fn">addTransaction(tx)</span></td><td>Ajoute une transaction. Crée un nouveau bloc si le courant est déjà signé. Vérifie la validité, les doublons, et la cohérence de date.</td></tr>
+  <tr><td><span class="fn">getHistory(limit)</span></td><td>Retourne toutes les transactions des <code>limit</code> derniers blocs.</td></tr>
+  <tr><td><span class="fn">getMyPublicKey()</span></td><td>Retourne la clé publique du propriétaire de la blockchain.</td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2>5. La blockchain écosystème (EcosystemBlockchain)</h2>
+
+<h3>5.1 Cycle de vie</h3>
+
+<div class="section-intro">
+Un écosystème passe par les mêmes états qu'un citoyen, mais la validation est assurée par n'importe quelle clé (typiquement le premier admin), et le bloc de naissance inclut le nom de l'écosystème et la clé publique du premier admin.
+</div>
+
+<table>
+  <tr><th>État</th><th>Méthode de test</th></tr>
+  <tr><td>En attente de validation</td><td><span class="fn">isWaitingValidation()</span></td></tr>
+  <tr><td>Validé et actif</td><td><span class="fn">isValidated()</span></td></tr>
+</table>
+
+<p>
+À la création (<span class="fn">startBlockchain</span>), le premier admin est automatiquement enregistré comme admin <em>et</em> acteur avec un ratio de 1.
+</p>
+
+<h3>5.2 Rôles : Admin, Acteur, Payeur</h3>
+
+<p>
+Les citoyens peuvent avoir jusqu'à trois rôles dans un écosystème :
+</p>
+
+<table>
+  <tr><th>Rôle</th><th>Champ clé</th><th>Qui peut le gérer</th><th>Description</th></tr>
+  <tr>
+    <td><strong>Admin</strong></td>
+    <td>—</td>
+    <td>N'importe quel admin</td>
+    <td>Gère les rôles (nomme/révoque admins, acteurs, payeurs). Au moins un admin doit toujours rester.</td>
+  </tr>
+  <tr>
+    <td><strong>Acteur</strong></td>
+    <td><code>ratio</code> (entier ≥ 0)</td>
+    <td>N'importe quel admin</td>
+    <td>Reçoit une part proportionnelle des salaires distribués. Un ratio 0 neutralise temporairement l'acteur sans le révoquer. Au moins un acteur doit avoir un ratio > 0.</td>
+  </tr>
+  <tr>
+    <td><strong>Payeur</strong></td>
+    <td><code>cap</code> (entier ≥ 0)</td>
+    <td>N'importe quel admin</td>
+    <td>Autorisé à émettre des ordres de paiement. Cap = 0 signifie illimité. Cap > 0 est décrémenté automatiquement à chaque ordre reçu.</td>
+  </tr>
+</table>
+
+<p>
+<strong>Lecture des rôles actifs :</strong> les méthodes <span class="fn">getAdmins()</span>, <span class="fn">getActors()</span> et <span class="fn">getPayers()</span> lisent les transactions du bloc courant <em>en sens inverse</em>. Seule la transaction la plus récente pour chaque clé cible est prise en compte, ce qui garantit que les révocations et mises à jour de plafond sont immédiatement effectives.
+</p>
+
+<p>
+<strong>Transition de bloc :</strong> lors de la création d'un nouveau bloc (<span class="fn">newBlock()</span>), seules les transactions de rôles <em>encore actifs</em> sont copiées dans le nouveau bloc. Les invests et money disponibles sont également reportés. Les <span class="tx-type">PAYERORDER</span> et <span class="tx-type">EARN</span> ne sont pas copiés (ils sont épuisés après usage).
+</p>
+
+<h3>5.3 Fonctions disponibles</h3>
+
+<h4>Initialisation</h4>
+<table>
+  <tr><th>Fonction</th><th>Rôle</th></tr>
+  <tr>
+    <td><span class="fn">startBlockchain(name, signerSk, adminPk, secretKey, date)</span></td>
+    <td>Crée et valide l'écosystème. Enregistre automatiquement <code>adminPk</code> comme admin et acteur (ratio 1). Retourne la clé privée de l'écosystème.</td>
+  </tr>
+</table>
+
+<h4>Gestion des rôles</h4>
+<table>
+  <tr><th>Fonction</th><th>Rôle</th></tr>
+  <tr><td><span class="fn">setAdmin(adminSk, targetPk, date)</span></td><td>Nomme un admin. Émet une <span class="tx-type">SETADMIN</span>.</td></tr>
+  <tr><td><span class="fn">unsetAdmin(adminSk, targetPk, date)</span></td><td>Révoque un admin. Interdit s'il est le dernier. Émet une <span class="tx-type">UNSETADMIN</span>.</td></tr>
+  <tr><td><span class="fn">setActor(adminSk, targetPk, ratio, date)</span></td><td>Nomme un acteur avec un ratio. Émet une <span class="tx-type">SETACTOR</span>.</td></tr>
+  <tr><td><span class="fn">unsetActor(adminSk, targetPk, date)</span></td><td>Révoque un acteur. Interdit si encore admin ou payeur. Émet une <span class="tx-type">UNSETACTOR</span>.</td></tr>
+  <tr><td><span class="fn">setPayer(adminSk, targetPk, cap, date)</span></td><td>Nomme un payeur avec un plafond (0 = illimité). Émet une <span class="tx-type">SETPAYER</span>.</td></tr>
+  <tr><td><span class="fn">unsetPayer(adminSk, targetPk, date)</span></td><td>Révoque un payeur. Émet une <span class="tx-type">UNSETPAYER</span>.</td></tr>
+  <tr><td><span class="fn">getAdmins()</span></td><td>Retourne un <code>Set</code> des clés publiques admins actifs.</td></tr>
+  <tr><td><span class="fn">getActors()</span></td><td>Retourne une <code>Map</code> clé publique → ratio pour les acteurs actifs.</td></tr>
+  <tr><td><span class="fn">getPayers()</span></td><td>Retourne une <code>Map</code> clé publique → cap pour les payeurs actifs.</td></tr>
+  <tr><td><span class="fn">isAdmin(pk)</span> / <span class="fn">isActor(pk)</span> / <span class="fn">isPayer(pk)</span></td><td>Teste si <code>pk</code> a le rôle correspondant.</td></tr>
+</table>
+
+<h4>Réception d'actifs</h4>
+<table>
+  <tr><th>Fonction</th><th>Rôle</th></tr>
+  <tr>
+    <td><span class="fn">receiveInvests(engageTx)</span></td>
+    <td>Reçoit un engagement d'invests depuis un citoyen (<span class="tx-type">ENGAGE</span> avec <code>invests.length &gt; 0</code>). Enregistre la transaction et ajoute <em>tous</em> les IDs (présents et futurs) à <code>lastblock.invests</code>.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">receiveMoney(engageTx)</span></td>
+    <td>Reçoit un engagement de money depuis un citoyen (<span class="tx-type">ENGAGE</span> avec <code>money.length &gt; 0</code>). Enregistre la transaction et ajoute <em>tous</em> les IDs (présents et futurs) à <code>lastblock.money</code>.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">receiveEarn(earnTx)</span></td>
+    <td>Reçoit une <span class="tx-type">EARN</span> venant d'un autre écosystème (ex : résultat d'un <code>order</code> d'un fournisseur). Enregistre la transaction et ajoute les money à <code>lastblock.money</code>.</td>
+  </tr>
+</table>
+
+<h4>Ordres de paiement</h4>
+<table>
+  <tr><th>Fonction</th><th>Rôle</th></tr>
+  <tr>
+    <td><span class="fn">receivePayerOrder(ecoSk, tx)</span></td>
+    <td>Reçoit et valide une <span class="tx-type">PAYERORDER</span> signée par un payeur. Vérifie : type valide, transaction ciblant cet écosystème, signataire est bien payeur, plafond non dépassé, invests disponibles et matures. Si le payeur a un cap > 0, émet automatiquement une <span class="tx-type">SETPAYER</span> pour décrémenter le cap restant. Enregistre la transaction.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">order(ecoSk, targetPk, invests, date)</span></td>
+    <td>Exécute un ordre de paiement. Vérifie : invests disponibles, matures, et autorisés par une <span class="tx-type">PAYERORDER</span> existante pour cette cible. Convertit les invests en money (<span class="fn">investIdToMoneyId</span>), retire les invests, ajoute la money, puis appelle <span class="fn">earn()</span> qui émet une <span class="tx-type">EARN</span> et retire la money. Retourne la <span class="tx-type">EARN</span>.</td>
+  </tr>
+</table>
+
+<h4>Distribution de salaires</h4>
+<table>
+  <tr><th>Fonction</th><th>Rôle</th></tr>
+  <tr>
+    <td><span class="fn">earn(heartSk, actorPk, money, date)</span></td>
+    <td>Émet une <span class="tx-type">EARN</span> ciblant <code>actorPk</code> avec les <code>money</code> fournis. Enregistre la transaction, retire la money du wallet. Méthode de bas niveau, appelée par <span class="fn">distributeSalary</span> et <span class="fn">order</span>.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">distributeSalary(heartSk, date)</span></td>
+    <td>Distribue la money <em>mature</em> (dont la date est atteinte) aux acteurs actifs de façon proportionnelle à leurs ratios. La distribution se fait par cycles complets (si la money disponible ne permet pas un cycle entier, le reste n'est pas distribué). Appelle <span class="fn">earn()</span> pour chaque acteur. Retourne la liste des <span class="tx-type">EARN</span> émises. La money immature reste dans <code>lastblock.money</code>.</td>
+  </tr>
+</table>
+
+<h4>Consultation</h4>
+<table>
+  <tr><th>Fonction</th><th>Rôle</th></tr>
+  <tr><td><span class="fn">getAffordableInvestsAmount(date)</span></td><td>Nombre d'invests dont la date est atteinte (utilisables dans un ordre).</td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2>6. Parcours de transactions complets</h2>
+
+<div class="section-intro">
+Les parcours suivants décrivent les appels exacts, dans l'ordre, pour chaque flux métier. Les fonctions entre crochets sont appelées en interne ; les fonctions sans crochets sont appelées par le code applicatif.
+</div>
+
+<!-- 6.1 -->
+<h3>6.1 Création et validation d'un compte citoyen</h3>
+
+<p><strong>Acteurs :</strong> Alice (nouveau citoyen), Référent (citoyen existant validé)</p>
+
+<div class="flow-box">
+  <div class="step"><span class="actor">Alice</span><span class="arrow">▶</span> <span class="fn">bc.makeBirthBlock('Alice', birthdate, null, date)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Crée et signe un BirthBlock (INIT). Génère une clé privée si absente. Ajoute le bloc à la chaîne.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Retourne la clé privée d'Alice.</div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Alice → Référent</span><span class="arrow">▶</span> Transmet le BirthBlock (hors bibliothèque)</div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Référent</span><span class="arrow">▶</span> <span class="fn">bc.validateAccount(referentSk, date)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Ajoute un InitializationBlock signé par le référent.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Le compte est maintenant validé : <span class="fn">bc.isValidated()</span> retourne <code>true</code>.</div>
+  <div class="step" style="margin-top:0.5rem; color:#555;"><em>Note : <span class="fn">startBlockchain</span> combine ces deux étapes en un seul appel.</em></div>
+</div>
+
+<p>
+<strong>Bloc de naissance</strong> : contient une transaction <span class="tx-type">INIT</span> avec le nom et la date de naissance. Le premier bloc génère également une money et un invest pour le jour de la création (niveau 1 initial).
+</p>
+
+<!-- 6.2 -->
+<h3>6.2 Création d'un écosystème</h3>
+
+<p><strong>Acteurs :</strong> Alice (premier admin), Écosystème (nouvelle entité)</p>
+
+<div class="flow-box">
+  <div class="step"><span class="actor">Alice</span><span class="arrow">▶</span> <span class="fn">eco.startBlockchain('Ma Coop', aliceSk, alicePk, null, date)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">makeBirthBlock</span>] Crée un EcoBirthBlock avec nom et clé admin.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">validateAccount</span>] Ajoute un EcoInitializationBlock signé par Alice.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Enregistre automatiquement Alice comme <span class="tx-type">SETADMIN</span> et <span class="tx-type">SETACTOR</span> (ratio 1).</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Retourne la clé privée de l'écosystème.</div>
+</div>
+
+<!-- 6.3 -->
+<h3>6.3 Création journalière de money et invests</h3>
+
+<p><strong>Acteurs :</strong> Alice (citoyen validé)</p>
+
+<div class="flow-box">
+  <div class="step"><span class="actor">Alice</span><span class="arrow">▶</span> <span class="fn">bc.createMoneyAndInvests(aliceSk, date)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Détermine la période à créer (depuis la dernière <span class="tx-type">CREATE</span> jusqu'à <code>date</code>).</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">getLevel()</span>] Calcule le niveau courant pour déterminer le nombre d'unités/jour.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">makeFilteredMoneyIndexes</span>] Génère les IDs money non encore engagés.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">makeFilteredInvestsIndexes</span>] Génère les IDs invests non encore engagés.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Ajoute la <span class="tx-type">CREATE</span> au bloc courant.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Retourne la transaction, ou <code>null</code> si déjà créée pour cette date.</div>
+</div>
+
+<div class="note">
+<strong>Cas particulier :</strong> les jours manqués sont automatiquement rattrapés. Si Alice crée son argent le 14 juin après avoir manqué les 12 et 13, la transaction couvre les trois jours d'un coup.
+</div>
+
+<!-- 6.4 -->
+<h3>6.4 Paiement entre citoyens</h3>
+
+<p><strong>Acteurs :</strong> Alice (émetteur), Bob (destinataire)</p>
+
+<div class="flow-box">
+  <div class="step"><span class="actor">Alice</span><span class="arrow">▶</span> <span class="fn">aliceBc.pay(aliceSk, bobPk, 3, date)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">getAvailableMoney(3)</span>] Sélectionne 3 IDs money dans le wallet d'Alice.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Crée et signe une <span class="tx-type">PAY</span> avec ces 3 IDs.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Enregistre la transaction dans la blockchain d'Alice.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">removeMoney</span>] Retire les 3 IDs de <code>lastblock.money</code> d'Alice.</div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Alice → Bob</span><span class="arrow">▶</span> Transmet la transaction PAY (hors bibliothèque)</div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Bob</span><span class="arrow">▶</span> <span class="fn">bobBc.addTransaction(payTx)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Vérifie la validité de la transaction et l'absence de doublon.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Enregistre la <span class="tx-type">PAY</span> dans la blockchain de Bob.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Détecte que <code>target === bobPk</code> → incrémente <code>lastblock.total</code> de 3.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">getLevel()</span>] Le niveau de Bob peut progresser si le total atteint un seuil.</div>
+</div>
+
+<div class="note">
+<strong>Important :</strong> les money IDs reçus par Bob via une PAY <em>n'entrent pas</em> dans son wallet (<code>lastblock.money</code>). Seules les money créées par <span class="fn">createMoneyAndInvests</span> ou reçues via un <span class="fn">cashPaper</span> y figurent. La PAY ne fait qu'augmenter l'expérience économique (total) de Bob.
+</div>
+
+<!-- 6.5 -->
+<h3>6.5 Argent papier : émission et encaissement</h3>
+
+<p><strong>Acteurs :</strong> Alice (émetteur), Bob (destinataire), Écosystème local (signataire du bloc)</p>
+
+<div class="flow-box">
+  <div class="step" style="font-weight:bold; color:#2c5f2e;">Émission par Alice</div>
+  <div class="step"><span class="actor">Alice</span><span class="arrow">▶</span> <span class="fn">aliceBc.generatePaper(aliceSk, 5, localEcoPk, date)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">getAvailableMoney(5)</span>] Sélectionne 5 IDs money.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Crée et signe une <span class="tx-type">PAPER</span> ciblant <code>localEcoPk</code>.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Enregistre dans la blockchain d'Alice.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">removeMoney</span>] Retire les 5 IDs du wallet d'Alice.</div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Alice → Bob</span><span class="arrow">▶</span> Remet le billet papier physique (ou numérique signé)</div>
+  <div class="step" style="margin-top:0.8rem; font-weight:bold; color:#2c5f2e;">Encaissement par Bob</div>
+  <div class="step"><span class="actor">Bob</span><span class="arrow">▶</span> <span class="fn">bobBc.cashPaper(paperTx)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Vérifie que la transaction est bien de type <span class="tx-type">PAPER</span> et valide.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Enregistre dans la blockchain de Bob.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Incrémente <code>lastblock.total</code> de 5 (expérience économique).</div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Écosystème local</span><span class="arrow">▶</span> <span class="fn">bobBc.closeLastBlock(localEcoSk, date)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ L'écosystème signe le bloc de Bob, certifiant l'encaissement.</div>
+</div>
+
+<!-- 6.6 -->
+<h3>6.6 Engagement d'invests vers un écosystème</h3>
+
+<p><strong>Acteurs :</strong> Alice (citoyen payeur), Écosystème</p>
+
+<div class="flow-box">
+  <div class="step"><span class="actor">Alice</span><span class="arrow">▶</span> <span class="fn">aliceBc.engageInvests(aliceSk, ecoPk, 2, 30, date)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Vérifie qu'Alice peut engager 2 invests/jour (<span class="fn">getAffordableInvestAmount</span>).</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">#buildEngageIndexes</span>] Calcule les IDs pour chacun des 30 jours (présents et futurs).</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Crée et signe une <span class="tx-type">ENGAGE</span> avec les 60 IDs invests.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Enregistre dans la blockchain d'Alice.</div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Alice → Écosystème</span><span class="arrow">▶</span> Transmet la transaction ENGAGE</div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Écosystème</span><span class="arrow">▶</span> <span class="fn">eco.receiveInvests(engageTx)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Vérifie : type ENGAGE valide, cible = cet écosystème, invests.length &gt; 0.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Enregistre dans la blockchain de l'écosystème.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Ajoute les 60 IDs à <code>lastblock.invests</code> (même les futurs).</div>
+</div>
+
+<div class="note">
+<strong>Maturité des invests reçus :</strong> tous les IDs sont stockés immédiatement. Les ID dont la date n'est pas encore atteinte ne peuvent pas être utilisés dans un <span class="fn">order()</span> ni un <span class="fn">receivePayerOrder()</span>. La vérification se fait à chaque usage via <span class="fn">unitIdToDateInt(id)</span>.
+</div>
+
+<!-- 6.7 -->
+<h3>6.7 Engagement de money vers un écosystème</h3>
+
+<p><strong>Acteurs :</strong> Alice (citoyen), Écosystème</p>
+
+<div class="flow-box">
+  <div class="step"><span class="actor">Alice</span><span class="arrow">▶</span> <span class="fn">aliceBc.engageMoney(aliceSk, ecoPk, 1, 7, date)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Vérifie qu'Alice peut engager 1 money/jour (<span class="fn">getAffordableMoneyAmount</span>).</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">#buildEngageIndexes</span>] Calcule les 7 IDs money (un par jour).</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Crée et signe une <span class="tx-type">ENGAGE</span> avec les 7 IDs money.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Enregistre dans la blockchain d'Alice.</td></div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Alice → Écosystème</span><span class="arrow">▶</span> Transmet la transaction ENGAGE</div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Écosystème</span><span class="arrow">▶</span> <span class="fn">eco.receiveMoney(engageTx)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Vérifie : type ENGAGE valide, cible = cet écosystème, money.length &gt; 0.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Enregistre dans la blockchain de l'écosystème.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Ajoute les 7 IDs (présents et futurs) à <code>lastblock.money</code>.</div>
+</div>
+
+<div class="note">
+<strong>Money future :</strong> les IDs dont la date n'est pas atteinte sont stockés dans <code>lastblock.money</code> mais seront ignorés lors de <span class="fn">distributeSalary()</span> jusqu'à leur maturité.
+</div>
+
+<!-- 6.8 -->
+<h3>6.8 Ordre de paiement via un payeur</h3>
+
+<p><strong>Acteurs :</strong> Alice (payeur), Écosystème, Fournisseur (citoyen ou écosystème cible)</p>
+
+<div class="flow-box">
+  <div class="step" style="font-weight:bold; color:#2c5f2e;">Étape 1 — Alice crée l'ordre sur sa blockchain</div>
+  <div class="step"><span class="actor">Alice</span><span class="arrow">▶</span> <span class="fn">aliceBc.payerOrder(aliceSk, ecoPk, supplierPk, investIds, date)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Crée une <span class="tx-type">PAYERORDER</span> signée par Alice, ciblant <code>supplierPk</code>.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Le champ <code>e</code> (clé publique de l'écosystème) est inclus dans le hash → liaison cryptographique à cet écosystème précis.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Enregistre dans la blockchain d'Alice.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Retourne la transaction à transmettre.</div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Alice → Écosystème</span><span class="arrow">▶</span> Transmet la PAYERORDER</div>
+  <div class="step" style="margin-top:0.8rem; font-weight:bold; color:#2c5f2e;">Étape 2 — L'écosystème reçoit et valide l'ordre</div>
+  <div class="step"><span class="actor">Écosystème</span><span class="arrow">▶</span> <span class="fn">eco.receivePayerOrder(ecoSk, payerOrderTx)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Vérifie : type PAYERORDER valide, <code>tx.ecosystem === ecoPk</code>, signataire est payeur.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">getPayers()</span>] Récupère le cap courant d'Alice.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Vérifie que le cap n'est pas dépassé, les invests disponibles et matures.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Si cap &gt; 0 : [<span class="fn">addTransaction</span>] ajoute une <span class="tx-type">SETPAYER</span> pour décrémenter le cap (cap − invests utilisés).</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Enregistre la <span class="tx-type">PAYERORDER</span>.</div>
+  <div class="step" style="margin-top:0.8rem; font-weight:bold; color:#2c5f2e;">Étape 3 — L'écosystème exécute l'ordre</div>
+  <div class="step"><span class="actor">Écosystème</span><span class="arrow">▶</span> <span class="fn">eco.order(ecoSk, supplierPk, investIds, date)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Vérifie que les invests sont disponibles et matures.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Vérifie qu'une <span class="tx-type">PAYERORDER</span> existante autorise ces invests pour <code>supplierPk</code>.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">investIdToMoneyId</span>] Convertit chaque invest ID en money ID (suppression du séparateur 9).</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">removeInvests</span>] Retire les invests de <code>lastblock.invests</code>.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Ajoute les money IDs à <code>lastblock.money</code>.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">earn(ecoSk, supplierPk, moneyIds, date)</span>] Émet une <span class="tx-type">EARN</span> et retire immédiatement la money.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Retourne la <span class="tx-type">EARN</span>.</div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Écosystème → Fournisseur</span><span class="arrow">▶</span> Transmet la transaction EARN</div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Fournisseur</span><span class="arrow">▶</span> <span class="fn">supplierBc.receiveEarn(earnTx)</span> (citoyen ou écosystème)</div>
+</div>
+
+<!-- 6.9 -->
+<h3>6.9 Distribution de salaires</h3>
+
+<p><strong>Acteurs :</strong> Écosystème, Acteurs (citoyens ou écosystèmes)</p>
+
+<div class="flow-box">
+  <div class="step"><span class="actor">Écosystème</span><span class="arrow">▶</span> <span class="fn">eco.distributeSalary(ecoSk, date)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">getActors()</span>] Récupère la map acteurs → ratios.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Calcule le ratio total et le nombre de cycles possibles.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Filtre <code>lastblock.money</code> : ne conserve que les IDs dont <span class="fn">unitIdToDateInt(id) ≤ dateToInt(date)</span>.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Calcule <code>cycles = ⌊money_mature.length / ratio_total⌋</code>. Si 0, retourne <code>[]</code>.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Pour chaque acteur (ratio &gt; 0) : [<span class="fn">earn(ecoSk, actorPk, money_tranche, date)</span>]</div>
+  <div class="step" style="margin-left:2rem; color:#666;">&nbsp;&nbsp;&nbsp;&nbsp;→ Crée une <span class="tx-type">EARN</span>, l'enregistre, retire la money du wallet.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ La money immature reste dans <code>lastblock.money</code> pour une prochaine distribution.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ La money qui ne complète pas un cycle reste aussi dans le wallet.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Retourne la liste des <span class="tx-type">EARN</span> émises.</div>
+  <div class="step" style="margin-top:0.5rem;"><span class="actor">Pour chaque earnTx retourné :</span></div>
+  <div class="step"><span class="actor">Acteur</span><span class="arrow">▶</span> <span class="fn">actorBc.receiveEarn(earnTx)</span></div>
+</div>
+
+<div class="note">
+<strong>Exemple numérique :</strong> écosystème avec Alice (ratio 3) et Bob (ratio 2), 7 money matures disponibles. Ratio total = 5. Cycles possibles = ⌊7 / 5⌋ = 1. Alice reçoit 3 money, Bob reçoit 2 money. Les 2 money restantes restent dans le wallet.
+</div>
+
+<!-- 6.10 -->
+<h3>6.10 Réception d'un EARN par un citoyen</h3>
+
+<p><strong>Acteurs :</strong> Citoyen (destinataire), Écosystème (émetteur)</p>
+
+<div class="flow-box">
+  <div class="step"><span class="actor">Citoyen</span><span class="arrow">▶</span> <span class="fn">citizenBc.receiveEarn(earnTx)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">super.receiveEarn</span> dans Blockchain] Vérifie : type EARN valide, <code>target === myPublicKey</code>.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Enregistre la <span class="tx-type">EARN</span> dans la blockchain.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Incrémente <code>lastblock.total</code> du nombre de money reçues.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">getLevel()</span>] Le niveau peut progresser si le total atteint un seuil.</div>
+</div>
+
+<div class="note">
+<strong>Note :</strong> comme pour un paiement PAY, les money d'un EARN reçu par un citoyen n'entrent pas dans son wallet personnel (<code>lastblock.money</code>). Elles augmentent uniquement son expérience économique (<code>total</code>). Le citoyen génère lui-même sa money via <span class="fn">createMoneyAndInvests</span> à un rythme déterminé par son niveau.
+</div>
+
+<!-- 6.11 -->
+<h3>6.11 Réception d'un EARN par un écosystème</h3>
+
+<p><strong>Acteurs :</strong> Écosystème destinataire, Écosystème émetteur (ou fournisseur)</p>
+
+<div class="flow-box">
+  <div class="step"><span class="actor">Écosystème B</span><span class="arrow">▶</span> <span class="fn">ecoBc.receiveEarn(earnTx)</span></div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">super.receiveEarn</span> dans Blockchain] Vérifie : type EARN valide, <code>target === myPublicKey</code>.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Enregistre la <span class="tx-type">EARN</span>.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Ajoute les money IDs à <code>lastblock.money</code>.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Ces money sont maintenant disponibles pour <span class="fn">distributeSalary()</span>.</div>
+</div>
+
+<p>
+Cas typique : l'écosystème B est un fournisseur qui reçoit un paiement d'investissement de l'écosystème A via <span class="fn">order()</span>. Contrairement au citoyen, un écosystème peut faire fructifier la money reçue en la redistribuant à ses propres acteurs.
+</p>
+
+
+<!-- ============================================================ -->
+<h2>7. Gestion des rôles dans un écosystème</h2>
+
+<h3>Contraintes métier</h3>
+
+<table>
+  <tr><th>Action</th><th>Contrainte</th></tr>
+  <tr>
+    <td>Révoquer un admin</td>
+    <td>Interdit s'il est le dernier admin actif (<span class="fn">getAdmins().size ≤ 1</span>).</td>
+  </tr>
+  <tr>
+    <td>Révoquer un acteur</td>
+    <td>Interdit si l'acteur est encore admin ou encore payeur.</td>
+  </tr>
+  <tr>
+    <td>Mettre le ratio d'un acteur à 0</td>
+    <td>Interdit si c'est le dernier acteur avec un ratio &gt; 0.</td>
+  </tr>
+  <tr>
+    <td>Révoquer le seul acteur à ratio &gt; 0</td>
+    <td>Interdit pour les mêmes raisons que ci-dessus.</td>
+  </tr>
+  <tr>
+    <td>Plafond payeur (cap)</td>
+    <td>Cap = 0 → illimité. Cap &gt; 0 → décrémenté à chaque <span class="fn">receivePayerOrder</span>. Le cap est mis à jour par une <span class="tx-type">SETPAYER</span> auto-émise.</td>
+  </tr>
+</table>
+
+<h3>Persistance des rôles entre blocs</h3>
+
+<p>
+Lors d'un appel à <span class="fn">newBlock()</span>, l'écosystème copie automatiquement dans le nouveau bloc les transactions de rôles actifs (<span class="tx-type">SETADMIN</span>, <span class="tx-type">SETACTOR</span>, <span class="tx-type">SETPAYER</span>) du bloc précédent — uniquement pour les entités encore actives au moment de la transition. Cela garantit que les rôles survivent aux transitions de blocs sans qu'il soit nécessaire de les re-déclarer.
+</p>
+
+
+<!-- ============================================================ -->
+<h2>8. Persistance et sérialisation</h2>
+
+<p>
+Toute blockchain peut être sérialisée en un tableau d'objets JSON plain (sans classes ni prototypes) via la méthode <span class="fn">export()</span>. Elle peut être reconstituée à partir de ce tableau en passant celui-ci au constructeur de la classe correspondante.
+</p>
+
+<table>
+  <tr><th>Opération</th><th>Appel</th><th>Description</th></tr>
+  <tr>
+    <td>Sérialisation</td>
+    <td><span class="fn">bc.export()</span></td>
+    <td>Retourne un tableau d'objets plain JS représentant tous les blocs et transactions. Peut être stocké en JSON.</td>
+  </tr>
+  <tr>
+    <td>Désérialisation citoyen</td>
+    <td><code>new CitizenBlockchain(data)</code></td>
+    <td>Restitue une blockchain citoyen complète à partir des données exportées.</td>
+  </tr>
+  <tr>
+    <td>Désérialisation écosystème</td>
+    <td><code>new EcosystemBlockchain(data)</code></td>
+    <td>Restitue une blockchain écosystème. Le type de chaque bloc est inféré automatiquement par le <code>BlockMaker</code>.</td>
+  </tr>
+</table>
+
+<p>
+Chaque transaction est sérialisée avec des noms de champs courts pour la compacité du stockage et de la transmission réseau :
+</p>
+
+<table>
+  <tr><th>Champ court</th><th>Signification</th></tr>
+  <tr><td><code>v</code></td><td>Version du protocole (toujours 1)</td></tr>
+  <tr><td><code>d</code></td><td>Date de la transaction (entier YYYYMMDD)</td></tr>
+  <tr><td><code>t</code></td><td>Type de la transaction (entier 1–13)</td></tr>
+  <tr><td><code>p</code></td><td>Clé publique cible (target)</td></tr>
+  <tr><td><code>s</code></td><td>Clé publique signataire</td></tr>
+  <tr><td><code>m</code></td><td>Liste des IDs money</td></tr>
+  <tr><td><code>i</code></td><td>Liste des IDs invests</td></tr>
+  <tr><td><code>h</code></td><td>Signature DER SECP256K1 (hex)</td></tr>
+  <tr><td><code>e</code></td><td>(PAYERORDER uniquement) Clé publique de l'écosystème lié</td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2>9. Utilitaires cryptographiques</h2>
+
+<table>
+  <tr><th>Fonction</th><th>Rôle</th></tr>
+  <tr>
+    <td><span class="fn">randomPrivateKey()</span></td>
+    <td>Génère une clé privée SECP256K1 aléatoire (32 octets hex).</td>
+  </tr>
+  <tr>
+    <td><span class="fn">publicFromPrivate(sk)</span></td>
+    <td>Dérive la clé publique compressée (33 octets hex) depuis une clé privée.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">dateToInt(date)</span></td>
+    <td>Convertit un objet <code>Date</code> en entier YYYYMMDD.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">intToDate(n)</span></td>
+    <td>Convertit un entier YYYYMMDD en objet <code>Date</code>.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">unitIdToDateInt(id)</span></td>
+    <td>Extrait la date (YYYYMMDD) encodée dans un ID money ou invest. Permet de vérifier la maturité d'une unité.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">investIdToMoneyId(id)</span></td>
+    <td>Convertit un invest ID en money ID en supprimant le séparateur <code>9</code> : <code>202506149003</code> → <code>20250614003</code>.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">buildMoneyIndexes(date, level)</span></td>
+    <td>Génère la liste des IDs money pour un jour et un niveau donnés.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">buildInvestIndexes(date, level)</span></td>
+    <td>Génère la liste des IDs invests pour un jour et un niveau donnés.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">signHash(hash, sk)</span></td>
+    <td>Signe un hash (Uint8Array 32 octets) avec une clé privée. Retourne la signature DER hex.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">verifySignature(hash, sig, pk)</span></td>
+    <td>Vérifie une signature DER hex pour un hash et une clé publique donnés.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">hashTimestampAuth(pk, timestamp)</span></td>
+    <td>Génère un token d'authentification basé sur la clé publique et un timestamp. Utilisé par le serveur HTTP pour les sessions.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">aesEncrypt(sk, passphrase)</span></td>
+    <td>Chiffre une clé privée avec une passphrase (AES + dérivation Scrypt). Retourne une promesse.</td>
+  </tr>
+  <tr>
+    <td><span class="fn">aesDecrypt(encrypted, passphrase)</span></td>
+    <td>Déchiffre une clé privée chiffrée. Retourne une promesse.</td>
+  </tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2>10. Règles de cohérence et contraintes globales</h2>
+
+<h3>Règles sur les dates</h3>
+<ul>
+  <li>Une transaction ne peut pas être datée <em>avant</em> la date de fermeture du dernier bloc signé (<span class="fn">lastClosedBlock.closedate</span>). Toute tentative lève une <code>InvalidTransactionError</code>.</li>
+  <li>La création de money (<span class="fn">createMoneyAndInvests</span>) est interdite pour une date future.</li>
+  <li>Un invest ou une money est considéré mature quand <span class="fn">unitIdToDateInt(id) ≤ dateToInt(date)</span>.</li>
+</ul>
+
+<h3>Règles sur les doublons</h3>
+<ul>
+  <li><span class="fn">addTransaction</span> vérifie les 3 derniers blocs pour détecter une transaction déjà présente (par signature). Un doublon lève une <code>InvalidTransactionError</code>.</li>
+</ul>
+
+<h3>Unicité des unités</h3>
+<ul>
+  <li>Chaque ID money ou invest est unique dans le temps pour un citoyen donné (date + index séquentiel).</li>
+  <li>Une fois une money ou un invest engagé, il n'est plus disponible pour d'autres engagements (filtré par <span class="fn">getEngagedInvests</span> / <span class="fn">getEngagedMoney</span>).</li>
+  <li><span class="fn">removeMoney</span> et <span class="fn">removeInvests</span> retirent définitivement les IDs du wallet courant.</li>
+</ul>
+
+<h3>Sécurité cryptographique des PayerOrder</h3>
+<ul>
+  <li>La clé publique de l'écosystème cible (<code>e</code>) est incluse dans le hash signé d'une <span class="tx-type">PAYERORDER</span>. Une transaction ne peut donc pas être rejouée sur un autre écosystème : la signature deviendrait invalide.</li>
+  <li>La clé privée du payeur ne quitte jamais son appareil. L'écosystème reçoit uniquement la transaction signée.</li>
+</ul>
+
+<h3>Erreurs métier</h3>
+<table>
+  <tr><th>Classe d'erreur</th><th>Cas déclencheurs typiques</th></tr>
+  <tr>
+    <td><code>InvalidTransactionError</code></td>
+    <td>Transaction invalide ou mal formée, doublon, date incohérente, invests non disponibles ou immatures, fonds insuffisants, cap dépassé, transaction ne ciblant pas cette blockchain.</td>
+  </tr>
+  <tr>
+    <td><code>UnauthorizedError</code></td>
+    <td>Clé privée ne correspondant pas à la blockchain, action réservée à un admin, action réservée à un payeur, ajout de bloc sur un bloc non encore signé.</td>
+  </tr>
+</table>
+
+<h3>Résumé des propriétés du wallet écosystème</h3>
+<table>
+  <tr><th>Champ</th><th>Alimenté par</th><th>Consommé par</th></tr>
+  <tr>
+    <td><code>lastblock.invests</code></td>
+    <td><span class="fn">receiveInvests()</span></td>
+    <td><span class="fn">order()</span> via <span class="fn">removeInvests()</span></td>
+  </tr>
+  <tr>
+    <td><code>lastblock.money</code></td>
+    <td><span class="fn">receiveMoney()</span>, <span class="fn">receiveEarn()</span>, <span class="fn">order()</span> (transit)</td>
+    <td><span class="fn">earn()</span> via <span class="fn">removeMoney()</span>, appelé par <span class="fn">distributeSalary()</span> et <span class="fn">order()</span></td>
+  </tr>
+</table>
+
+<hr style="margin-top:3rem; border-color:#ccc;">
+<p style="text-align:center; color:#999; font-size:9pt; margin-top:1rem;">
+  organic-money.js · GuziEconomy · Référence fonctionnelle · Juin 2026
+</p>
+
+</body>
+</html>

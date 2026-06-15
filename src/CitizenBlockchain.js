@@ -138,6 +138,18 @@ export class CitizenBlockchain extends Blockchain {
 		return earnTx
 	}
 
+	cashPaper(tx) {
+		super.cashPaper(tx)
+		this.lastblock.total += tx.money.length
+		return tx
+	}
+
+	newBlock() {
+		const total = this.lastblock.total
+		super.newBlock()
+		this.lastblock.total = total
+	}
+
 	payerOrder(mySk, ecosystemPk, supplierPk, invests, date = new Date()) {
 		if (publicFromPrivate(mySk) !== this.getMyPublicKey())
 			throw new UnauthorizedError('Private key does not match blockchain owner.')

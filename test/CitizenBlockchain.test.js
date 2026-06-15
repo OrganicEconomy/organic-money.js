@@ -995,6 +995,34 @@ describe('CitizenBlockchain', () => {
 		})
 	})
 
+	describe('cashPaper', () => {
+		it('Should increment total by money.length.', () => {
+			const bc = level3CitizenBlockchain()
+			const totalBefore = bc.lastblock.total
+
+			const paper = makeTransaction({
+				type: TXTYPE.PAPER,
+				moneycount: 3,
+				target: referentPk
+			})
+			bc.cashPaper(paper)
+
+			assert.equal(bc.lastblock.total, totalBefore + 3)
+		})
+	})
+
+	describe('newBlock', () => {
+		it('Should preserve total when creating a new block.', () => {
+			const bc = level3CitizenBlockchain()
+			const totalBefore = bc.lastblock.total
+			bc.closeLastBlock(mySk)
+
+			bc.newBlock()
+
+			assert.equal(bc.lastblock.total, totalBefore)
+		})
+	})
+
 	describe('payerOrder', () => {
 		const DATE2 = new Date('2025-01-02')
 

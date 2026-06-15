@@ -120,7 +120,6 @@ export class Blockchain {
 		}
 
 		this.addTransaction(tx)
-		this.lastblock.total += tx.money.length
 		return tx
 	}
 
@@ -210,7 +209,7 @@ export class Blockchain {
 			p: this.lastblock.signature,
 			m: this.lastblock.money,
 			i: this.lastblock.invests,
-			t: this.lastblock.total,
+			t: 0,
 			r: 0,
 			s: null,
 			h: null,

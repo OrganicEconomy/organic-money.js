@@ -119,17 +119,6 @@ describe('Blockchain', () => {
 			assert.deepEqual(bc.lastblock.transactions[0], paper)
 		})
 
-		it('Should increase the blockchain total.', () => {
-			const bc = new Blockchain([makeBlockObj({ signed: true, date: new Date('2026-01-19') })])
-
-			const paper = makeTransaction({
-				type: TXTYPE.PAPER,
-				moneycount: 3
-			})
-			bc.cashPaper(paper)
-
-			assert.deepEqual(bc.lastblock.total, 3)
-		})
 	})
 
 	describe('isValid', () => {
@@ -427,14 +416,6 @@ describe('Blockchain', () => {
 			bc.newBlock()
 
 			assert.equal(bc.blocks[0].toString(), '[Block]')
-		})
-
-		it('Should report total.', () => {
-			const bc = new Blockchain([makeBlockObj({ signed: true, total: 12 })])
-
-			bc.newBlock()
-
-			assert.equal(bc.lastblock.total, 12)
 		})
 
 		it('Should report money and invests.', () => {

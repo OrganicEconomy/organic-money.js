@@ -90,9 +90,6 @@ export class Blockchain {
 			throw new InvalidTransactionError('Invalid date')
 		}
 		this.lastblock.add(transaction)
-		if (transaction.type === TXTYPE.PAY && transaction.target === this.getMyPublicKey()) {
-			this.lastblock.total += transaction.money.length
-		}
 	}
 
 	receiveEarn(earnTx) {

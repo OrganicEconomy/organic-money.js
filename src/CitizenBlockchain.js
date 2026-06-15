@@ -122,6 +122,16 @@ export class CitizenBlockchain extends Blockchain {
 		return indexes
 	}
 
+	receivePay(payTx) {
+		if (payTx.type !== TXTYPE.PAY || !payTx.isValid())
+			throw new InvalidTransactionError('Invalid transaction')
+		if (payTx.target !== this.getMyPublicKey())
+			throw new InvalidTransactionError('Transaction not targeting this citizen')
+		this.addTransaction(payTx)
+		this.lastblock.total += payTx.money.length
+		return payTx
+	}
+
 	receiveEarn(earnTx) {
 		super.receiveEarn(earnTx)
 		this.lastblock.total += earnTx.money.length
@@ -144,6 +154,9 @@ export class CitizenBlockchain extends Blockchain {
 		const transaction = new PayTransaction(mySk, targetPk, d, money)
 		this.addTransaction(transaction)
 		this.removeMoney(money)
+		if (targetPk === this.getMyPublicKey()) {
+			this.lastblock.total += money.length
+		}
 		return transaction
 	}
 

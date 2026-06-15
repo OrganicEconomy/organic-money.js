@@ -6,14 +6,14 @@ import { Blockchain } from '../src/Blockchain.js';
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js';
 import { mySk, myPk, targetSk, targetPk, makeBlock, makeBlockObj, makeTransaction, referentSk, referentPk } from './testUtils.js'
 import { dateToInt, intToDate, randomPrivateKey, buildInvestIndexes } from '../src/crypto.js'
-import { TXTYPE, PayerOrderTransaction, EarnTransaction } from '../src/Transaction.js'
+import { TXTYPE, PayerOrderTransaction, EarnTransaction, PayTransaction } from '../src/Transaction.js'
 
 
 describe('CitizenBlockchain', () => {
 	function level3CitizenBlockchain() {
 		const bc = new CitizenBlockchain()
 		bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
-		bc.addTransaction(makeTransaction({
+		bc.receivePay(makeTransaction({
 			target: myPk,
 			type: TXTYPE.PAY,
 			signer: referentPk,
@@ -79,17 +79,10 @@ describe('CitizenBlockchain', () => {
 				moneycount: 7
 			})
 
-			bc.addTransaction(tx)
+			bc.receivePay(tx)
 
 			assert.isTrue(tx.isValid())
 			assert.equal(bc.total, 7)
-		})
-
-		it('Should add money to total exactly once when pay() targets blockchain owner.', () => {
-			const bc = new CitizenBlockchain()
-			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
-			bc.pay(mySk, myPk, 1)
-			assert.equal(bc.total, 1)
 		})
 	})
 	
@@ -136,7 +129,7 @@ describe('CitizenBlockchain', () => {
 		it('Should create 1+Total^(1/3) Money.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
-			bc.addTransaction(makeTransaction({
+			bc.receivePay(makeTransaction({
 				target: myPk,
 				type: TXTYPE.PAY,
 				signer: referentPk,
@@ -175,7 +168,7 @@ describe('CitizenBlockchain', () => {
 		it('Should increase money of the block.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
-			bc.addTransaction(makeTransaction({
+			bc.receivePay(makeTransaction({
 				target: myPk,
 				type: TXTYPE.PAY,
 				signer: referentPk,
@@ -195,7 +188,7 @@ describe('CitizenBlockchain', () => {
 		it('Should increase invests of the block.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
-			bc.addTransaction(makeTransaction({
+			bc.receivePay(makeTransaction({
 				target: myPk,
 				type: TXTYPE.PAY,
 				signer: referentPk,
@@ -226,7 +219,7 @@ describe('CitizenBlockchain', () => {
 		it('Should create 1+Total^(1/3) minus engaged money/invests.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
-			bc.addTransaction(makeTransaction({
+			bc.receivePay(makeTransaction({
 				target: myPk,
 				type: TXTYPE.PAY,
 				signer: referentPk,
@@ -639,7 +632,7 @@ describe('CitizenBlockchain', () => {
 			}))
 
 			for (let i = 1; i < 8; i++) {
-				bc.addTransaction(makeTransaction({
+				bc.receivePay(makeTransaction({
 					type: TXTYPE.PAY,
 					money: [20240101000 + i],
 					target: targetPk
@@ -656,7 +649,7 @@ describe('CitizenBlockchain', () => {
 			}))
 
 			for (let i = 8; i < 26; i++) {
-				bc.addTransaction(makeTransaction({
+				bc.receivePay(makeTransaction({
 					type: TXTYPE.PAY,
 					money: [20240101000 + i],
 					target: targetPk
@@ -715,7 +708,7 @@ describe('CitizenBlockchain', () => {
 			bc.addBlock(makeBlock({
 				total: 27
 			}))
-			bc.addTransaction(makeTransaction({
+			bc.receivePay(makeTransaction({
 				type: TXTYPE.PAY,
 				moneycount: 36,
 				target: targetPk
@@ -732,7 +725,7 @@ describe('CitizenBlockchain', () => {
 			bc.addBlock(makeBlock({
 				total: 27
 			}))
-			bc.addTransaction(makeTransaction({
+			bc.receivePay(makeTransaction({
 				type: TXTYPE.PAY,
 				moneycount: 37,
 				target: targetPk
@@ -749,7 +742,7 @@ describe('CitizenBlockchain', () => {
 			bc.addBlock(makeBlock({
 				total: 63
 			}))
-			bc.addTransaction(makeTransaction({
+			bc.receivePay(makeTransaction({
 				type: TXTYPE.PAY,
 				moneycount: 1,
 				target: targetPk
@@ -1043,6 +1036,54 @@ describe('CitizenBlockchain', () => {
 			const result = bc.payerOrder(mySk, referentPk, targetPk, invests, DATE2)
 
 			assert.instanceOf(result, PayerOrderTransaction)
+		})
+	})
+
+	describe('receivePay', () => {
+		const DATE2 = new Date('2025-01-03')
+
+		it('Should throw if not a PayTransaction.', () => {
+			const bc = level3CitizenBlockchain()
+
+			const tx = new PayerOrderTransaction(mySk, targetPk, [], referentPk, DATE2)
+
+			assert.throws(() => bc.receivePay(tx))
+		})
+
+		it('Should throw if not targeting this citizen.', () => {
+			const bc = level3CitizenBlockchain()
+
+			const tx = new EarnTransaction(referentSk, targetPk, [20250101000], DATE2)
+
+			assert.throws(() => bc.receivePay(tx))
+		})
+
+		it('Should increment total by money.length.', () => {
+			const bc = level3CitizenBlockchain()
+			const totalBefore = bc.lastblock.total
+
+			const tx = new PayTransaction(referentSk, myPk, DATE2, [20250101000, 20250101001])
+			bc.receivePay(tx)
+
+			assert.equal(bc.lastblock.total, totalBefore + 2)
+		})
+
+		it('Should record the transaction in the blockchain.', () => {
+			const bc = level3CitizenBlockchain()
+
+			const tx = new PayTransaction(referentSk, myPk, DATE2, [20250101000])
+			bc.receivePay(tx)
+
+			assert.include(bc.lastblock.transactions, tx)
+		})
+
+		it('Should return the transaction.', () => {
+			const bc = level3CitizenBlockchain()
+
+			const tx = new PayTransaction(referentSk, myPk, DATE2, [20250101000])
+			const result = bc.receivePay(tx)
+
+			assert.equal(result, tx)
 		})
 	})
 

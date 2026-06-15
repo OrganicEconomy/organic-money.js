@@ -2,7 +2,7 @@ import { Blockchain } from './Blockchain.js'
 import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { randomPrivateKey, publicFromPrivate, 
 	dateToInt, buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
-import { BirthBlock, InitializationBlock } from './Block.js'
+import { CitizenBlock, BirthBlock, InitializationBlock } from './Block.js'
 import { CreateTransaction, EngageTransaction, PaperTransaction, PayTransaction, PayerOrderTransaction, TXTYPE } from './Transaction.js'
 
 export class CitizenBlockchain extends Blockchain {
@@ -144,10 +144,8 @@ export class CitizenBlockchain extends Blockchain {
 		return tx
 	}
 
-	newBlock() {
-		const total = this.lastblock.total
-		super.newBlock()
-		this.lastblock.total = total
+	_createNewBlock(data) {
+		return new CitizenBlock({ ...data, t: this.lastblock.total })
 	}
 
 	payerOrder(mySk, ecosystemPk, supplierPk, invests, date = new Date()) {

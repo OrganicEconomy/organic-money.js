@@ -1,5 +1,5 @@
 import { Blockchain } from "../src/Blockchain.js"
-import { Block } from "../src/Block.js";
+import { CitizenBlock } from "../src/Block.js";
 import { Transaction, TXTYPE, TransactionMaker } from "../src/Transaction.js"
 import { buildInvestIndexes, buildMoneyIndexes } from "../src/crypto.js"
 import { dateToInt } from '../src/crypto.js';
@@ -72,7 +72,7 @@ export function makeBlock(options = {}) {
     const date = "date" in options ? options.date : new Date()
     const transactions = "transactions" in options ? options.transactions : []
 
-    const block = new Block({
+    const block = new CitizenBlock({
         v: "version" in options ? options.version : 1,
         d: "date" in options ? dateToInt(options.date) : null,
         p: "previousHash" in options ? options.previousHash : "",

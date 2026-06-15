@@ -144,7 +144,7 @@ describe('Blockchain', () => {
 			const result = bc.export()
 
 			assert.equal(result.length, 3)
-			assert.hasAllKeys(result[1], ['v', 'd', 'p', 's', 'r', 'm', 'i', 't', 'h', 'x'])
+			assert.hasAllKeys(result[1], ['v', 'd', 'p', 's', 'r', 'm', 'i', 'h', 'x'])
 			assert.hasAllKeys(result[1].x[0], ['v', 't', 'm', 'i', 'd', 's', 'p', 'h',])
 		})
 

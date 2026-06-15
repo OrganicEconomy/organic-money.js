@@ -14,16 +14,11 @@ export const ECOREF_HASH = 'ec051c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e
 
 export class BlockMaker {
     static make(blockObj) {
-        if (blockObj.p === ECOREF_HASH) {
-            return new EcoBirthBlock(blockObj)
-        }
-        if (blockObj.p ===  REF_HASH) {
-            return new BirthBlock(blockObj)
-        }
+        if (blockObj.p === ECOREF_HASH) return new EcoBirthBlock(blockObj)
+        if (blockObj.p === REF_HASH) return new BirthBlock(blockObj)
         if (blockObj.h && blockObj.m.length === 1 && blockObj.i.length === 1
-        && blockObj.x.length === 0) {
-            return new InitializationBlock(blockObj)
-        }
+            && blockObj.x.length === 0) return new InitializationBlock(blockObj)
+        if ("t" in blockObj) return new CitizenBlock(blockObj)
         return new Block(blockObj)
     }
 }
@@ -31,8 +26,8 @@ export class BlockMaker {
 export class Block {
 
     constructor(blockObj) {
-        if (!("v" in blockObj && "d" in blockObj && "p" in blockObj && "s" in blockObj && "r" in blockObj && "m" in blockObj && "i" in blockObj && "t" in blockObj && "h" in blockObj && "x" in blockObj)) {
-            throw new Error('Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (total), "h" (signature) and "x" (transactions) are mandatory.')
+        if (!("v" in blockObj && "d" in blockObj && "p" in blockObj && "s" in blockObj && "r" in blockObj && "m" in blockObj && "i" in blockObj && "h" in blockObj && "x" in blockObj)) {
+            throw new Error('Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "h" (signature) and "x" (transactions) are mandatory.')
         }
         this.version = blockObj.v
         this.closedate = intToDate(infinityDate)
@@ -44,7 +39,6 @@ export class Block {
         this.root = blockObj.r
         this.money = blockObj.m
         this.invests = blockObj.i
-        this.total = blockObj.t
         this.signature = blockObj.h
         this.transactions = blockObj.x.map(tx => TransactionMaker.make(tx))
     }
@@ -68,8 +62,7 @@ export class Block {
             s: this.signer,
             r: this.root,
             m: this.money,
-            i: this.invests,
-            t: this.total
+            i: this.invests
         }
         const packedblock = encode(block)
         return sha256(packedblock)
@@ -136,7 +129,6 @@ export class Block {
             r: this.root,
             m: this.money,
             i: this.invests,
-            t: this.total,
             h: this.signature,
             x: this.transactions.map(tx => tx.export())
         }
@@ -221,7 +213,41 @@ export class Block {
     }
 }
 
-export class BirthBlock extends Block {
+export class CitizenBlock extends Block {
+
+    constructor(blockObj) {
+        if (!("t" in blockObj)) {
+            throw new Error('Field "t" (total) is mandatory.')
+        }
+        super(blockObj)
+        this.total = blockObj.t
+    }
+
+    toString() {
+        return '[CitizenBlock]'
+    }
+
+    hash() {
+        const block = {
+            v: this.version,
+            d: dateToInt(this.closedate),
+            p: this.previousHash,
+            s: this.signer,
+            r: this.root,
+            m: this.money,
+            i: this.invests,
+            t: this.total
+        }
+        const packedblock = encode(block)
+        return sha256(packedblock)
+    }
+
+    export() {
+        return { ...super.export(), t: this.total }
+    }
+}
+
+export class BirthBlock extends CitizenBlock {
     constructor(objOrSk, birthdate = null, name = null, date = new Date()) {
         if (typeof objOrSk === 'object' && birthdate === null && name === null) {
             super(objOrSk)
@@ -245,13 +271,9 @@ export class BirthBlock extends Block {
         }
     }
 
-    toString() {
-        return '[BirthBlock]'
-    }
+    toString() { return '[BirthBlock]' }
 
-    getMyPublicKey() {
-        return this.signer
-    }
+    getMyPublicKey() { return this.signer }
 
     // TODO : test it
     isValid() {
@@ -276,7 +298,7 @@ export class BirthBlock extends Block {
     }
 }
 
-export class InitializationBlock extends Block {
+export class InitializationBlock extends CitizenBlock {
     constructor(objOrSk, previousBlock = null, date = new Date()) {
         if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null
             && previousBlock === null) {
@@ -299,13 +321,9 @@ export class InitializationBlock extends Block {
         }
     }
 
-    toString() {
-        return '[InitializationBlock]'
-    }
+    toString() { return '[InitializationBlock]' }
 
-    getMyPublicKey() {
-        return null
-    }
+    getMyPublicKey() { return null }
 
     // TODO : test it
     isValid() {
@@ -336,7 +354,6 @@ export class EcoBirthBlock extends Block {
                 r: 0,
                 m: [],
                 i: [],
-                t: 0,
                 h: null,
                 x: []
             })
@@ -365,7 +382,6 @@ export class EcoBirthBlock extends Block {
             this.transactions.length === 3 &&
             this.money.length === 0 &&
             this.invests.length === 0 &&
-            this.total === 0 &&
             secp256k1.verify(signature, messageHash, publicKey)
     }
 }
@@ -382,7 +398,7 @@ export class EcoInitializationBlock extends Block {
                 p: previousBlock.signature,
                 s: publicFromPrivate(objOrSk),
                 r: 0,
-                m: [], i: [], t: 0, h: null, x: []
+                m: [], i: [], h: null, x: []
             })
             const roleTxTypes = new Set([TXTYPE.SETADMIN, TXTYPE.SETACTOR, TXTYPE.SETPAYER])
             for (const tx of previousBlock.transactions) {
@@ -407,7 +423,6 @@ export class EcoInitializationBlock extends Block {
             this.root.length === 64 &&
             this.money.length === 0 &&
             this.invests.length === 0 &&
-            this.total === 0 &&
             secp256k1.verify(signature, messageHash, publicKey)
     }
 }

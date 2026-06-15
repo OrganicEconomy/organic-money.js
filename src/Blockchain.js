@@ -199,17 +199,20 @@ export class Blockchain {
 	 * Copy to this new block some transactions :
 	 *   - those with still running engagement
 	 */
+	_createNewBlock(data) {
+		return new Block(data)
+	}
+
 	newBlock() {
 		if (!this.lastblock.isSigned()) {
 			throw new Error('Previous block not signed.')
 		}
-		const block = new Block ({
+		const block = this._createNewBlock({
 			v: Blockchain.VERSION,
 			d: infinityDate,
 			p: this.lastblock.signature,
 			m: this.lastblock.money,
 			i: this.lastblock.invests,
-			t: 0,
 			r: 0,
 			s: null,
 			h: null,

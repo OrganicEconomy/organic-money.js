@@ -182,14 +182,29 @@ export class Blockchain {
 		return true
 	}
 
+	/**
+	 * Remove the given ids from result, one occurrence per requested id.
+	 * Ids are date+index based, with no citizen-specific component, so the same id
+	 * can legitimately appear more than once — a plain value filter would remove
+	 * every occurrence instead of just the ones requested.
+	 */
+	#removeOccurrences(source, idsToRemove) {
+		const result = [...source]
+		for (const id of idsToRemove) {
+			const index = result.indexOf(id)
+			if (index !== -1) result.splice(index, 1)
+		}
+		return result
+	}
+
 	removeMoney(money) {
-		const result = this.lastblock.money.filter(x => !money.includes(x))
+		const result = this.#removeOccurrences(this.lastblock.money, money)
 		this.lastblock.money = result;
 		return result
 	}
 
 	removeInvests(invests) {
-		const result = this.lastblock.invests.filter(x => !invests.includes(x))
+		const result = this.#removeOccurrences(this.lastblock.invests, invests)
 		this.lastblock.invests = result
 		return result
 	}

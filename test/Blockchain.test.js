@@ -304,6 +304,15 @@ describe('Blockchain', () => {
 
 			assert.deepEqual(result, expected)
 		})
+
+		it('Should only remove one occurrence per requested id, even if the id appears more than once (different citizens can generate the same money id).', () => {
+			const bc = new Blockchain([makeBlockObj({ signed: true, date: new Date('2025-01-01') })])
+			bc.lastblock.money = [20250101000, 20250101000, 20250101001]
+
+			const result = bc.removeMoney([20250101000])
+
+			assert.deepEqual(result, [20250101000, 20250101001])
+		})
 	})
 
 	describe('removeInvests', () => {
@@ -318,6 +327,15 @@ describe('Blockchain', () => {
 			const result = bc.removeInvests(toRemove)
 
 			assert.deepEqual(result, tx2.invests.slice(1))
+		})
+
+		it('Should only remove one occurrence per requested id, even if the id appears more than once (different citizens can generate the same invest id).', () => {
+			const bc = new Blockchain([makeBlockObj({ signed: true, date: new Date('2025-01-01') })])
+			bc.lastblock.invests = [202501019000, 202501019000, 202501019001]
+
+			const result = bc.removeInvests([202501019000])
+
+			assert.deepEqual(result, [202501019000, 202501019001])
 		})
 	})
 

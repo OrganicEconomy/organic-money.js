@@ -79,6 +79,25 @@ export function buildMoneyIndexes(date, level) {
     return result
 }
 
+/**
+ * Money and invest ids are date+index based, with no citizen-specific component,
+ * so the same id can legitimately appear more than once (held by different parties).
+ * This checks that haystack has at least as many occurrences of each value as needles
+ * requires, instead of just checking value presence.
+ */
+export function hasEnoughOccurrences(haystack, needles) {
+    const counts = new Map()
+    for (const id of haystack) {
+        counts.set(id, (counts.get(id) || 0) + 1)
+    }
+    for (const id of needles) {
+        const remaining = counts.get(id) || 0
+        if (remaining <= 0) return false
+        counts.set(id, remaining - 1)
+    }
+    return true
+}
+
 export function signHash(hash, sk) {
     return toHex(secp256k1.sign(hash, hexToBytes(sk)).toDERRawBytes())
 }

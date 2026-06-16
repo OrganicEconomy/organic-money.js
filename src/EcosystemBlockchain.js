@@ -1,6 +1,6 @@
 import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
-import { randomPrivateKey, publicFromPrivate, dateToInt, unitIdToDateInt, investIdToMoneyId } from './crypto.js'
+import { randomPrivateKey, publicFromPrivate, dateToInt, unitIdToDateInt, investIdToMoneyId, hasEnoughOccurrences } from './crypto.js'
 import { Block, EcoBirthBlock, EcoInitializationBlock, BLOCKTYPE } from './Block.js'
 import {
     SetAdminTransaction, UnsetAdminTransaction,
@@ -241,7 +241,7 @@ export class EcosystemBlockchain extends Blockchain {
         const cap = this.getPayers().get(tx.signer)
         if (cap > 0 && tx.invests.length > cap)
             throw new InvalidTransactionError('Order exceeds payer capacity.')
-        const allInvestsAvailable = tx.invests.every(i => this.lastblock.invests.includes(i))
+        const allInvestsAvailable = hasEnoughOccurrences(this.lastblock.invests, tx.invests)
         if (!allInvestsAvailable)
             throw new InvalidTransactionError('Ecosystem does not have these invests available.')
         const orderDateInt = dateToInt(tx.date)
@@ -258,7 +258,7 @@ export class EcosystemBlockchain extends Blockchain {
 
     order(ecoSk, targetPk, invests, date = new Date()) {
         this.#assertIsMe(ecoSk)
-        const allInvestsAvailable = invests.every(i => this.lastblock.invests.includes(i))
+        const allInvestsAvailable = hasEnoughOccurrences(this.lastblock.invests, invests)
         if (!allInvestsAvailable)
             throw new InvalidTransactionError('Ecosystem does not have these invests available.')
         const orderDateInt = dateToInt(date)
@@ -268,7 +268,7 @@ export class EcosystemBlockchain extends Blockchain {
         const authorizedInvests = this.lastblock.transactions
             .filter(tx => tx.type === TXTYPE.PAYERORDER && tx.target === targetPk)
             .flatMap(tx => tx.invests)
-        if (!invests.every(i => authorizedInvests.includes(i)))
+        if (!hasEnoughOccurrences(authorizedInvests, invests))
             throw new InvalidTransactionError('No payer authorization for these invests.')
         const money = invests.map(investIdToMoneyId)
         this.removeInvests(invests)

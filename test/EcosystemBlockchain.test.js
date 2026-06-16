@@ -828,6 +828,17 @@ describe('EcosystemBlockchain', () => {
 
             assert.doesNotThrow(() => bc.receivePayerOrder(mySk,tx))
         })
+
+        it('Should throw if order claims more occurrences of an id than actually available (duplicate id, insufficient count).', () => {
+            const bc = makeStartedEco()
+
+            ecoSetPayer(bc, adminSk, referentPk, 0, DATE2)
+            const investId = buildInvestIndexes(DATE2, 1)[0]
+            bc.lastblock.invests = [investId]
+            const tx = new PayerOrderTransaction(referentSk, targetPk, [investId, investId], myPk, DATE2)
+
+            assert.throws(() => bc.receivePayerOrder(mySk, tx), InvalidTransactionError, 'Ecosystem does not have these invests available.')
+        })
     })
 
     describe('order', () => {
@@ -843,6 +854,34 @@ describe('EcosystemBlockchain', () => {
             const invests = buildInvestIndexes(DATE2, 1)
 
             assert.throws(() => bc.order(mySk, myPk, invests, DATE2))
+        })
+
+        it('Should throw if order claims more occurrences of an id than actually available (duplicate id, insufficient count).', () => {
+            const bc = makeStartedEco()
+
+            const investId = buildInvestIndexes(DATE2, 1)[0]
+            bc.lastblock.invests = [investId]
+
+            assert.throws(
+                () => bc.order(mySk, myPk, [investId, investId], DATE2),
+                InvalidTransactionError,
+                'Ecosystem does not have these invests available.'
+            )
+        })
+
+        it('Should throw if payerOrder authorized fewer occurrences of an id than requested.', () => {
+            const bc = makeStartedEco()
+
+            ecoSetPayer(bc, adminSk, referentPk, 0, DATE2)
+            const investId = buildInvestIndexes(DATE2, 1)[0]
+            bc.lastblock.invests = [investId, investId]
+            bc.receivePayerOrder(mySk, new PayerOrderTransaction(referentSk, targetPk, [investId], myPk, DATE2))
+
+            assert.throws(
+                () => bc.order(mySk, targetPk, [investId, investId], DATE2),
+                InvalidTransactionError,
+                'No payer authorization for these invests.'
+            )
         })
 
         it('Should create an EarnTransaction, convert invests to money, and remove invests from lastblock.', () => {
@@ -915,6 +954,15 @@ describe('EcosystemBlockchain', () => {
             assert.deepEqual(tx.money, [20250101000])
             assert.ok(tx.isValid())
             assert.notInclude(bc.lastblock.money, 20250101000)
+        })
+
+        it('Should only remove one occurrence per requested id, even if the id appears more than once (different citizens can generate the same money id).', () => {
+            const bc = makeStartedEco()
+
+            bc.lastblock.money = [20250101000, 20250101000, 20250101001]
+            bc.earn(mySk, adminPk, [20250101000], DATE2)
+
+            assert.deepEqual(bc.lastblock.money, [20250101000, 20250101001])
         })
     })
 

@@ -21,8 +21,11 @@ export const referentSk = privateKey3
 export function makeTransactionObj(options = {}) {
     const obj = makeTransaction(options).export()
     if ("q" in options) obj.q = options.q
+    obj.e = "e" in options ? options.e : publicKey1
     return obj
 }
+
+const ROLE_TX_TYPES = [TXTYPE.SETADMIN, TXTYPE.SETACTOR, TXTYPE.SETPAYER, TXTYPE.UNSETADMIN, TXTYPE.UNSETACTOR, TXTYPE.UNSETPAYER]
 
 export function makeTransaction(options = {}) {
 
@@ -30,6 +33,7 @@ export function makeTransaction(options = {}) {
     const date = "date" in options ? options.date : new Date()
     const isCreate = type === TXTYPE.CREATE
     const needsQ = type === TXTYPE.SETACTOR || type === TXTYPE.SETPAYER
+    const needsEcosystem = ROLE_TX_TYPES.includes(type)
     const tx = TransactionMaker.make({
         v: "version" in options ? options.version : 1,
         d: dateToInt(date),
@@ -39,7 +43,8 @@ export function makeTransaction(options = {}) {
         i: "invests" in options ? options.invests : (isCreate ? buildInvestIndexes(date, 1) : []),
         t: type,
         h: "signature" in options ? options.signature : 'notsetyet',
-        ...((needsQ || "q" in options) && { q: "q" in options ? options.q : 1 })
+        ...((needsQ || "q" in options) && { q: "q" in options ? options.q : 1 }),
+        ...((needsEcosystem || "e" in options) && { e: "e" in options ? options.e : publicKey1 })
     })
     if ("moneycount" in options) {
         tx.money = buildMoneyIndexes(date, options.moneycount)

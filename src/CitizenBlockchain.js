@@ -3,7 +3,11 @@ import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { randomPrivateKey, publicFromPrivate, 
 	dateToInt, buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
 import { CitizenBlock, BirthBlock, InitializationBlock, BLOCKTYPE } from './Block.js'
-import { CreateTransaction, EngageTransaction, PaperTransaction, PayTransaction, PayerOrderTransaction, TXTYPE } from './Transaction.js'
+import {
+	CreateTransaction, EngageTransaction, PaperTransaction, PayTransaction, PayerOrderTransaction,
+	SetAdminTransaction, UnsetAdminTransaction, SetActorTransaction, UnsetActorTransaction,
+	SetPayerTransaction, UnsetPayerTransaction, TXTYPE
+} from './Transaction.js'
 
 export class CitizenBlockchain extends Blockchain {
 
@@ -152,6 +156,65 @@ export class CitizenBlockchain extends Blockchain {
 		if (publicFromPrivate(mySk) !== this.getMyPublicKey())
 			throw new UnauthorizedError('Private key does not match blockchain owner.')
 		const tx = new PayerOrderTransaction(mySk, supplierPk, invests, ecosystemPk, date)
+		this._addTransaction(tx)
+		return tx
+	}
+
+	#assertOwner(sk) {
+		if (publicFromPrivate(sk) !== this.getMyPublicKey())
+			throw new UnauthorizedError('Private key does not match blockchain owner.')
+	}
+
+	#assertValidRatio(ratio) {
+		if (!Number.isInteger(ratio) || ratio < 0)
+			throw new InvalidTransactionError('Ratio must be a non-negative integer.')
+	}
+
+	#assertValidCap(cap) {
+		if (!Number.isInteger(cap) || cap < 0)
+			throw new InvalidTransactionError('Cap must be a non-negative integer.')
+	}
+
+	setAdmin(mySk, ecosystemPk, targetPk, date = new Date()) {
+		this.#assertOwner(mySk)
+		const tx = new SetAdminTransaction(mySk, targetPk, ecosystemPk, date)
+		this._addTransaction(tx)
+		return tx
+	}
+
+	unsetAdmin(mySk, ecosystemPk, targetPk, date = new Date()) {
+		this.#assertOwner(mySk)
+		const tx = new UnsetAdminTransaction(mySk, targetPk, ecosystemPk, date)
+		this._addTransaction(tx)
+		return tx
+	}
+
+	setActor(mySk, ecosystemPk, targetPk, ratio, date = new Date()) {
+		this.#assertOwner(mySk)
+		this.#assertValidRatio(ratio)
+		const tx = new SetActorTransaction(mySk, targetPk, ratio, ecosystemPk, date)
+		this._addTransaction(tx)
+		return tx
+	}
+
+	unsetActor(mySk, ecosystemPk, targetPk, date = new Date()) {
+		this.#assertOwner(mySk)
+		const tx = new UnsetActorTransaction(mySk, targetPk, ecosystemPk, date)
+		this._addTransaction(tx)
+		return tx
+	}
+
+	setPayer(mySk, ecosystemPk, targetPk, cap, date = new Date()) {
+		this.#assertOwner(mySk)
+		this.#assertValidCap(cap)
+		const tx = new SetPayerTransaction(mySk, targetPk, cap, ecosystemPk, date)
+		this._addTransaction(tx)
+		return tx
+	}
+
+	unsetPayer(mySk, ecosystemPk, targetPk, date = new Date()) {
+		this.#assertOwner(mySk)
+		const tx = new UnsetPayerTransaction(mySk, targetPk, ecosystemPk, date)
 		this._addTransaction(tx)
 		return tx
 	}

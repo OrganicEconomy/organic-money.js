@@ -375,9 +375,10 @@ export class EcoBirthBlock extends Block {
                 h: null,
                 x: []
             })
+            const ecosystemPk = publicFromPrivate(objOrSk)
             this.add(new InitTransaction(objOrSk, name, date))
-            this.add(new SetAdminTransaction(objOrSk, adminPk, date))
-            this.add(new SetActorTransaction(objOrSk, adminPk, 1, date))
+            this.add(new SetAdminTransaction(objOrSk, adminPk, ecosystemPk, date))
+            this.add(new SetActorTransaction(objOrSk, adminPk, 1, ecosystemPk, date))
             this.sign(objOrSk, date)
         }
     }

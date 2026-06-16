@@ -336,9 +336,11 @@ export class PaperTransaction extends Transaction {
 }
 
 export class SetAdminTransaction extends Transaction {
-    constructor(objOrSk, targetPk = null, date = null) {
+    constructor(objOrSk, targetPk = null, ecosystemPk = null, date = null) {
         if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
             super(objOrSk)
+            if (objOrSk.e === undefined) throw new Error('SetAdminTransaction: missing e field')
+            this.ecosystem = objOrSk.e
         } else {
             super({
                 v: Blockchain.VERSION,
@@ -350,11 +352,28 @@ export class SetAdminTransaction extends Transaction {
                 p: targetPk,
                 h: ""
             })
+            this.ecosystem = ecosystemPk
             this.sign(objOrSk)
         }
     }
 
     toString() { return '[SetAdminTransaction]' }
+
+    hash() {
+        const tx = {
+            d: dateToInt(this.date),
+            m: this.money,
+            i: this.invests,
+            s: this.signer,
+            t: this.type,
+            p: this.target,
+            v: this.version,
+            e: this.ecosystem
+        }
+        return sha256(encode(tx))
+    }
+
+    export() { return { ...super.export(), e: this.ecosystem } }
 
     isValid() {
         return super.isValid() &&
@@ -362,16 +381,20 @@ export class SetAdminTransaction extends Transaction {
         this.money.length === 0 &&
         this.invests.length === 0 &&
         !! this.target &&
-        this.target.length === 66
+        this.target.length === 66 &&
+        !! this.ecosystem &&
+        this.ecosystem.length === 66
     }
 }
 
 export class SetActorTransaction extends Transaction {
-    constructor(objOrSk, targetPk = null, ratio = 0, date = null) {
+    constructor(objOrSk, targetPk = null, ratio = 0, ecosystemPk = null, date = null) {
         if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
             super(objOrSk)
             if (objOrSk.q === undefined) throw new Error('SetActorTransaction: missing q field')
+            if (objOrSk.e === undefined) throw new Error('SetActorTransaction: missing e field')
             this.ratio = objOrSk.q
+            this.ecosystem = objOrSk.e
         } else {
             super({
                 v: Blockchain.VERSION,
@@ -384,6 +407,7 @@ export class SetActorTransaction extends Transaction {
                 h: ""
             })
             this.ratio = ratio
+            this.ecosystem = ecosystemPk
             this.sign(objOrSk)
         }
     }
@@ -399,12 +423,13 @@ export class SetActorTransaction extends Transaction {
             t: this.type,
             p: this.target,
             v: this.version,
-            q: this.ratio
+            q: this.ratio,
+            e: this.ecosystem
         }
         return sha256(encode(tx))
     }
 
-    export() { return { ...super.export(), q: this.ratio } }
+    export() { return { ...super.export(), q: this.ratio, e: this.ecosystem } }
 
     isValid() {
         return super.isValid() &&
@@ -413,16 +438,20 @@ export class SetActorTransaction extends Transaction {
         this.invests.length === 0 &&
         !! this.target &&
         this.target.length === 66 &&
-        Number.isInteger(this.ratio) && this.ratio >= 0
+        Number.isInteger(this.ratio) && this.ratio >= 0 &&
+        !! this.ecosystem &&
+        this.ecosystem.length === 66
     }
 }
 
 export class SetPayerTransaction extends Transaction {
-    constructor(objOrSk, targetPk = null, cap = 0, date = null) {
+    constructor(objOrSk, targetPk = null, cap = 0, ecosystemPk = null, date = null) {
         if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
             super(objOrSk)
             if (objOrSk.q === undefined) throw new Error('SetPayerTransaction: missing q field')
+            if (objOrSk.e === undefined) throw new Error('SetPayerTransaction: missing e field')
             this.cap = objOrSk.q
+            this.ecosystem = objOrSk.e
         } else {
             super({
                 v: Blockchain.VERSION,
@@ -435,6 +464,7 @@ export class SetPayerTransaction extends Transaction {
                 h: ""
             })
             this.cap = cap
+            this.ecosystem = ecosystemPk
             this.sign(objOrSk)
         }
     }
@@ -450,12 +480,13 @@ export class SetPayerTransaction extends Transaction {
             t: this.type,
             p: this.target,
             v: this.version,
-            q: this.cap
+            q: this.cap,
+            e: this.ecosystem
         }
         return sha256(encode(tx))
     }
 
-    export() { return { ...super.export(), q: this.cap } }
+    export() { return { ...super.export(), q: this.cap, e: this.ecosystem } }
 
     isValid() {
         return super.isValid() &&
@@ -464,14 +495,18 @@ export class SetPayerTransaction extends Transaction {
         this.invests.length === 0 &&
         !! this.target &&
         this.target.length === 66 &&
-        Number.isInteger(this.cap) && this.cap >= 0
+        Number.isInteger(this.cap) && this.cap >= 0 &&
+        !! this.ecosystem &&
+        this.ecosystem.length === 66
     }
 }
 
 export class UnsetAdminTransaction extends Transaction {
-    constructor(objOrSk, targetPk = null, date = null) {
+    constructor(objOrSk, targetPk = null, ecosystemPk = null, date = null) {
         if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
             super(objOrSk)
+            if (objOrSk.e === undefined) throw new Error('UnsetAdminTransaction: missing e field')
+            this.ecosystem = objOrSk.e
         } else {
             super({
                 v: Blockchain.VERSION,
@@ -483,11 +518,28 @@ export class UnsetAdminTransaction extends Transaction {
                 p: targetPk,
                 h: ""
             })
+            this.ecosystem = ecosystemPk
             this.sign(objOrSk)
         }
     }
 
     toString() { return '[UnsetAdminTransaction]' }
+
+    hash() {
+        const tx = {
+            d: dateToInt(this.date),
+            m: this.money,
+            i: this.invests,
+            s: this.signer,
+            t: this.type,
+            p: this.target,
+            v: this.version,
+            e: this.ecosystem
+        }
+        return sha256(encode(tx))
+    }
+
+    export() { return { ...super.export(), e: this.ecosystem } }
 
     isValid() {
         return super.isValid() &&
@@ -495,14 +547,18 @@ export class UnsetAdminTransaction extends Transaction {
             this.money.length === 0 &&
             this.invests.length === 0 &&
             !!this.target &&
-            this.target.length === 66
+            this.target.length === 66 &&
+            !! this.ecosystem &&
+            this.ecosystem.length === 66
     }
 }
 
 export class UnsetActorTransaction extends Transaction {
-    constructor(objOrSk, targetPk = null, date = null) {
+    constructor(objOrSk, targetPk = null, ecosystemPk = null, date = null) {
         if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
             super(objOrSk)
+            if (objOrSk.e === undefined) throw new Error('UnsetActorTransaction: missing e field')
+            this.ecosystem = objOrSk.e
         } else {
             super({
                 v: Blockchain.VERSION,
@@ -514,11 +570,28 @@ export class UnsetActorTransaction extends Transaction {
                 p: targetPk,
                 h: ""
             })
+            this.ecosystem = ecosystemPk
             this.sign(objOrSk)
         }
     }
 
     toString() { return '[UnsetActorTransaction]' }
+
+    hash() {
+        const tx = {
+            d: dateToInt(this.date),
+            m: this.money,
+            i: this.invests,
+            s: this.signer,
+            t: this.type,
+            p: this.target,
+            v: this.version,
+            e: this.ecosystem
+        }
+        return sha256(encode(tx))
+    }
+
+    export() { return { ...super.export(), e: this.ecosystem } }
 
     isValid() {
         return super.isValid() &&
@@ -526,14 +599,18 @@ export class UnsetActorTransaction extends Transaction {
             this.money.length === 0 &&
             this.invests.length === 0 &&
             !!this.target &&
-            this.target.length === 66
+            this.target.length === 66 &&
+            !! this.ecosystem &&
+            this.ecosystem.length === 66
     }
 }
 
 export class UnsetPayerTransaction extends Transaction {
-    constructor(objOrSk, targetPk = null, date = null) {
+    constructor(objOrSk, targetPk = null, ecosystemPk = null, date = null) {
         if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
             super(objOrSk)
+            if (objOrSk.e === undefined) throw new Error('UnsetPayerTransaction: missing e field')
+            this.ecosystem = objOrSk.e
         } else {
             super({
                 v: Blockchain.VERSION,
@@ -545,11 +622,28 @@ export class UnsetPayerTransaction extends Transaction {
                 p: targetPk,
                 h: ""
             })
+            this.ecosystem = ecosystemPk
             this.sign(objOrSk)
         }
     }
 
     toString() { return '[UnsetPayerTransaction]' }
+
+    hash() {
+        const tx = {
+            d: dateToInt(this.date),
+            m: this.money,
+            i: this.invests,
+            s: this.signer,
+            t: this.type,
+            p: this.target,
+            v: this.version,
+            e: this.ecosystem
+        }
+        return sha256(encode(tx))
+    }
+
+    export() { return { ...super.export(), e: this.ecosystem } }
 
     isValid() {
         return super.isValid() &&
@@ -557,7 +651,9 @@ export class UnsetPayerTransaction extends Transaction {
             this.money.length === 0 &&
             this.invests.length === 0 &&
             !!this.target &&
-            this.target.length === 66
+            this.target.length === 66 &&
+            !! this.ecosystem &&
+            this.ecosystem.length === 66
     }
 }
 

@@ -110,12 +110,6 @@ export class EcosystemBlockchain extends Blockchain {
         }
     }
 
-    #assertAdmin(sk) {
-        const pk = publicFromPrivate(sk)
-        if (!this.isAdmin(pk)) throw new UnauthorizedError('Only admins can perform this action.')
-        return pk
-    }
-
     #assertIsMe(sk) {
         if (publicFromPrivate(sk) !== this.getMyPublicKey())
             throw new UnauthorizedError('Private key does not match blockchain owner.')
@@ -131,58 +125,61 @@ export class EcosystemBlockchain extends Blockchain {
             throw new InvalidTransactionError('Cap must be a non-negative integer.')
     }
 
-    setAdmin(adminSk, targetPk, date = new Date()) {
-        this.#assertAdmin(adminSk)
-        const tx = new SetAdminTransaction(adminSk, targetPk, date)
+    #assertReceivable(tx, type) {
+        if (tx.type !== type || !tx.isValid())
+            throw new InvalidTransactionError('Invalid transaction')
+        if (tx.ecosystem !== this.getMyPublicKey())
+            throw new InvalidTransactionError('Transaction not targeting this ecosystem')
+        if (!this.isAdmin(tx.signer))
+            throw new UnauthorizedError('Only admins can perform this action.')
+    }
+
+    receiveSetAdmin(tx) {
+        this.#assertReceivable(tx, TXTYPE.SETADMIN)
         this._addTransaction(tx)
         return tx
     }
 
-    unsetAdmin(adminSk, targetPk, date = new Date()) {
-        this.#assertAdmin(adminSk)
+    receiveUnsetAdmin(tx) {
+        this.#assertReceivable(tx, TXTYPE.UNSETADMIN)
         if (this.getAdmins().size <= 1) throw new InvalidTransactionError('Cannot remove the last admin.')
-        const tx = new UnsetAdminTransaction(adminSk, targetPk, date)
         this._addTransaction(tx)
         return tx
     }
 
-    setActor(adminSk, targetPk, ratio, date = new Date()) {
-        this.#assertAdmin(adminSk)
-        this.#assertValidRatio(ratio)
-        if (ratio === 0) {
-            const otherWithRatio = [...this.getActors().entries()].some(([pk, r]) => pk !== targetPk && r > 0)
+    receiveSetActor(tx) {
+        this.#assertReceivable(tx, TXTYPE.SETACTOR)
+        this.#assertValidRatio(tx.ratio)
+        if (tx.ratio === 0) {
+            const otherWithRatio = [...this.getActors().entries()].some(([pk, r]) => pk !== tx.target && r > 0)
             if (!otherWithRatio) throw new InvalidTransactionError('At least one actor must have a ratio > 0.')
         }
-        const tx = new SetActorTransaction(adminSk, targetPk, ratio, date)
         this._addTransaction(tx)
         return tx
     }
 
-    unsetActor(adminSk, targetPk, date = new Date()) {
-        this.#assertAdmin(adminSk)
-        if (this.isAdmin(targetPk)) throw new InvalidTransactionError('Cannot remove actor who is still admin.')
-        if (this.isPayer(targetPk)) throw new InvalidTransactionError('Cannot remove actor who is still payer.')
-        const actorRatio = this.getActors().get(targetPk)
+    receiveUnsetActor(tx) {
+        this.#assertReceivable(tx, TXTYPE.UNSETACTOR)
+        if (this.isAdmin(tx.target)) throw new InvalidTransactionError('Cannot remove actor who is still admin.')
+        if (this.isPayer(tx.target)) throw new InvalidTransactionError('Cannot remove actor who is still payer.')
+        const actorRatio = this.getActors().get(tx.target)
         if (actorRatio > 0) {
-            const otherWithRatio = [...this.getActors().entries()].some(([pk, r]) => pk !== targetPk && r > 0)
+            const otherWithRatio = [...this.getActors().entries()].some(([pk, r]) => pk !== tx.target && r > 0)
             if (!otherWithRatio) throw new InvalidTransactionError('At least one actor must have a ratio > 0.')
         }
-        const tx = new UnsetActorTransaction(adminSk, targetPk, date)
         this._addTransaction(tx)
         return tx
     }
 
-    setPayer(adminSk, targetPk, cap, date = new Date()) {
-        this.#assertAdmin(adminSk)
-        this.#assertValidCap(cap)
-        const tx = new SetPayerTransaction(adminSk, targetPk, cap, date)
+    receiveSetPayer(tx) {
+        this.#assertReceivable(tx, TXTYPE.SETPAYER)
+        this.#assertValidCap(tx.cap)
         this._addTransaction(tx)
         return tx
     }
 
-    unsetPayer(adminSk, targetPk, date = new Date()) {
-        this.#assertAdmin(adminSk)
-        const tx = new UnsetPayerTransaction(adminSk, targetPk, date)
+    receiveUnsetPayer(tx) {
+        this.#assertReceivable(tx, TXTYPE.UNSETPAYER)
         this._addTransaction(tx)
         return tx
     }
@@ -252,7 +249,7 @@ export class EcosystemBlockchain extends Blockchain {
         if (!allInvestsMature)
             throw new InvalidTransactionError('Some invests are not yet available.')
         if (cap > 0) {
-            const capUpdate = new SetPayerTransaction(ecoSk, tx.signer, cap - tx.invests.length, tx.date)
+            const capUpdate = new SetPayerTransaction(ecoSk, tx.signer, cap - tx.invests.length, this.getMyPublicKey(), tx.date)
             this._addTransaction(capUpdate)
         }
         this._addTransaction(tx)

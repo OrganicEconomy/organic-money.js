@@ -881,6 +881,26 @@ describe('PaperTransaction', () => {
 })
 
 describe('SetAdminTransaction', () => {
+    describe('constructor', () => {
+        it('Should throw if e is missing from object.', () => {
+            const obj = new SetAdminTransaction(mySk, targetPk, referentPk, new Date()).export()
+            delete obj.e
+
+            assert.throws(() => new SetAdminTransaction(obj), Error)
+        })
+
+        it('Should store ecosystem when created with (sk, targetPk, ecosystemPk, date).', () => {
+            const tx = new SetAdminTransaction(mySk, targetPk, referentPk, new Date())
+            assert.equal(tx.ecosystem, referentPk)
+        })
+
+        it('Should read ecosystem from e field when created from object.', () => {
+            const tx = new SetAdminTransaction(mySk, targetPk, referentPk, new Date())
+            const tx2 = new SetAdminTransaction(tx.export())
+            assert.equal(tx2.ecosystem, referentPk)
+        })
+    })
+
     describe('toString', () => {
         it('Should return [SetAdminTransaction]', () => {
             const tx = makeTransaction({
@@ -891,7 +911,31 @@ describe('SetAdminTransaction', () => {
         })
     })
 
+    describe('e field (ecosystem)', () => {
+        it('Should include ecosystem in hash — different ecosystem produces different hash.', () => {
+            const d = new Date('2025-01-01')
+            const tx1 = new SetAdminTransaction(mySk, targetPk, referentPk, d)
+            const tx2 = new SetAdminTransaction(mySk, targetPk, targetPk, d)
+            assert.notDeepEqual(tx1.hash(), tx2.hash())
+        })
+
+        it('Should include e in export.', () => {
+            const tx = new SetAdminTransaction(mySk, targetPk, referentPk, new Date())
+            assert.equal(tx.export().e, referentPk)
+        })
+    })
+
     describe('isValid', () => {
+
+        it('Should return false if ecosystem is missing.', () => {
+            const tx = new SetAdminTransaction(mySk, targetPk, "", new Date())
+            assert.isFalse(tx.isValid())
+        })
+
+        it('Should return false if ecosystem is NOT 66 char length.', () => {
+            const tx = new SetAdminTransaction(mySk, targetPk, "123", new Date())
+            assert.isFalse(tx.isValid())
+        })
 
         it('Should return false if money is NOT an empty array.', () => {
             const tx = new SetAdminTransaction(makeTransactionObj({
@@ -965,8 +1009,15 @@ describe('SetAdminTransaction', () => {
 describe('SetActorTransaction', () => {
     describe('constructor', () => {
         it('Should throw if q is missing from object.', () => {
-            const obj = new SetActorTransaction(mySk, targetPk, 3, new Date()).export()
+            const obj = new SetActorTransaction(mySk, targetPk, 3, referentPk, new Date()).export()
             delete obj.q
+
+            assert.throws(() => new SetActorTransaction(obj), Error)
+        })
+
+        it('Should throw if e is missing from object.', () => {
+            const obj = new SetActorTransaction(mySk, targetPk, 3, referentPk, new Date()).export()
+            delete obj.e
 
             assert.throws(() => new SetActorTransaction(obj), Error)
         })
@@ -1040,56 +1091,97 @@ describe('SetActorTransaction', () => {
         })
 
         it('Should return false if ratio is negative.', () => {
-            const tx = new SetActorTransaction(mySk, targetPk, -1, new Date())
+            const tx = new SetActorTransaction(mySk, targetPk, -1, referentPk, new Date())
             assert.isFalse(tx.isValid())
         })
 
         it('Should return false if ratio is not an integer.', () => {
-            const tx = new SetActorTransaction(mySk, targetPk, 1.5, new Date())
+            const tx = new SetActorTransaction(mySk, targetPk, 1.5, referentPk, new Date())
             assert.isFalse(tx.isValid())
         })
 
         it('Should return true if ratio is 0 (volunteer).', () => {
-            const tx = new SetActorTransaction(mySk, targetPk, 0, new Date())
+            const tx = new SetActorTransaction(mySk, targetPk, 0, referentPk, new Date())
             assert.isTrue(tx.isValid())
         })
 
         it('Should return true if all is fine.', () => {
-            const tx = new SetActorTransaction(mySk, targetPk, 1, new Date())
+            const tx = new SetActorTransaction(mySk, targetPk, 1, referentPk, new Date())
             assert.isTrue(tx.isValid())
+        })
+
+        it('Should return false if ecosystem is missing.', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, 1, "", new Date())
+            assert.isFalse(tx.isValid())
+        })
+
+        it('Should return false if ecosystem is NOT 66 char length.', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, 1, "123", new Date())
+            assert.isFalse(tx.isValid())
         })
     })
 
     describe('constructor', () => {
-        it('Should store ratio when created with (sk, targetPk, ratio, date).', () => {
-            const tx = new SetActorTransaction(mySk, targetPk, 3, new Date())
+        it('Should store ratio when created with (sk, targetPk, ratio, ecosystemPk, date).', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, 3, referentPk, new Date())
             assert.equal(tx.ratio, 3)
         })
 
         it('Should read ratio from q field when created from object.', () => {
-            const tx = new SetActorTransaction(mySk, targetPk, 5, new Date())
+            const tx = new SetActorTransaction(mySk, targetPk, 5, referentPk, new Date())
             const tx2 = new SetActorTransaction(tx.export())
             assert.equal(tx2.ratio, 5)
+        })
+
+        it('Should store ecosystem when created with (sk, targetPk, ratio, ecosystemPk, date).', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, 3, referentPk, new Date())
+            assert.equal(tx.ecosystem, referentPk)
+        })
+
+        it('Should read ecosystem from e field when created from object.', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, 3, referentPk, new Date())
+            const tx2 = new SetActorTransaction(tx.export())
+            assert.equal(tx2.ecosystem, referentPk)
         })
     })
 
     describe('q field (ratio)', () => {
         it('Should include ratio in hash — different ratio produces different hash.', () => {
             const d = new Date('2025-01-01')
-            const tx1 = new SetActorTransaction(mySk, targetPk, 1, d)
-            const tx2 = new SetActorTransaction(mySk, targetPk, 2, d)
+            const tx1 = new SetActorTransaction(mySk, targetPk, 1, referentPk, d)
+            const tx2 = new SetActorTransaction(mySk, targetPk, 2, referentPk, d)
             assert.notDeepEqual(tx1.hash(), tx2.hash())
         })
 
         it('Should include q in export.', () => {
-            const tx = new SetActorTransaction(mySk, targetPk, 3, new Date())
+            const tx = new SetActorTransaction(mySk, targetPk, 3, referentPk, new Date())
             assert.equal(tx.export().q, 3)
         })
 
         it('Should preserve ratio after round-trip export/reconstruct.', () => {
-            const tx = new SetActorTransaction(mySk, targetPk, 7, new Date())
+            const tx = new SetActorTransaction(mySk, targetPk, 7, referentPk, new Date())
             const tx2 = new SetActorTransaction(tx.export())
             assert.equal(tx2.ratio, 7)
+        })
+    })
+
+    describe('e field (ecosystem)', () => {
+        it('Should include ecosystem in hash — different ecosystem produces different hash.', () => {
+            const d = new Date('2025-01-01')
+            const tx1 = new SetActorTransaction(mySk, targetPk, 1, referentPk, d)
+            const tx2 = new SetActorTransaction(mySk, targetPk, 1, targetPk, d)
+            assert.notDeepEqual(tx1.hash(), tx2.hash())
+        })
+
+        it('Should include e in export.', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, 3, referentPk, new Date())
+            assert.equal(tx.export().e, referentPk)
+        })
+
+        it('Should preserve ecosystem after round-trip export/reconstruct.', () => {
+            const tx = new SetActorTransaction(mySk, targetPk, 7, referentPk, new Date())
+            const tx2 = new SetActorTransaction(tx.export())
+            assert.equal(tx2.ecosystem, referentPk)
         })
     })
 })
@@ -1097,8 +1189,15 @@ describe('SetActorTransaction', () => {
 describe('SetPayerTransaction', () => {
     describe('constructor', () => {
         it('Should throw if q is missing from object.', () => {
-            const obj = new SetPayerTransaction(mySk, targetPk, 5, new Date()).export()
+            const obj = new SetPayerTransaction(mySk, targetPk, 5, referentPk, new Date()).export()
             delete obj.q
+
+            assert.throws(() => new SetPayerTransaction(obj), Error)
+        })
+
+        it('Should throw if e is missing from object.', () => {
+            const obj = new SetPayerTransaction(mySk, targetPk, 5, referentPk, new Date()).export()
+            delete obj.e
 
             assert.throws(() => new SetPayerTransaction(obj), Error)
         })
@@ -1172,61 +1271,116 @@ describe('SetPayerTransaction', () => {
         })
 
         it('Should return false if cap is negative.', () => {
-            const tx = new SetPayerTransaction(mySk, targetPk, -1, new Date())
+            const tx = new SetPayerTransaction(mySk, targetPk, -1, referentPk, new Date())
             assert.isFalse(tx.isValid())
         })
 
         it('Should return false if cap is not an integer.', () => {
-            const tx = new SetPayerTransaction(mySk, targetPk, 1.5, new Date())
+            const tx = new SetPayerTransaction(mySk, targetPk, 1.5, referentPk, new Date())
             assert.isFalse(tx.isValid())
         })
 
         it('Should return true if cap is 0 (unlimited).', () => {
-            const tx = new SetPayerTransaction(mySk, targetPk, 0, new Date())
+            const tx = new SetPayerTransaction(mySk, targetPk, 0, referentPk, new Date())
             assert.isTrue(tx.isValid())
         })
 
         it('Should return true if all is fine.', () => {
-            const tx = new SetPayerTransaction(mySk, targetPk, 100, new Date())
+            const tx = new SetPayerTransaction(mySk, targetPk, 100, referentPk, new Date())
             assert.isTrue(tx.isValid())
+        })
+
+        it('Should return false if ecosystem is missing.', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, 100, "", new Date())
+            assert.isFalse(tx.isValid())
+        })
+
+        it('Should return false if ecosystem is NOT 66 char length.', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, 100, "123", new Date())
+            assert.isFalse(tx.isValid())
         })
     })
 
     describe('constructor', () => {
-        it('Should store cap when created with (sk, targetPk, cap, date).', () => {
-            const tx = new SetPayerTransaction(mySk, targetPk, 50, new Date())
+        it('Should store cap when created with (sk, targetPk, cap, ecosystemPk, date).', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, 50, referentPk, new Date())
             assert.equal(tx.cap, 50)
         })
 
         it('Should read cap from q field when created from object.', () => {
-            const tx = new SetPayerTransaction(mySk, targetPk, 200, new Date())
+            const tx = new SetPayerTransaction(mySk, targetPk, 200, referentPk, new Date())
             const tx2 = new SetPayerTransaction(tx.export())
             assert.equal(tx2.cap, 200)
+        })
+
+        it('Should store ecosystem when created with (sk, targetPk, cap, ecosystemPk, date).', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, 50, referentPk, new Date())
+            assert.equal(tx.ecosystem, referentPk)
+        })
+
+        it('Should read ecosystem from e field when created from object.', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, 50, referentPk, new Date())
+            const tx2 = new SetPayerTransaction(tx.export())
+            assert.equal(tx2.ecosystem, referentPk)
         })
     })
 
     describe('q field (cap)', () => {
         it('Should include cap in hash — different cap produces different hash.', () => {
             const d = new Date('2025-01-01')
-            const tx1 = new SetPayerTransaction(mySk, targetPk, 10, d)
-            const tx2 = new SetPayerTransaction(mySk, targetPk, 20, d)
+            const tx1 = new SetPayerTransaction(mySk, targetPk, 10, referentPk, d)
+            const tx2 = new SetPayerTransaction(mySk, targetPk, 20, referentPk, d)
             assert.notDeepEqual(tx1.hash(), tx2.hash())
         })
 
         it('Should include q in export.', () => {
-            const tx = new SetPayerTransaction(mySk, targetPk, 50, new Date())
+            const tx = new SetPayerTransaction(mySk, targetPk, 50, referentPk, new Date())
             assert.equal(tx.export().q, 50)
         })
 
         it('Should preserve cap after round-trip export/reconstruct.', () => {
-            const tx = new SetPayerTransaction(mySk, targetPk, 300, new Date())
+            const tx = new SetPayerTransaction(mySk, targetPk, 300, referentPk, new Date())
             const tx2 = new SetPayerTransaction(tx.export())
             assert.equal(tx2.cap, 300)
+        })
+    })
+
+    describe('e field (ecosystem)', () => {
+        it('Should include ecosystem in hash — different ecosystem produces different hash.', () => {
+            const d = new Date('2025-01-01')
+            const tx1 = new SetPayerTransaction(mySk, targetPk, 10, referentPk, d)
+            const tx2 = new SetPayerTransaction(mySk, targetPk, 10, targetPk, d)
+            assert.notDeepEqual(tx1.hash(), tx2.hash())
+        })
+
+        it('Should include e in export.', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, 50, referentPk, new Date())
+            assert.equal(tx.export().e, referentPk)
+        })
+
+        it('Should preserve ecosystem after round-trip export/reconstruct.', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, 300, referentPk, new Date())
+            const tx2 = new SetPayerTransaction(tx.export())
+            assert.equal(tx2.ecosystem, referentPk)
         })
     })
 })
 
 describe('UnsetAdminTransaction', () => {
+    describe('constructor', () => {
+        it('Should throw if e is missing from object.', () => {
+            const obj = new UnsetAdminTransaction(mySk, targetPk, referentPk, new Date()).export()
+            delete obj.e
+
+            assert.throws(() => new UnsetAdminTransaction(obj), Error)
+        })
+
+        it('Should store ecosystem when created with (sk, targetPk, ecosystemPk, date).', () => {
+            const tx = new UnsetAdminTransaction(mySk, targetPk, referentPk, new Date())
+            assert.equal(tx.ecosystem, referentPk)
+        })
+    })
+
     describe('toString', () => {
         it('Should return [UnsetAdminTransaction]', () => {
             const tx = makeTransaction({
@@ -1237,7 +1391,31 @@ describe('UnsetAdminTransaction', () => {
         })
     })
 
+    describe('e field (ecosystem)', () => {
+        it('Should include ecosystem in hash — different ecosystem produces different hash.', () => {
+            const d = new Date('2025-01-01')
+            const tx1 = new UnsetAdminTransaction(mySk, targetPk, referentPk, d)
+            const tx2 = new UnsetAdminTransaction(mySk, targetPk, targetPk, d)
+            assert.notDeepEqual(tx1.hash(), tx2.hash())
+        })
+
+        it('Should include e in export.', () => {
+            const tx = new UnsetAdminTransaction(mySk, targetPk, referentPk, new Date())
+            assert.equal(tx.export().e, referentPk)
+        })
+    })
+
     describe('isValid', () => {
+
+        it('Should return false if ecosystem is missing.', () => {
+            const tx = new UnsetAdminTransaction(mySk, targetPk, "", new Date())
+            assert.isFalse(tx.isValid())
+        })
+
+        it('Should return false if ecosystem is NOT 66 char length.', () => {
+            const tx = new UnsetAdminTransaction(mySk, targetPk, "123", new Date())
+            assert.isFalse(tx.isValid())
+        })
 
         it('Should return false if money is NOT an empty array.', () => {
             const tx = new UnsetAdminTransaction(makeTransactionObj({
@@ -1309,6 +1487,20 @@ describe('UnsetAdminTransaction', () => {
 })
 
 describe('UnsetActorTransaction', () => {
+    describe('constructor', () => {
+        it('Should throw if e is missing from object.', () => {
+            const obj = new UnsetActorTransaction(mySk, targetPk, referentPk, new Date()).export()
+            delete obj.e
+
+            assert.throws(() => new UnsetActorTransaction(obj), Error)
+        })
+
+        it('Should store ecosystem when created with (sk, targetPk, ecosystemPk, date).', () => {
+            const tx = new UnsetActorTransaction(mySk, targetPk, referentPk, new Date())
+            assert.equal(tx.ecosystem, referentPk)
+        })
+    })
+
     describe('toString', () => {
         it('Should return [UnsetActorTransaction]', () => {
             const tx = makeTransaction({
@@ -1319,7 +1511,31 @@ describe('UnsetActorTransaction', () => {
         })
     })
 
+    describe('e field (ecosystem)', () => {
+        it('Should include ecosystem in hash — different ecosystem produces different hash.', () => {
+            const d = new Date('2025-01-01')
+            const tx1 = new UnsetActorTransaction(mySk, targetPk, referentPk, d)
+            const tx2 = new UnsetActorTransaction(mySk, targetPk, targetPk, d)
+            assert.notDeepEqual(tx1.hash(), tx2.hash())
+        })
+
+        it('Should include e in export.', () => {
+            const tx = new UnsetActorTransaction(mySk, targetPk, referentPk, new Date())
+            assert.equal(tx.export().e, referentPk)
+        })
+    })
+
     describe('isValid', () => {
+        it('Should return false if ecosystem is missing.', () => {
+            const tx = new UnsetActorTransaction(mySk, targetPk, "", new Date())
+            assert.isFalse(tx.isValid())
+        })
+
+        it('Should return false if ecosystem is NOT 66 char length.', () => {
+            const tx = new UnsetActorTransaction(mySk, targetPk, "123", new Date())
+            assert.isFalse(tx.isValid())
+        })
+
         it('Should return false if money is NOT an empty array.', () => {
             const tx = new UnsetActorTransaction(makeTransactionObj({
                 type: TXTYPE.UNSETACTOR,
@@ -1390,6 +1606,20 @@ describe('UnsetActorTransaction', () => {
 })
 
 describe('UnsetPayerTransaction', () => {
+    describe('constructor', () => {
+        it('Should throw if e is missing from object.', () => {
+            const obj = new UnsetPayerTransaction(mySk, targetPk, referentPk, new Date()).export()
+            delete obj.e
+
+            assert.throws(() => new UnsetPayerTransaction(obj), Error)
+        })
+
+        it('Should store ecosystem when created with (sk, targetPk, ecosystemPk, date).', () => {
+            const tx = new UnsetPayerTransaction(mySk, targetPk, referentPk, new Date())
+            assert.equal(tx.ecosystem, referentPk)
+        })
+    })
+
     describe('toString', () => {
         it('Should return [UnsetPayerTransaction]', () => {
             const tx = makeTransaction({
@@ -1400,7 +1630,31 @@ describe('UnsetPayerTransaction', () => {
         })
     })
 
+    describe('e field (ecosystem)', () => {
+        it('Should include ecosystem in hash — different ecosystem produces different hash.', () => {
+            const d = new Date('2025-01-01')
+            const tx1 = new UnsetPayerTransaction(mySk, targetPk, referentPk, d)
+            const tx2 = new UnsetPayerTransaction(mySk, targetPk, targetPk, d)
+            assert.notDeepEqual(tx1.hash(), tx2.hash())
+        })
+
+        it('Should include e in export.', () => {
+            const tx = new UnsetPayerTransaction(mySk, targetPk, referentPk, new Date())
+            assert.equal(tx.export().e, referentPk)
+        })
+    })
+
     describe('isValid', () => {
+        it('Should return false if ecosystem is missing.', () => {
+            const tx = new UnsetPayerTransaction(mySk, targetPk, "", new Date())
+            assert.isFalse(tx.isValid())
+        })
+
+        it('Should return false if ecosystem is NOT 66 char length.', () => {
+            const tx = new UnsetPayerTransaction(mySk, targetPk, "123", new Date())
+            assert.isFalse(tx.isValid())
+        })
+
         it('Should return false if money is NOT an empty array.', () => {
             const tx = new UnsetPayerTransaction(makeTransactionObj({
                 type: TXTYPE.UNSETPAYER,

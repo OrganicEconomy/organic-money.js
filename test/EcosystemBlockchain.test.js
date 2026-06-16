@@ -3,6 +3,7 @@ import { assert } from 'chai';
 
 import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { EcosystemBlockchain } from '../src/EcosystemBlockchain.js'
+import { CitizenBlockchain } from '../src/CitizenBlockchain.js'
 import { EcoBirthBlock, EcoInitializationBlock } from '../src/Block.js'
 import { EngageTransaction, EarnTransaction, PayTransaction, PaperTransaction, SetAdminTransaction, PayerOrderTransaction, TXTYPE } from '../src/Transaction.js'
 import { publicFromPrivate, dateToInt, buildInvestIndexes, buildMoneyIndexes } from '../src/crypto.js'
@@ -24,6 +25,44 @@ function makeEngageTx(signerSk, ecoPublicKey, date = DATE2) {
     const tx = new EngageTransaction({ d: dateToInt(date), p: ecoPublicKey, i: invests, s: publicFromPrivate(signerSk) })
     tx.sign(signerSk)
     return tx
+}
+
+// Role transactions (SetAdmin/SetActor/SetPayer and their unset) are created on the
+// signer's own CitizenBlockchain (mirroring payerOrder), then received by the ecosystem.
+function makeAdminBc(signerSk) {
+    const bc = new CitizenBlockchain()
+    bc.makeBirthBlock('Admin', DATE1, signerSk, DATE1)
+    return bc
+}
+
+function ecoSetAdmin(eco, signerSk, targetPk, date = DATE2) {
+    const tx = makeAdminBc(signerSk).setAdmin(signerSk, eco.getMyPublicKey(), targetPk, date)
+    return eco.receiveSetAdmin(tx)
+}
+
+function ecoUnsetAdmin(eco, signerSk, targetPk, date = DATE2) {
+    const tx = makeAdminBc(signerSk).unsetAdmin(signerSk, eco.getMyPublicKey(), targetPk, date)
+    return eco.receiveUnsetAdmin(tx)
+}
+
+function ecoSetActor(eco, signerSk, targetPk, ratio, date = DATE2) {
+    const tx = makeAdminBc(signerSk).setActor(signerSk, eco.getMyPublicKey(), targetPk, ratio, date)
+    return eco.receiveSetActor(tx)
+}
+
+function ecoUnsetActor(eco, signerSk, targetPk, date = DATE2) {
+    const tx = makeAdminBc(signerSk).unsetActor(signerSk, eco.getMyPublicKey(), targetPk, date)
+    return eco.receiveUnsetActor(tx)
+}
+
+function ecoSetPayer(eco, signerSk, targetPk, cap, date = DATE2) {
+    const tx = makeAdminBc(signerSk).setPayer(signerSk, eco.getMyPublicKey(), targetPk, cap, date)
+    return eco.receiveSetPayer(tx)
+}
+
+function ecoUnsetPayer(eco, signerSk, targetPk, date = DATE2) {
+    const tx = makeAdminBc(signerSk).unsetPayer(signerSk, eco.getMyPublicKey(), targetPk, date)
+    return eco.receiveUnsetPayer(tx)
 }
 
 describe('EcosystemBlockchain', () => {
@@ -161,7 +200,7 @@ describe('EcosystemBlockchain', () => {
         it('getAdmins should include a newly set admin.', () => {
             const bc = makeStartedEco()
 
-            bc.setAdmin(adminSk, referentPk, DATE2)
+            ecoSetAdmin(bc,adminSk, referentPk, DATE2)
 
             assert.isTrue(bc.isAdmin(referentPk))
             assert.isTrue(bc.isAdmin(adminPk))
@@ -171,8 +210,8 @@ describe('EcosystemBlockchain', () => {
         it('getAdmins should no longer include an unset admin.', () => {
             const bc = makeStartedEco()
 
-            bc.setAdmin(adminSk, referentPk, DATE2)
-            bc.unsetAdmin(adminSk, adminPk, DATE2)
+            ecoSetAdmin(bc,adminSk, referentPk, DATE2)
+            ecoUnsetAdmin(bc,adminSk, adminPk, DATE2)
 
             assert.isFalse(bc.isAdmin(adminPk))
             assert.isTrue(bc.isAdmin(referentPk))
@@ -181,7 +220,7 @@ describe('EcosystemBlockchain', () => {
         it('unsetAdmin should throw if trying to remove the last admin.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.unsetAdmin(adminSk, adminPk, DATE2))
+            assert.throws(() => ecoUnsetAdmin(bc,adminSk, adminPk, DATE2))
         })
     })
 
@@ -201,7 +240,7 @@ describe('EcosystemBlockchain', () => {
         it('setActor should update the ratio of an existing actor.', () => {
             const bc = makeStartedEco()
 
-            bc.setActor(adminSk, adminPk, 3, DATE2)
+            ecoSetActor(bc,adminSk, adminPk, 3, DATE2)
 
             assert.equal(bc.getActors().get(adminPk), 3)
         })
@@ -209,7 +248,7 @@ describe('EcosystemBlockchain', () => {
         it('setActor should add a new actor.', () => {
             const bc = makeStartedEco()
 
-            bc.setActor(adminSk, referentPk, 2, DATE2)
+            ecoSetActor(bc,adminSk, referentPk, 2, DATE2)
 
             assert.isTrue(bc.isActor(referentPk))
             assert.equal(bc.getActors().get(referentPk), 2)
@@ -218,60 +257,60 @@ describe('EcosystemBlockchain', () => {
         it('unsetActor should throw if actor is still admin.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.unsetActor(adminSk, adminPk, DATE2))
+            assert.throws(() => ecoUnsetActor(bc,adminSk, adminPk, DATE2))
         })
 
         it('unsetActor should throw if actor is still payer.', () => {
             const bc = makeStartedEco()
 
-            bc.setActor(adminSk, referentPk, 2, DATE2)
-            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            ecoSetActor(bc,adminSk, referentPk, 2, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 0, DATE2)
 
-            assert.throws(() => bc.unsetActor(adminSk, referentPk, DATE2))
+            assert.throws(() => ecoUnsetActor(bc,adminSk, referentPk, DATE2))
         })
 
         it('unsetActor should throw if it would leave no actor with ratio > 0.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.unsetActor(adminSk, adminPk, DATE2), InvalidTransactionError)
+            assert.throws(() => ecoUnsetActor(bc,adminSk, adminPk, DATE2), InvalidTransactionError)
         })
 
         it('setActor should throw if it would leave no actor with ratio > 0.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.setActor(adminSk, adminPk, 0, DATE2), InvalidTransactionError)
+            assert.throws(() => ecoSetActor(bc,adminSk, adminPk, 0, DATE2), InvalidTransactionError)
         })
 
         it('setActor should throw a specific error if ratio is negative.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.setActor(adminSk, referentPk, -1, DATE2), InvalidTransactionError, 'Ratio must be a non-negative integer.')
+            assert.throws(() => ecoSetActor(bc,adminSk, referentPk, -1, DATE2), InvalidTransactionError, 'Ratio must be a non-negative integer.')
         })
 
         it('setActor should throw a specific error if ratio is not an integer.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.setActor(adminSk, referentPk, 1.5, DATE2), InvalidTransactionError, 'Ratio must be a non-negative integer.')
+            assert.throws(() => ecoSetActor(bc,adminSk, referentPk, 1.5, DATE2), InvalidTransactionError, 'Ratio must be a non-negative integer.')
         })
 
         it('setActor should throw a specific error if ratio is not a number.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.setActor(adminSk, referentPk, 'abc', DATE2), InvalidTransactionError, 'Ratio must be a non-negative integer.')
+            assert.throws(() => ecoSetActor(bc,adminSk, referentPk, 'abc', DATE2), InvalidTransactionError, 'Ratio must be a non-negative integer.')
         })
 
         it('unsetActor should remove the actor.', () => {
             const bc = makeStartedEco()
 
-            bc.setActor(adminSk, referentPk, 2, DATE2)
-            bc.unsetActor(adminSk, referentPk, DATE2)
+            ecoSetActor(bc,adminSk, referentPk, 2, DATE2)
+            ecoUnsetActor(bc,adminSk, referentPk, DATE2)
 
             assert.isFalse(bc.isActor(referentPk))
         })
 
         it('volunteers (ratio 0) should be included in getActors.', () => {
             const bc = makeStartedEco()
-            bc.setActor(adminSk, referentPk, 0, DATE2)
+            ecoSetActor(bc,adminSk, referentPk, 0, DATE2)
 
             assert.isTrue(bc.getActors().has(referentPk))
             assert.equal(bc.getActors().get(referentPk), 0)
@@ -288,7 +327,7 @@ describe('EcosystemBlockchain', () => {
         it('setPayer should add a payer.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 10, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 10, DATE2)
             assert.isTrue(bc.isPayer(referentPk))
 
             assert.equal(bc.getPayers().get(referentPk), 10)
@@ -297,7 +336,7 @@ describe('EcosystemBlockchain', () => {
         it('setPayer with cap 0 (unlimited) should be included.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 0, DATE2)
             assert.isTrue(bc.isPayer(referentPk))
 
             assert.equal(bc.getPayers().get(referentPk), 0)
@@ -306,26 +345,26 @@ describe('EcosystemBlockchain', () => {
         it('setPayer should throw a specific error if cap is negative.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.setPayer(adminSk, referentPk, -1, DATE2), InvalidTransactionError, 'Cap must be a non-negative integer.')
+            assert.throws(() => ecoSetPayer(bc,adminSk, referentPk, -1, DATE2), InvalidTransactionError, 'Cap must be a non-negative integer.')
         })
 
         it('setPayer should throw a specific error if cap is not an integer.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.setPayer(adminSk, referentPk, 1.5, DATE2), InvalidTransactionError, 'Cap must be a non-negative integer.')
+            assert.throws(() => ecoSetPayer(bc,adminSk, referentPk, 1.5, DATE2), InvalidTransactionError, 'Cap must be a non-negative integer.')
         })
 
         it('setPayer should throw a specific error if cap is not a number.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.setPayer(adminSk, referentPk, 'abc', DATE2), InvalidTransactionError, 'Cap must be a non-negative integer.')
+            assert.throws(() => ecoSetPayer(bc,adminSk, referentPk, 'abc', DATE2), InvalidTransactionError, 'Cap must be a non-negative integer.')
         })
 
         it('unsetPayer should remove the payer.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 10, DATE2)
-            bc.unsetPayer(adminSk, referentPk, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 10, DATE2)
+            ecoUnsetPayer(bc,adminSk, referentPk, DATE2)
 
             assert.isFalse(bc.isPayer(referentPk))
         })
@@ -335,15 +374,15 @@ describe('EcosystemBlockchain', () => {
         it('setAdmin should throw if caller is not admin.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.setAdmin(referentSk, referentPk, DATE2))
+            assert.throws(() => ecoSetAdmin(bc,referentSk, referentPk, DATE2))
         })
 
         it('unsetAdmin should throw if caller is not admin.', () => {
             const bc = makeStartedEco()
 
-            bc.setAdmin(adminSk, referentPk, DATE2)
+            ecoSetAdmin(bc,adminSk, referentPk, DATE2)
 
-            assert.throws(() => bc.unsetAdmin(mySk, adminPk, DATE2))
+            assert.throws(() => ecoUnsetAdmin(bc,mySk, adminPk, DATE2))
         })
     })
 
@@ -351,7 +390,7 @@ describe('EcosystemBlockchain', () => {
         it('setActor should throw if caller is not admin.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.setActor(referentSk, referentPk, 2, DATE2))
+            assert.throws(() => ecoSetActor(bc,referentSk, referentPk, 2, DATE2))
         })
     })
 
@@ -359,7 +398,7 @@ describe('EcosystemBlockchain', () => {
         it('setPayer should throw if caller is not admin.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.setPayer(referentSk, referentPk, 10, DATE2))
+            assert.throws(() => ecoSetPayer(bc,referentSk, referentPk, 10, DATE2))
         })
     })
 
@@ -367,9 +406,9 @@ describe('EcosystemBlockchain', () => {
         it('Should preserve admins after newBlock is triggered.', () => {
             const bc = makeStartedEco()
 
-            bc.setAdmin(adminSk, referentPk, DATE2)
+            ecoSetAdmin(bc,adminSk, referentPk, DATE2)
             bc.closeLastBlock(mySk, DATE2)
-            bc.setActor(referentSk, referentPk, 1, DATE3)
+            ecoSetActor(bc,referentSk, referentPk, 1, DATE3)
 
             assert.isTrue(bc.isAdmin(adminPk))
             assert.isTrue(bc.isAdmin(referentPk))
@@ -378,9 +417,9 @@ describe('EcosystemBlockchain', () => {
         it('Should preserve actors after newBlock is triggered.', () => {
             const bc = makeStartedEco()
 
-            bc.setActor(adminSk, adminPk, 5, DATE2)
+            ecoSetActor(bc,adminSk, adminPk, 5, DATE2)
             bc.closeLastBlock(mySk, DATE2)
-            bc.setAdmin(adminSk, referentPk, DATE3)
+            ecoSetAdmin(bc,adminSk, referentPk, DATE3)
 
             assert.equal(bc.getActors().get(adminPk), 5)
         })
@@ -388,9 +427,9 @@ describe('EcosystemBlockchain', () => {
         it('Should preserve payers after newBlock is triggered.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 100, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 100, DATE2)
             bc.closeLastBlock(mySk, DATE2)
-            bc.setAdmin(adminSk, referentPk, DATE3)
+            ecoSetAdmin(bc,adminSk, referentPk, DATE3)
 
             assert.isTrue(bc.isPayer(referentPk))
             assert.equal(bc.getPayers().get(referentPk), 100)
@@ -686,7 +725,7 @@ describe('EcosystemBlockchain', () => {
         it('Should throw if ecosystem does not match this ecosystem.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 0, DATE2)
             const invests = buildInvestIndexes(DATE2, 1)
             bc.lastblock.invests = invests
             const tx = new PayerOrderTransaction(referentSk, targetPk, invests, referentPk, DATE2)
@@ -707,7 +746,7 @@ describe('EcosystemBlockchain', () => {
         it('Should throw if invests exceed payer cap.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 1, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 1, DATE2)
             const invests = buildInvestIndexes(DATE2, 2)
             bc.lastblock.invests = invests
             const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
@@ -718,7 +757,7 @@ describe('EcosystemBlockchain', () => {
         it('Should throw if cumulative payerOrders from same payer exceed cap.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 3, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 3, DATE2)
             const invests1 = buildInvestIndexes(DATE1, 2)
             const invests2 = buildInvestIndexes(DATE2, 2)
             bc.lastblock.invests = [...invests1, ...invests2]
@@ -733,7 +772,7 @@ describe('EcosystemBlockchain', () => {
         it('Should throw if invests not in lastblock.invests.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 0, DATE2)
             const invests = buildInvestIndexes(DATE2, 1)
             const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
 
@@ -743,7 +782,7 @@ describe('EcosystemBlockchain', () => {
         it('Should throw if invests are not yet mature.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 0, DATE2)
             const futureInvests = buildInvestIndexes(DATE3, 1)
             bc.lastblock.invests = futureInvests
             const tx = new PayerOrderTransaction(referentSk, targetPk, futureInvests, myPk, DATE2)
@@ -754,7 +793,7 @@ describe('EcosystemBlockchain', () => {
         it('Should add the transaction to blockchain and return it.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 0, DATE2)
             const engageTx = makeEngageTx(referentSk, myPk)
             bc.receiveInvests(engageTx)
             const tx = new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2)
@@ -771,7 +810,7 @@ describe('EcosystemBlockchain', () => {
         it('Should not throw if cap is 0 (unlimited) even with many invests.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 0, DATE2)
             const invests = buildInvestIndexes(DATE2, 2)
             bc.lastblock.invests = invests
             const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
@@ -782,7 +821,7 @@ describe('EcosystemBlockchain', () => {
         it('Should succeed when invest date equals order date.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 0, DATE2)
             const invests = buildInvestIndexes(DATE2, 1)
             bc.lastblock.invests = invests
             const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
@@ -809,7 +848,7 @@ describe('EcosystemBlockchain', () => {
         it('Should create an EarnTransaction, convert invests to money, and remove invests from lastblock.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 0, DATE2)
             const engageTx = makeEngageTx(referentSk, myPk)
             bc.receiveInvests(engageTx)
             bc.receivePayerOrder(mySk,new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2))
@@ -849,7 +888,7 @@ describe('EcosystemBlockchain', () => {
         it('Should succeed when invest date equals order date.', () => {
             const bc = makeStartedEco()
 
-            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 0, DATE2)
             const invests = buildInvestIndexes(DATE2, 1)
             bc.lastblock.invests = invests
             bc.receivePayerOrder(mySk,new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2))
@@ -890,7 +929,7 @@ describe('EcosystemBlockchain', () => {
 
         it('Should return empty array if no money available.', () => {
             const bc = makeStartedEco()
-            bc.setActor(adminSk, adminPk, 3, DATE2)
+            ecoSetActor(bc,adminSk, adminPk, 3, DATE2)
             const earns = bc.distributeSalary(mySk, DATE2)
             assert.deepEqual(earns, [])
         })
@@ -898,8 +937,8 @@ describe('EcosystemBlockchain', () => {
         it('Should distribute money to actors proportionally.', () => {
             const bc = makeStartedEco()
 
-            bc.setActor(adminSk, adminPk, 3, DATE2)
-            bc.setActor(adminSk, referentPk, 2, DATE2)
+            ecoSetActor(bc,adminSk, adminPk, 3, DATE2)
+            ecoSetActor(bc,adminSk, referentPk, 2, DATE2)
             bc.lastblock.money = [
                 20250101000, 20250101001, 20250101002,
                 20250101003, 20250101004
@@ -916,8 +955,8 @@ describe('EcosystemBlockchain', () => {
         it('Should do multiple cycles if money allows it.', () => {
             const bc = makeStartedEco()
 
-            bc.setActor(adminSk, adminPk, 3, DATE2)
-            bc.setActor(adminSk, referentPk, 2, DATE2)
+            ecoSetActor(bc,adminSk, adminPk, 3, DATE2)
+            ecoSetActor(bc,adminSk, referentPk, 2, DATE2)
             bc.lastblock.money = [
                 20250101000, 20250101001, 20250101002, 20250101003, 20250101004,
                 20250101005, 20250101006, 20250101007, 20250101008, 20250101009
@@ -933,8 +972,8 @@ describe('EcosystemBlockchain', () => {
         it('Should not distribute money that does not complete a cycle.', () => {
             const bc = makeStartedEco()
 
-            bc.setActor(adminSk, adminPk, 3, DATE2)
-            bc.setActor(adminSk, referentPk, 2, DATE2)
+            ecoSetActor(bc,adminSk, adminPk, 3, DATE2)
+            ecoSetActor(bc,adminSk, referentPk, 2, DATE2)
             bc.lastblock.money = [
                 20250101000, 20250101001, 20250101002,
                 20250101003, 20250101004, 20250101005, 20250101006
@@ -951,7 +990,7 @@ describe('EcosystemBlockchain', () => {
         it('Should remove distributed money from lastblock.', () => {
             const bc = makeStartedEco()
 
-            bc.setActor(adminSk, adminPk, 2, DATE2)
+            ecoSetActor(bc,adminSk, adminPk, 2, DATE2)
             bc.lastblock.money = [20250101000, 20250101001]
             bc.distributeSalary(mySk, DATE2)
 
@@ -961,7 +1000,7 @@ describe('EcosystemBlockchain', () => {
         it('Should not distribute money whose date has not been reached yet.', () => {
             const bc = makeStartedEco()
 
-            bc.setActor(adminSk, adminPk, 1, DATE2)
+            ecoSetActor(bc,adminSk, adminPk, 1, DATE2)
             bc.lastblock.money = [
                 20250101000,
                 20250103000,
@@ -996,8 +1035,8 @@ describe('EcosystemBlockchain', () => {
         it('Should preserve roles after deserialization.', () => {
             const bc = makeStartedEco()
 
-            bc.setAdmin(adminSk, referentPk, DATE2)
-            bc.setActor(adminSk, referentPk, 5, DATE2)
+            ecoSetAdmin(bc,adminSk, referentPk, DATE2)
+            ecoSetActor(bc,adminSk, referentPk, 5, DATE2)
             const exported = bc.export()
             const bc2 = new EcosystemBlockchain(exported)
 
@@ -1019,8 +1058,8 @@ describe('EcosystemBlockchain', () => {
         it('Should preserve all transaction types and money/invests across two blocks.', () => {
             const bc = makeStartedEco()
 
-            bc.setActor(adminSk, referentPk, 3, DATE2)
-            bc.setPayer(adminSk, referentPk, 0, DATE2)
+            ecoSetActor(bc,adminSk, referentPk, 3, DATE2)
+            ecoSetPayer(bc,adminSk, referentPk, 0, DATE2)
             const engageTx = makeEngageTx(adminSk, myPk, DATE2)
             bc.receiveInvests(engageTx)
             bc.receivePayerOrder(mySk,new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2))
@@ -1029,7 +1068,7 @@ describe('EcosystemBlockchain', () => {
             bc.earn(mySk, adminPk, bc.lastblock.money.slice(0, 3), DATE2)
 
             bc.closeLastBlock(mySk, DATE2)
-            bc.setActor(adminSk, adminPk, 2, DATE3)
+            ecoSetActor(bc,adminSk, adminPk, 2, DATE3)
 
             const exported = bc.export()
             const bc2 = new EcosystemBlockchain(exported)

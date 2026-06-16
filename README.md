@@ -352,21 +352,35 @@ const ecoPk = publicFromPrivate(ecoSk)
 
 #### Manage roles
 
+Role transactions (`SetAdmin`, `SetActor`, `SetPayer` and their `unset` counterparts) are created on the **admin's own blockchain** — mirroring `payerOrder`/`receivePayerOrder` — then sent to the ecosystem, which validates the signer is one of its admins before recording it. This binds each transaction to one specific ecosystem (the `ecosystem` field), so it can't be replayed onto another ecosystem the same admin happens to manage.
+
 ```js
+// adminBc is the CitizenBlockchain of the admin (adminSk / adminPk)
+
 // Add actors (receive salaries proportional to their ratio)
-eco.setActor(adminSk, alicePk, 2)   // Alice: ratio 2
-eco.setActor(adminSk, bobPk, 1)     // Bob: ratio 1
+const aliceActorTx = adminBc.setActor(adminSk, ecoPk, alicePk, 2)   // Alice: ratio 2
+eco.receiveSetActor(aliceActorTx)
+
+const bobActorTx = adminBc.setActor(adminSk, ecoPk, bobPk, 1)       // Bob: ratio 1
+eco.receiveSetActor(bobActorTx)
 
 // Add a payer (can issue invest orders; 0 = no cap)
-eco.setPayer(adminSk, alicePk, 0)
+const payerTx = adminBc.setPayer(adminSk, ecoPk, alicePk, 0)
+eco.receiveSetPayer(payerTx)
 
 // Add another admin
-eco.setAdmin(adminSk, charliePk)
+const newAdminTx = adminBc.setAdmin(adminSk, ecoPk, charliePk)
+eco.receiveSetAdmin(newAdminTx)
 
 // Remove roles
-eco.unsetActor(adminSk, bobPk)
-eco.unsetPayer(adminSk, alicePk)
-eco.unsetAdmin(adminSk, charliePk)  // at least one admin must always remain
+const unsetActorTx = adminBc.unsetActor(adminSk, ecoPk, bobPk)
+eco.receiveUnsetActor(unsetActorTx)
+
+const unsetPayerTx = adminBc.unsetPayer(adminSk, ecoPk, alicePk)
+eco.receiveUnsetPayer(unsetPayerTx)
+
+const unsetAdminTx = adminBc.unsetAdmin(adminSk, ecoPk, charliePk)  // at least one admin must always remain
+eco.receiveUnsetAdmin(unsetAdminTx)
 ```
 
 #### Query roles
@@ -589,10 +603,12 @@ console.log(eco.isAdmin(alicePk))   // true
 console.log(eco.isActor(alicePk))   // true (ratio 1)
 
 // Add Bob as an actor with equal ratio
-eco.setActor(aliceSk, bobPk, 1)
+const bobActorTx = alice.setActor(aliceSk, ecoPk, bobPk, 1)
+eco.receiveSetActor(bobActorTx)
 
 // Alice becomes a payer (can issue invest orders, uncapped)
-eco.setPayer(aliceSk, alicePk, 0)
+const alicePayerTx = alice.setPayer(aliceSk, ecoPk, alicePk, 0)
+eco.receiveSetPayer(alicePayerTx)
 
 // ── 3. Both citizens engage invests into the ecosystem ────────────────────────
 const aliceEngageTx = alice.engageInvests(aliceSk, ecoPk, 1, 30)

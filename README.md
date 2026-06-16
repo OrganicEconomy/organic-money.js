@@ -204,7 +204,7 @@ The chain is immutable once closed: the next block's `previousHash` references t
 
 ### Validating a blockchain
 
-`blockchain.isValid(depth = 0)` re-verifies a chain — useful after deserializing data from storage or the network, since it may have been tampered with. `depth = 0` checks the whole chain since genesis; `depth = N` checks only the N most recent blocks (faster, but can't validate things that depend on earlier history).
+`blockchain.assertIsValid(depth = 0)` re-verifies a chain — useful after deserializing data from storage or the network, since it may have been tampered with. It throws an `InvalidBlockchainError` with a detailed message at the first check that fails. `depth = 0` checks the whole chain since genesis; `depth = N` checks only the N most recent blocks (faster, but can't validate things that depend on earlier history). `blockchain.isValid(depth)` is a convenience wrapper that returns `true`/`false` instead of throwing, for callers who only need a yes/no answer.
 
 Generic checks (any `Blockchain`):
 - each block's signature is cryptographically valid, and its merkle root matches its current transactions

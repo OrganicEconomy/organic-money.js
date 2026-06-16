@@ -6,7 +6,7 @@ import { secp256k1 } from 'ethereum-cryptography/secp256k1.js'
 
 import { dateToInt, infinityDate, intToDate, publicFromPrivate } from "./crypto.js"
 import { CreateTransaction, InitTransaction, SetAdminTransaction, SetActorTransaction, TransactionMaker, TXTYPE } from './Transaction.js'
-import { UnauthorizedError } from './errors.js'
+import { UnauthorizedError, InvalidBlockchainError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
 
 export const REF_HASH = '1eb10cdeba5ec1a551cc0defa15ab1e1dea1157e50c1a1e7910ba11eb10cdeba'
@@ -169,29 +169,39 @@ export class Block {
     }
 
     isValid() {
+        try {
+            this.assertIsValid()
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    assertIsValid() {
         for (const tx of this.transactions) {
-            if (!tx.isValid()) return false
+            if (!tx.isValid()) throw new InvalidBlockchainError(`Transaction ${tx.signature} is invalid.`)
         }
 
         let papersTarget = null
         for (const tx of this.transactions) {
             if (tx.type === TXTYPE.PAPER) {
-                if (papersTarget !== null && papersTarget !== tx.target) return false
+                if (papersTarget !== null && papersTarget !== tx.target)
+                    throw new InvalidBlockchainError('Block contains papers with different targets.')
                 papersTarget = tx.target
             }
         }
 
         if (this.signature) {
-            if (!this.isSigned()) return false
+            if (!this.isSigned()) throw new InvalidBlockchainError('Block signature does not verify.')
 
             const leaves = this.transactions.map(x => x.signature)
             const tree = new MerkleTree(leaves, sha256)
-            if (this.root !== tree.getRoot().toString('hex')) return false
+            if (this.root !== tree.getRoot().toString('hex'))
+                throw new InvalidBlockchainError('Block merkle root does not match its transactions.')
 
-            if (papersTarget !== null && this.signer !== papersTarget) return false
+            if (papersTarget !== null && this.signer !== papersTarget)
+                throw new InvalidBlockchainError('Block signer does not match the papers target.')
         }
-
-        return true
     }
 
     isSigned() {
@@ -313,16 +323,15 @@ export class BirthBlock extends CitizenBlock {
 
     getMyPublicKey() { return this.signer }
 
-    isValid() {
-        if (!super.isValid()) return false
-        if (!this.isSigned()) return false
-
-        return this.previousHash === REF_HASH &&
-            this.version === Blockchain.VERSION &&
-            this.transactions.length === 2 &&
-            this.money.length === 1 &&
-            this.invests.length === 1 &&
-            this.experience === 0
+    assertIsValid() {
+        super.assertIsValid()
+        if (!this.isSigned()) throw new InvalidBlockchainError('BirthBlock must be signed.')
+        if (this.previousHash !== REF_HASH) throw new InvalidBlockchainError('BirthBlock previousHash must be REF_HASH.')
+        if (this.version !== Blockchain.VERSION) throw new InvalidBlockchainError('BirthBlock version mismatch.')
+        if (this.transactions.length !== 2) throw new InvalidBlockchainError('BirthBlock must have exactly 2 transactions (INIT, CREATE).')
+        if (this.money.length !== 1) throw new InvalidBlockchainError('BirthBlock must have exactly 1 money id.')
+        if (this.invests.length !== 1) throw new InvalidBlockchainError('BirthBlock must have exactly 1 invest id.')
+        if (this.experience !== 0) throw new InvalidBlockchainError('BirthBlock experience must be 0.')
     }
 }
 
@@ -354,15 +363,14 @@ export class InitializationBlock extends CitizenBlock {
 
     getMyPublicKey() { return null }
 
-    isValid() {
-        if (!super.isValid()) return false
-        if (!this.isSigned()) return false
-
-        return this.version === Blockchain.VERSION &&
-            this.transactions.length === 0 &&
-            this.money.length === 1 &&
-            this.invests.length === 1 &&
-            this.experience === 0
+    assertIsValid() {
+        super.assertIsValid()
+        if (!this.isSigned()) throw new InvalidBlockchainError('InitializationBlock must be signed.')
+        if (this.version !== Blockchain.VERSION) throw new InvalidBlockchainError('InitializationBlock version mismatch.')
+        if (this.transactions.length !== 0) throw new InvalidBlockchainError('InitializationBlock must have no transactions.')
+        if (this.money.length !== 1) throw new InvalidBlockchainError('InitializationBlock must have exactly 1 money id.')
+        if (this.invests.length !== 1) throw new InvalidBlockchainError('InitializationBlock must have exactly 1 invest id.')
+        if (this.experience !== 0) throw new InvalidBlockchainError('InitializationBlock experience must be 0.')
     }
 }
 
@@ -395,15 +403,14 @@ export class EcoBirthBlock extends Block {
 
     getMyPublicKey() { return this.signer }
 
-    isValid() {
-        if (!super.isValid()) return false
-        if (!this.isSigned()) return false
-
-        return this.previousHash === ECOREF_HASH &&
-            this.version === Blockchain.VERSION &&
-            this.transactions.length === 3 &&
-            this.money.length === 0 &&
-            this.invests.length === 0
+    assertIsValid() {
+        super.assertIsValid()
+        if (!this.isSigned()) throw new InvalidBlockchainError('EcoBirthBlock must be signed.')
+        if (this.previousHash !== ECOREF_HASH) throw new InvalidBlockchainError('EcoBirthBlock previousHash must be ECOREF_HASH.')
+        if (this.version !== Blockchain.VERSION) throw new InvalidBlockchainError('EcoBirthBlock version mismatch.')
+        if (this.transactions.length !== 3) throw new InvalidBlockchainError('EcoBirthBlock must have exactly 3 transactions (INIT, SETADMIN, SETACTOR).')
+        if (this.money.length !== 0) throw new InvalidBlockchainError('EcoBirthBlock must have no money.')
+        if (this.invests.length !== 0) throw new InvalidBlockchainError('EcoBirthBlock must have no invests.')
     }
 }
 
@@ -435,12 +442,11 @@ export class EcoInitializationBlock extends Block {
 
     getMyPublicKey() { return null }
 
-    isValid() {
-        if (!super.isValid()) return false
-        if (!this.isSigned()) return false
-
-        return this.version === Blockchain.VERSION &&
-            this.money.length === 0 &&
-            this.invests.length === 0
+    assertIsValid() {
+        super.assertIsValid()
+        if (!this.isSigned()) throw new InvalidBlockchainError('EcoInitializationBlock must be signed.')
+        if (this.version !== Blockchain.VERSION) throw new InvalidBlockchainError('EcoInitializationBlock version mismatch.')
+        if (this.money.length !== 0) throw new InvalidBlockchainError('EcoInitializationBlock must have no money.')
+        if (this.invests.length !== 0) throw new InvalidBlockchainError('EcoInitializationBlock must have no invests.')
     }
 }

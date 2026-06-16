@@ -1,4 +1,4 @@
-import { InvalidTransactionError, UnauthorizedError } from './errors.js'
+import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from './errors.js'
 import { intToDate, dateToInt, infinityDate } from './crypto.js'
 
 import { TXTYPE } from './Transaction.js'
@@ -183,6 +183,15 @@ export class Blockchain {
 	 *   0 means the whole chain since genesis.
 	 */
 	isValid(depth = 0) {
+		try {
+			this.assertIsValid(depth)
+			return true
+		} catch {
+			return false
+		}
+	}
+
+	assertIsValid(depth = 0) {
 		const blocksToCheck = depth > 0 ? this.blocks.slice(0, depth) : this.blocks
 
 		// Role/structural transactions are intentionally re-presented (same object, same
@@ -198,29 +207,31 @@ export class Blockchain {
 		for (let i = 0; i < blocksToCheck.length; i++) {
 			const block = blocksToCheck[i]
 
-			if (!block.isValid()) return false
-			if (i > 0 && !block.isSigned()) return false
+			block.assertIsValid()
+			if (i > 0 && !block.isSigned()) throw new InvalidBlockchainError(`Block at index ${i} must be signed.`)
 
 			if (i < blocksToCheck.length - 1) {
 				const olderBlock = blocksToCheck[i + 1]
-				if (block.previousHash !== olderBlock.signature) return false
-				if (!(olderBlock.closedate <= block.closedate)) return false
+				if (block.previousHash !== olderBlock.signature)
+					throw new InvalidBlockchainError(`Block at index ${i} previousHash does not match the previous block signature.`)
+				if (!(olderBlock.closedate <= block.closedate))
+					throw new InvalidBlockchainError(`Block at index ${i} has an earlier closedate than the previous block.`)
 			}
 
 			const pk = block.getMyPublicKey()
 			if (pk !== null) {
-				if (ownerKey !== null && ownerKey !== pk) return false
+				if (ownerKey !== null && ownerKey !== pk)
+					throw new InvalidBlockchainError('Owner public key changes between blocks.')
 				ownerKey = pk
 			}
 
 			for (const tx of block.transactions) {
 				if (carriedForwardTypes.has(tx.type)) continue
-				if (seenSignatures.has(tx.signature)) return false
+				if (seenSignatures.has(tx.signature))
+					throw new InvalidBlockchainError(`Transaction ${tx.signature} is duplicated across blocks.`)
 				seenSignatures.add(tx.signature)
 			}
 		}
-
-		return true
 	}
 
 	/**

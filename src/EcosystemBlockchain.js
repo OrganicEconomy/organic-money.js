@@ -1,4 +1,4 @@
-import { InvalidTransactionError, UnauthorizedError } from './errors.js'
+import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
 import { randomPrivateKey, publicFromPrivate, dateToInt, unitIdToDateInt, investIdToMoneyId, hasEnoughOccurrences } from './crypto.js'
 import { Block, EcoBirthBlock, EcoInitializationBlock, BLOCKTYPE } from './Block.js'
@@ -90,11 +90,20 @@ export class EcosystemBlockchain extends Blockchain {
      *     and no PAYERORDER ever exceeded the payer cap in effect at the time
      */
     isValid(depth = 0) {
-        if (!super.isValid(depth)) return false
+        try {
+            this.assertIsValid(depth)
+            return true
+        } catch {
+            return false
+        }
+    }
 
-        if (this.getAdmins().size === 0) return false
+    assertIsValid(depth = 0) {
+        super.assertIsValid(depth)
+
+        if (this.getAdmins().size === 0) throw new InvalidBlockchainError('Ecosystem must have at least one admin.')
         const actors = this.getActors()
-        if (![...actors.values()].some(ratio => ratio > 0)) return false
+        if (![...actors.values()].some(ratio => ratio > 0)) throw new InvalidBlockchainError('Ecosystem must have at least one actor with a ratio > 0.')
 
         if (depth === 0) {
             const chronologicalBlocks = this.blocks.slice().reverse()
@@ -112,31 +121,29 @@ export class EcosystemBlockchain extends Blockchain {
                     if (tx.type === TXTYPE.UNSETPAYER) payerCaps.delete(tx.target)
                     if (tx.type === TXTYPE.PAYERORDER) {
                         const cap = payerCaps.get(tx.signer)
-                        if (cap === undefined) return false
-                        if (cap > 0 && tx.invests.length > cap) return false
+                        if (cap === undefined) throw new InvalidBlockchainError('A PAYERORDER was issued by a non-payer at the time it was recorded.')
+                        if (cap > 0 && tx.invests.length > cap) throw new InvalidBlockchainError('A PAYERORDER exceeded the payer cap in effect at the time.')
                     }
                 }
             }
 
             const currentAdmins = this.getAdmins()
-            if (admins.size !== currentAdmins.size) return false
+            if (admins.size !== currentAdmins.size) throw new InvalidBlockchainError('The replayed admin history does not match the current admin set.')
             for (const pk of admins) {
-                if (!currentAdmins.has(pk)) return false
+                if (!currentAdmins.has(pk)) throw new InvalidBlockchainError('The replayed admin history does not match the current admin set.')
             }
 
-            if (replayedActors.size !== actors.size) return false
+            if (replayedActors.size !== actors.size) throw new InvalidBlockchainError('The replayed actor history does not match the current actor set.')
             for (const [pk, ratio] of replayedActors) {
-                if (actors.get(pk) !== ratio) return false
+                if (actors.get(pk) !== ratio) throw new InvalidBlockchainError('The replayed actor history does not match the current actor set.')
             }
 
             const currentPayers = this.getPayers()
-            if (payerCaps.size !== currentPayers.size) return false
+            if (payerCaps.size !== currentPayers.size) throw new InvalidBlockchainError('The replayed payer history does not match the current payer set.')
             for (const [pk, cap] of payerCaps) {
-                if (currentPayers.get(pk) !== cap) return false
+                if (currentPayers.get(pk) !== cap) throw new InvalidBlockchainError('The replayed payer history does not match the current payer set.')
             }
         }
-
-        return true
     }
 
     newBlock() {

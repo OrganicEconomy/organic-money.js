@@ -8,7 +8,7 @@ import { dateToInt, infinityDate, intToDate } from '../src/crypto.js';
 import { makeBlockObj, makeBlock, makeTransactions, makeTransaction, referentPk, targetPk, targetSk, mySk, referentSk, myPk } from './testUtils.js';
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
 import { signHash } from '../src/crypto.js';
-import { UnauthorizedError } from '../src/errors.js';
+import { UnauthorizedError, InvalidBlockchainError } from '../src/errors.js';
 import { Blockchain } from '../src/Blockchain.js';
 
 describe('Block', () => {
@@ -961,6 +961,58 @@ describe('Block', () => {
             assert.isFalse(block.isValid())
         })
     })
+
+    describe('assertIsValid', () => {
+        it('Should not throw for a signed block with valid transactions.', () => {
+            const tx = makeTransaction({ date: new Date('2025-01-01') })
+            const block = makeBlock({ transactions: [tx], signed: true })
+
+            assert.doesNotThrow(() => block.assertIsValid())
+        })
+
+        it('Should throw if a transaction is invalid.', () => {
+            const tx = makeTransaction({ date: new Date('2025-01-01') })
+            tx.signature = 'forged'
+            const block = makeBlock({ transactions: [tx], signed: false })
+
+            assert.throws(() => block.assertIsValid(), InvalidBlockchainError, /transaction/i)
+        })
+
+        it('Should throw if a signature is present but does not verify.', () => {
+            const tx = makeTransaction({ date: new Date('2025-01-01') })
+            const block = makeBlock({ transactions: [tx], signed: false })
+            block.signature = 'garbage'
+
+            assert.throws(() => block.assertIsValid(), InvalidBlockchainError, /signature/i)
+        })
+
+        it('Should throw if a transaction was swapped after signing (merkle root no longer matches).', () => {
+            const tx = makeTransaction({ date: new Date('2025-01-01') })
+            const block = makeBlock({ transactions: [tx], signed: true })
+            const otherTx = makeTransaction({ date: new Date('2025-01-02'), signer: targetPk, sk: targetSk })
+            block.transactions = [otherTx]
+
+            assert.throws(() => block.assertIsValid(), InvalidBlockchainError, /merkle/i)
+        })
+
+        it('Should throw if papers in the block target different ecosystems.', () => {
+            const paper1 = makeTransaction({ type: TXTYPE.PAPER, moneycount: 1, target: targetPk })
+            const paper2 = makeTransaction({ type: TXTYPE.PAPER, moneycount: 1, target: referentPk })
+            const block = makeBlock({ transactions: [paper1, paper2], signed: false })
+
+            assert.throws(() => block.assertIsValid(), InvalidBlockchainError, /papers/i)
+        })
+
+        it('Should throw if signed by someone other than the papers target.', () => {
+            const paper = makeTransaction({ type: TXTYPE.PAPER, moneycount: 1, target: targetPk })
+            const block = makeBlock({ transactions: [paper], signed: false })
+            block.merkle()
+            block.signer = myPk
+            block.signature = signHash(block.hash(), mySk)
+
+            assert.throws(() => block.assertIsValid(), InvalidBlockchainError, /signer/i)
+        })
+    })
 })
 
 describe('CitizenBlock', () => {
@@ -1099,6 +1151,30 @@ describe('BirthBlock', () => {
             assert.isFalse(block.isValid())
         })
     })
+
+    describe('assertIsValid', () => {
+        it('Should not throw for a properly constructed block.', () => {
+            const block = new BirthBlock(mySk, new Date('2025-11-01'), "Jean Bombeur")
+
+            assert.doesNotThrow(() => block.assertIsValid())
+        })
+
+        it('Should throw a specific message if previousHash is not REF_HASH.', () => {
+            const original = new BirthBlock(mySk, new Date('2025-11-01'), "Jean Bombeur")
+            const tampered = new BirthBlock({ ...original.export(), p: 'wronghash', h: null })
+            tampered.sign(mySk)
+
+            assert.throws(() => tampered.assertIsValid(), InvalidBlockchainError, /REF_HASH/)
+        })
+
+        it('Should throw a specific message if experience is not 0.', () => {
+            const original = new BirthBlock(mySk, new Date('2025-11-01'), "Jean Bombeur")
+            const tampered = new BirthBlock({ ...original.export(), e: 1, h: null })
+            tampered.sign(mySk)
+
+            assert.throws(() => tampered.assertIsValid(), InvalidBlockchainError, /experience/i)
+        })
+    })
 })
 
 describe('InitializationBlock', () => {
@@ -1160,6 +1236,22 @@ describe('InitializationBlock', () => {
             const block = new InitializationBlock(targetSk, previousBlock)
 
             assert.isTrue(block.isValid())
+        })
+    })
+
+    describe('assertIsValid', () => {
+        it('Should not throw for a properly constructed block.', () => {
+            const previousBlock = makeBlock({ moneycount: 1, investscount: 1 })
+            const block = new InitializationBlock(targetSk, previousBlock)
+
+            assert.doesNotThrow(() => block.assertIsValid())
+        })
+
+        it('Should throw a specific message if money/invests count is not 1.', () => {
+            const previousBlock = makeBlock({ moneycount: 2, investscount: 2 })
+            const block = new InitializationBlock(targetSk, previousBlock)
+
+            assert.throws(() => block.assertIsValid(), InvalidBlockchainError, /money/i)
         })
     })
 })
@@ -1236,6 +1328,22 @@ describe('EcoBirthBlock', () => {
             block.transactions[0] = makeTransaction({ type: TXTYPE.SETACTOR, date: new Date('2025-01-02'), signer: targetPk, sk: targetSk })
 
             assert.isFalse(block.isValid())
+        })
+    })
+
+    describe('assertIsValid', () => {
+        it('Should not throw for a properly constructed block.', () => {
+            const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+
+            assert.doesNotThrow(() => block.assertIsValid())
+        })
+
+        it('Should throw a specific message if previousHash is not ECOREF_HASH.', () => {
+            const original = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+            const tampered = new EcoBirthBlock({ ...original.export(), p: 'wronghash', h: null })
+            tampered.sign(mySk)
+
+            assert.throws(() => tampered.assertIsValid(), InvalidBlockchainError, /ECOREF_HASH/)
         })
     })
 })
@@ -1318,6 +1426,24 @@ describe('EcoInitializationBlock', () => {
             block.transactions[0] = makeTransaction({ type: TXTYPE.SETACTOR, date: new Date('2025-01-03'), signer: targetPk, sk: targetSk })
 
             assert.isFalse(block.isValid())
+        })
+    })
+
+    describe('assertIsValid', () => {
+        it('Should not throw for a properly constructed block.', () => {
+            const prev = makePreviousEcoBirthBlock()
+            const block = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
+
+            assert.doesNotThrow(() => block.assertIsValid())
+        })
+
+        it('Should throw a specific message if money/invests are not empty.', () => {
+            const prev = makePreviousEcoBirthBlock()
+            const original = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
+            const tampered = new EcoInitializationBlock({ ...original.export(), m: [20250102000], h: null })
+            tampered.sign(targetSk)
+
+            assert.throws(() => tampered.assertIsValid(), InvalidBlockchainError, /money/i)
         })
     })
 })

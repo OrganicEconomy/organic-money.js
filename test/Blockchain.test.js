@@ -2,7 +2,7 @@ import { describe, it } from 'mocha';
 import { assert } from 'chai';
 
 
-import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
+import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from '../src/errors.js'
 import { Blockchain } from '../src/Blockchain.js';
 import { mySk, myPk, targetSk, targetPk, referentPk, makeBlockObj, makeBlock, makeTransaction } from './testUtils.js'
 import { TXTYPE } from '../src/Transaction.js';
@@ -240,6 +240,95 @@ describe('Blockchain', () => {
 
 				assert.isFalse(bc.isValid())
 				assert.isTrue(bc.isValid(2))
+			})
+		})
+	})
+
+	describe('assertIsValid', () => {
+		it('Should not throw for an empty blockchain.', () => {
+			const bc = new Blockchain()
+
+			assert.doesNotThrow(() => bc.assertIsValid())
+		})
+
+		it('Should not throw for a valid chain of linked, signed blocks.', () => {
+			const oldest = makeBlock({ date: new Date('2025-01-01'), signed: true })
+			const newest = makeBlock({ date: new Date('2025-01-02'), previousHash: oldest.signature, signed: true })
+			const bc = new Blockchain([newest.export(), oldest.export()])
+
+			assert.doesNotThrow(() => bc.assertIsValid())
+		})
+
+		it('Should throw a specific message if previousHash does not match the previous block signature.', () => {
+			const oldest = makeBlock({ date: new Date('2025-01-01'), signed: true })
+			const newest = makeBlock({ date: new Date('2025-01-02'), previousHash: 'wronghash', signed: true })
+			const bc = new Blockchain([newest.export(), oldest.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /previousHash/i)
+		})
+
+		it('Should throw a specific message if a non-current (older) block is unsigned.', () => {
+			const oldest = makeBlock({ date: new Date('2025-01-01'), signed: false })
+			const newest = makeBlock({ date: new Date('2025-01-02'), previousHash: '', signed: true })
+			const bc = new Blockchain([newest.export(), oldest.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /must be signed/i)
+		})
+
+		it('Should throw a specific message if an older block has a later closedate than a newer block.', () => {
+			const oldest = makeBlock({ date: new Date('2025-01-05'), signed: true })
+			const newest = makeBlock({ date: new Date('2025-01-02'), previousHash: oldest.signature, signed: true })
+			const bc = new Blockchain([newest.export(), oldest.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /closedate/i)
+		})
+
+		it('Should throw a specific message if the owner public key changes between blocks.', () => {
+			const createTx1 = makeTransaction({ type: TXTYPE.CREATE, signer: myPk, sk: mySk, date: new Date('2025-01-01') })
+			const oldest = makeBlock({ date: new Date('2025-01-01'), transactions: [createTx1], signed: true })
+			const createTx2 = makeTransaction({ type: TXTYPE.CREATE, signer: targetPk, sk: targetSk, date: new Date('2025-01-02') })
+			const newest = makeBlock({ date: new Date('2025-01-02'), previousHash: oldest.signature, transactions: [createTx2], signed: true })
+			const bc = new Blockchain([newest.export(), oldest.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /owner/i)
+		})
+
+		it('Should throw a specific message if a transaction signature is duplicated across blocks.', () => {
+			const tx = makeTransaction({ date: new Date('2025-01-01') })
+			const oldest = makeBlock({ date: new Date('2025-01-01'), transactions: [tx], signed: true })
+			const newest = makeBlock({ date: new Date('2025-01-02'), previousHash: oldest.signature, transactions: [tx], signed: true })
+			const bc = new Blockchain([newest.export(), oldest.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /duplicate/i)
+		})
+
+		it('Should not throw if a role transaction (e.g. SETADMIN) is legitimately carried forward across blocks.', () => {
+			const setAdminTx = makeTransaction({ type: TXTYPE.SETADMIN, date: new Date('2025-01-01') })
+			const oldest = makeBlock({ date: new Date('2025-01-01'), transactions: [setAdminTx], signed: true })
+			const newest = makeBlock({ date: new Date('2025-01-02'), previousHash: oldest.signature, transactions: [setAdminTx], signed: true })
+			const bc = new Blockchain([newest.export(), oldest.export()])
+
+			assert.doesNotThrow(() => bc.assertIsValid())
+		})
+
+		it('Should propagate the block-level error if a block fails its own assertIsValid() check.', () => {
+			const tx = makeTransaction({ date: new Date('2025-01-01') })
+			tx.signature = 'forged'
+			const oldest = makeBlock({ date: new Date('2025-01-01'), transactions: [tx], signed: false })
+			const bc = new Blockchain([oldest.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError)
+		})
+
+		describe('depth parameter', () => {
+			it('Should only check the last N blocks when depth > 0, ignoring older inconsistencies.', () => {
+				const corruptOldest = makeBlock({ date: new Date('2025-01-01'), signed: true })
+				const middle = makeBlock({ date: new Date('2025-01-02'), previousHash: 'wronghash', signed: true })
+				const newest = makeBlock({ date: new Date('2025-01-03'), previousHash: middle.signature, signed: true })
+				const bc = new Blockchain([newest.export(), middle.export(), corruptOldest.export()])
+
+				assert.throws(() => bc.assertIsValid(), InvalidBlockchainError)
+				assert.doesNotThrow(() => bc.assertIsValid(2))
 			})
 		})
 	})

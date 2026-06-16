@@ -11,3 +11,10 @@ export class UnauthorizedError extends Error {
 		this.name = "UnauthorizedError";
 	}
 }
+
+export class InvalidBlockchainError extends Error {
+	constructor(message) {
+		super(message);
+		this.name = "InvalidBlockchainError";
+	}
+}

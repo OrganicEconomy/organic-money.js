@@ -1,7 +1,7 @@
 import { describe, it } from 'mocha';
 import { assert } from 'chai';
 
-import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js';
+import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from '../src/errors.js';
 import { Blockchain } from '../src/Blockchain.js';
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js';
 import { mySk, myPk, targetSk, targetPk, makeBlock, makeBlockObj, makeTransaction, referentSk, referentPk } from './testUtils.js'
@@ -1331,6 +1331,107 @@ describe('CitizenBlockchain', () => {
 			const bc = new CitizenBlockchain([newest.export(), middle.export(), oldest.export()])
 
 			assert.isFalse(bc.isValid())
+		})
+	})
+
+	describe('assertIsValid', () => {
+		function makeOwnerCreateTx(date) {
+			return makeTransaction({ type: TXTYPE.CREATE, date, moneycount: 1, investscount: 1, signer: myPk, sk: mySk })
+		}
+
+		it('Should not throw for a chain where CREATE quantity matches the level implied by experience.', () => {
+			const older = makeBlock({ date: new Date('2025-01-01'), experience: 0, transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
+			const createTx = makeTransaction({ type: TXTYPE.CREATE, date: new Date('2025-01-02'), moneycount: 1, investscount: 1, signer: myPk, sk: mySk })
+			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 0, transactions: [createTx], signed: true })
+			const bc = new CitizenBlockchain([newer.export(), older.export()])
+
+			assert.doesNotThrow(() => bc.assertIsValid())
+		})
+
+		it('Should throw a specific message if a CREATE transaction creates the wrong amount of money for the level implied by experience.', () => {
+			const older = makeBlock({ date: new Date('2025-01-01'), experience: 0, transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
+			const badCreate = makeTransaction({ type: TXTYPE.CREATE, date: new Date('2025-01-02'), moneycount: 5, investscount: 5, signer: myPk, sk: mySk })
+			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 0, transactions: [badCreate], signed: true })
+			const bc = new CitizenBlockchain([newer.export(), older.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /level/i)
+		})
+
+		it('Should throw a specific message if experience does not match the actual PAY transaction in the block.', () => {
+			const older = makeBlock({ date: new Date('2025-01-01'), experience: 10, transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
+			const payTx = makeTransaction({ type: TXTYPE.PAY, date: new Date('2025-01-02'), moneycount: 3, target: myPk, signer: targetPk, sk: targetSk })
+			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 20, transactions: [payTx], signed: true })
+			const bc = new CitizenBlockchain([newer.export(), older.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /experience/i)
+		})
+
+		it('Should throw a specific message if experience carry-forward between blocks is wrong (no transactions but experience changed).', () => {
+			const older = makeBlock({ date: new Date('2025-01-01'), experience: 10, transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
+			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 99, transactions: [], signed: true })
+			const bc = new CitizenBlockchain([newer.export(), older.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /experience/i)
+		})
+
+		it('Should not throw when experience increases via a received PAY targeting me.', () => {
+			const older = makeBlock({ date: new Date('2025-01-01'), experience: 10, transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
+			const payTx = makeTransaction({ type: TXTYPE.PAY, date: new Date('2025-01-02'), moneycount: 3, target: myPk, signer: targetPk, sk: targetSk })
+			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 13, transactions: [payTx], signed: true })
+			const bc = new CitizenBlockchain([newer.export(), older.export()])
+
+			assert.doesNotThrow(() => bc.assertIsValid())
+		})
+
+		it('Should not throw when experience increases via a received EARN targeting me.', () => {
+			const older = makeBlock({ date: new Date('2025-01-01'), experience: 10, transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
+			const earnTx = makeTransaction({ type: TXTYPE.EARN, date: new Date('2025-01-02'), moneycount: 3, target: myPk, signer: targetPk, sk: targetSk })
+			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 13, transactions: [earnTx], signed: true })
+			const bc = new CitizenBlockchain([newer.export(), older.export()])
+
+			assert.doesNotThrow(() => bc.assertIsValid())
+		})
+
+		it('Should throw a specific message if a foreign-targeted EARN (not mine) is credited as if it were.', () => {
+			const older = makeBlock({ date: new Date('2025-01-01'), experience: 10, transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
+			const earnTx = makeTransaction({ type: TXTYPE.EARN, date: new Date('2025-01-02'), moneycount: 3, target: targetPk, signer: referentPk, sk: referentSk })
+			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 13, transactions: [earnTx], signed: true })
+			const bc = new CitizenBlockchain([newer.export(), older.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /experience/i)
+		})
+
+		it('Should not throw when experience increases via a paper cashed from someone else.', () => {
+			const older = makeBlock({ date: new Date('2025-01-01'), experience: 10, transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
+			const paperTx = makeTransaction({ type: TXTYPE.PAPER, date: new Date('2025-01-02'), moneycount: 3, target: referentPk, signer: targetPk, sk: targetSk })
+			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 13, transactions: [paperTx], signed: true, signer: referentSk })
+			const bc = new CitizenBlockchain([newer.export(), older.export()])
+
+			assert.doesNotThrow(() => bc.assertIsValid())
+		})
+
+		it('Should throw a specific message if experience increases for a paper I signed myself (generated, not cashed).', () => {
+			const older = makeBlock({ date: new Date('2025-01-01'), experience: 10, transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
+			const paperTx = makeTransaction({ type: TXTYPE.PAPER, date: new Date('2025-01-02'), moneycount: 3, target: referentPk, signer: myPk, sk: mySk })
+			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 13, transactions: [paperTx], signed: true, signer: referentSk })
+			const bc = new CitizenBlockchain([newer.export(), older.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /experience/i)
+		})
+
+		it('Should throw a specific message if two CREATE transactions across the chain reuse the same date, producing overlapping money ids.', () => {
+			const create1 = makeTransaction({ type: TXTYPE.CREATE, date: new Date('2025-01-01'), moneycount: 1, investscount: 1, signer: myPk, sk: mySk })
+			const oldest = makeBlock({ date: new Date('2025-01-01'), experience: 0, transactions: [create1], signed: true })
+
+			const payTx = makeTransaction({ type: TXTYPE.PAY, date: new Date('2025-01-02'), moneycount: 8, target: myPk, signer: targetPk, sk: targetSk })
+			const middle = makeBlock({ date: new Date('2025-01-02'), previousHash: oldest.signature, experience: 8, transactions: [payTx], signed: true })
+
+			const create2 = makeTransaction({ type: TXTYPE.CREATE, date: new Date('2025-01-01'), moneycount: 3, investscount: 3, signer: myPk, sk: mySk })
+			const newest = makeBlock({ date: new Date('2025-01-03'), previousHash: middle.signature, experience: 8, transactions: [create2], signed: true })
+
+			const bc = new CitizenBlockchain([newest.export(), middle.export(), oldest.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /duplicate/i)
 		})
 	})
 

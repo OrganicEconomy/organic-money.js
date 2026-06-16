@@ -1,5 +1,5 @@
 import { Blockchain } from './Blockchain.js'
-import { InvalidTransactionError, UnauthorizedError } from './errors.js'
+import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from './errors.js'
 import { randomPrivateKey, publicFromPrivate, 
 	dateToInt, buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
 import { CitizenBlock, BirthBlock, InitializationBlock, BLOCKTYPE } from './Block.js'
@@ -322,7 +322,16 @@ export class CitizenBlockchain extends Blockchain {
 	 * it's skipped — its own genesis invariants are covered by Block.isValid().
 	 */
 	isValid(depth = 0) {
-		if (!super.isValid(depth)) return false
+		try {
+			this.assertIsValid(depth)
+			return true
+		} catch {
+			return false
+		}
+	}
+
+	assertIsValid(depth = 0) {
+		super.assertIsValid(depth)
 
 		const blocksToCheck = depth > 0 ? this.blocks.slice(0, depth) : this.blocks
 		const ownerKey = this.getMyPublicKey()
@@ -336,11 +345,11 @@ export class CitizenBlockchain extends Blockchain {
 			for (const tx of block.transactions) {
 				if (tx.type !== TXTYPE.CREATE) continue
 				for (const id of tx.money) {
-					if (seenCreateMoney.has(id)) return false
+					if (seenCreateMoney.has(id)) throw new InvalidBlockchainError(`Duplicate CREATE money id ${id} across the chain.`)
 					seenCreateMoney.add(id)
 				}
 				for (const id of tx.invests) {
-					if (seenCreateInvests.has(id)) return false
+					if (seenCreateInvests.has(id)) throw new InvalidBlockchainError(`Duplicate CREATE invest id ${id} across the chain.`)
 					seenCreateInvests.add(id)
 				}
 			}
@@ -353,17 +362,17 @@ export class CitizenBlockchain extends Blockchain {
 			for (const tx of chronological) {
 				if (tx.type === TXTYPE.CREATE) {
 					const level = Math.floor(Math.cbrt(runningExperience)) + 1
-					if (tx.money.length !== level || tx.invests.length !== level) return false
+					if (tx.money.length !== level || tx.invests.length !== level)
+						throw new InvalidBlockchainError(`CREATE transaction at block index ${i} mints the wrong amount of money/invests for the level implied by accumulated experience.`)
 				}
 				if (tx.type === TXTYPE.PAY && tx.target === ownerKey) runningExperience += tx.money.length
 				if (tx.type === TXTYPE.EARN && tx.target === ownerKey) runningExperience += tx.money.length
 				if (tx.type === TXTYPE.PAPER && tx.signer !== ownerKey) runningExperience += tx.money.length
 			}
 
-			if (runningExperience !== block.experience) return false
+			if (runningExperience !== block.experience)
+				throw new InvalidBlockchainError(`Block at index ${i} experience does not match the experience replayed from its transactions.`)
 		}
-
-		return true
 	}
 
 	/**

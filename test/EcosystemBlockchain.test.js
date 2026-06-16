@@ -1,7 +1,7 @@
 import { describe, it } from 'mocha';
 import { assert } from 'chai';
 
-import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
+import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from '../src/errors.js'
 import { EcosystemBlockchain } from '../src/EcosystemBlockchain.js'
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js'
 import { EcoBirthBlock, EcoInitializationBlock } from '../src/Block.js'
@@ -63,6 +63,15 @@ function ecoSetPayer(eco, signerSk, targetPk, cap, date = DATE2) {
 function ecoUnsetPayer(eco, signerSk, targetPk, date = DATE2) {
     const tx = makeAdminBc(signerSk).unsetPayer(signerSk, eco.getMyPublicKey(), targetPk, date)
     return eco.receiveUnsetPayer(tx)
+}
+
+// Tampering with an already-signed block's transactions directly (bypassing the
+// validated receive*/addTransaction methods) breaks its merkle root. Re-signing
+// bakes the tampered content into a fresh, internally consistent signature, so the
+// test can isolate the specific business-rule check it targets.
+function resignLastBlock(bc, sk) {
+    bc.lastblock.signature = null
+    bc.lastblock.sign(sk, bc.lastblock.closedate)
 }
 
 describe('EcosystemBlockchain', () => {
@@ -1200,6 +1209,69 @@ describe('EcosystemBlockchain', () => {
             bc.lastblock.transactions.unshift(forgedAdmin)
 
             assert.isFalse(bc.isValid())
+        })
+    })
+
+    describe('assertIsValid', () => {
+        it('Should not throw for a freshly started ecosystem.', () => {
+            const bc = makeStartedEco()
+
+            assert.doesNotThrow(() => bc.assertIsValid())
+        })
+
+        it('Should not throw after a realistic flow of role changes and a payer order.', () => {
+            const bc = makeStartedEco()
+            ecoSetActor(bc, adminSk, referentPk, 2, DATE2)
+            ecoSetPayer(bc, adminSk, referentPk, 5, DATE2)
+            const invests = buildInvestIndexes(DATE2, 2)
+            bc.lastblock.invests = invests
+            bc.receivePayerOrder(mySk, new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2))
+
+            assert.doesNotThrow(() => bc.assertIsValid())
+        })
+
+        it('Should throw a specific message if there are no admins.', () => {
+            const bc = makeStartedEco()
+            bc.lastblock.transactions = bc.lastblock.transactions.filter(tx => tx.type !== TXTYPE.SETADMIN)
+            resignLastBlock(bc, referentSk)
+
+            assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /admin/i)
+        })
+
+        it('Should throw a specific message if no actor has a ratio > 0.', () => {
+            const bc = makeStartedEco()
+            bc.lastblock.transactions = bc.lastblock.transactions.filter(tx => tx.type !== TXTYPE.SETACTOR)
+            resignLastBlock(bc, referentSk)
+
+            assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /actor/i)
+        })
+
+        it('Should throw a specific message if a payer order in history exceeded the cap in effect at the time.', () => {
+            const bc = makeStartedEco()
+            ecoSetPayer(bc, adminSk, referentPk, 1, DATE2)
+            const invests = buildInvestIndexes(DATE2, 2)
+            bc.lastblock.invests = invests
+            const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
+            // bypass receivePayerOrder's own cap check to simulate a tampered/forged history
+            bc._addTransaction(tx)
+
+            assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /cap/i)
+        })
+
+        it('Should throw a specific message if the current admin state does not match the replayed history (forged SETADMIN not stemming from history).', () => {
+            const bc = makeStartedEco()
+            // Carry the EcoInitializationBlock forward so it is no longer the lastblock: forging a
+            // role transaction into it (but not into the new current lastblock) makes the full-history
+            // replay disagree with the current state read from getAdmins(), which only scans lastblock.
+            bc.newBlock()
+            const middle = bc.blocks[1]
+            const forgedAdmin = new SetAdminTransaction(referentSk, referentPk, bc.getMyPublicKey(), DATE2)
+            middle.transactions.unshift(forgedAdmin)
+            middle.signature = null
+            middle.sign(referentSk, middle.closedate)
+            bc.lastblock.previousHash = middle.signature
+
+            assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /replayed/i)
         })
     })
 })

@@ -242,6 +242,24 @@ describe('EcosystemBlockchain', () => {
             assert.throws(() => bc.setActor(adminSk, adminPk, 0, DATE2), InvalidTransactionError)
         })
 
+        it('setActor should throw a specific error if ratio is negative.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.setActor(adminSk, referentPk, -1, DATE2), InvalidTransactionError, 'Ratio must be a non-negative integer.')
+        })
+
+        it('setActor should throw a specific error if ratio is not an integer.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.setActor(adminSk, referentPk, 1.5, DATE2), InvalidTransactionError, 'Ratio must be a non-negative integer.')
+        })
+
+        it('setActor should throw a specific error if ratio is not a number.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.setActor(adminSk, referentPk, 'abc', DATE2), InvalidTransactionError, 'Ratio must be a non-negative integer.')
+        })
+
         it('unsetActor should remove the actor.', () => {
             const bc = makeStartedEco()
 
@@ -283,6 +301,24 @@ describe('EcosystemBlockchain', () => {
             assert.isTrue(bc.isPayer(referentPk))
 
             assert.equal(bc.getPayers().get(referentPk), 0)
+        })
+
+        it('setPayer should throw a specific error if cap is negative.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.setPayer(adminSk, referentPk, -1, DATE2), InvalidTransactionError, 'Cap must be a non-negative integer.')
+        })
+
+        it('setPayer should throw a specific error if cap is not an integer.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.setPayer(adminSk, referentPk, 1.5, DATE2), InvalidTransactionError, 'Cap must be a non-negative integer.')
+        })
+
+        it('setPayer should throw a specific error if cap is not a number.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => bc.setPayer(adminSk, referentPk, 'abc', DATE2), InvalidTransactionError, 'Cap must be a non-negative integer.')
         })
 
         it('unsetPayer should remove the payer.', () => {

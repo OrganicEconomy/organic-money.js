@@ -121,6 +121,16 @@ export class EcosystemBlockchain extends Blockchain {
             throw new UnauthorizedError('Private key does not match blockchain owner.')
     }
 
+    #assertValidRatio(ratio) {
+        if (!Number.isInteger(ratio) || ratio < 0)
+            throw new InvalidTransactionError('Ratio must be a non-negative integer.')
+    }
+
+    #assertValidCap(cap) {
+        if (!Number.isInteger(cap) || cap < 0)
+            throw new InvalidTransactionError('Cap must be a non-negative integer.')
+    }
+
     setAdmin(adminSk, targetPk, date = new Date()) {
         this.#assertAdmin(adminSk)
         const tx = new SetAdminTransaction(adminSk, targetPk, date)
@@ -138,6 +148,7 @@ export class EcosystemBlockchain extends Blockchain {
 
     setActor(adminSk, targetPk, ratio, date = new Date()) {
         this.#assertAdmin(adminSk)
+        this.#assertValidRatio(ratio)
         if (ratio === 0) {
             const otherWithRatio = [...this.getActors().entries()].some(([pk, r]) => pk !== targetPk && r > 0)
             if (!otherWithRatio) throw new InvalidTransactionError('At least one actor must have a ratio > 0.')
@@ -163,6 +174,7 @@ export class EcosystemBlockchain extends Blockchain {
 
     setPayer(adminSk, targetPk, cap, date = new Date()) {
         this.#assertAdmin(adminSk)
+        this.#assertValidCap(cap)
         const tx = new SetPayerTransaction(adminSk, targetPk, cap, date)
         this._addTransaction(tx)
         return tx

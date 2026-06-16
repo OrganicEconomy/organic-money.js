@@ -76,7 +76,7 @@ export class Blockchain {
 	/**
 	 * Add given transaction to the Blockchain
 	 */
-	addTransaction(transaction) {
+	_addTransaction(transaction) {
 		if (!transaction.isValid()) {
 			throw new InvalidTransactionError('Invalid transaction')
 		}
@@ -97,7 +97,7 @@ export class Blockchain {
 			throw new InvalidTransactionError('Invalid transaction')
 		if (earnTx.target !== this.getMyPublicKey())
 			throw new InvalidTransactionError('Transaction not targeting this blockchain')
-		this.addTransaction(earnTx)
+		this._addTransaction(earnTx)
 		return earnTx
 	}
 
@@ -119,7 +119,7 @@ export class Blockchain {
 			throw new InvalidTransactionError('Multiple papers target in same block')
 		}
 
-		this.addTransaction(tx)
+		this._addTransaction(tx)
 		return tx
 	}
 

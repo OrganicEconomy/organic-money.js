@@ -24,7 +24,7 @@ describe('CitizenBlockchain', () => {
 		return bc
 	}
 
-	describe('addTransaction', () => {
+	describe('_addTransaction', () => {
 		it('Should add the given transaction to last block', () => {
 			const blockObj1 = makeBlockObj({ signed: true })
 			const blockObj2 = makeBlockObj({ signed: false })
@@ -32,7 +32,7 @@ describe('CitizenBlockchain', () => {
 
 			const tx = makeTransaction()
 
-			blockchain.addTransaction(tx)
+			blockchain._addTransaction(tx)
 
 			assert.deepEqual(blockchain.lastTransaction, tx)
 		})
@@ -43,7 +43,7 @@ describe('CitizenBlockchain', () => {
 
 			const tx = makeTransaction({ date: new Date() })
 
-			blockchain.addTransaction(tx)
+			blockchain._addTransaction(tx)
 
 			assert.equal(blockchain.blocks.length, 2)
 		})
@@ -51,9 +51,9 @@ describe('CitizenBlockchain', () => {
 		it('Should NOT create a new block if last one is NOT signed', () => {
 			const bc = new CitizenBlockchain([makeBlockObj(), makeBlockObj({ signed: true, date: new Date('2026-01-19') })]);
 
-			bc.addTransaction(makeTransaction({ date: new Date('2026-01-20') }))
-			bc.addTransaction(makeTransaction({ date: new Date('2026-01-21') }))
-			bc.addTransaction(makeTransaction({ date: new Date('2026-01-22') }))
+			bc._addTransaction(makeTransaction({ date: new Date('2026-01-20') }))
+			bc._addTransaction(makeTransaction({ date: new Date('2026-01-21') }))
+			bc._addTransaction(makeTransaction({ date: new Date('2026-01-22') }))
 
 			assert.equal(bc.blocks.length, 2)
 		})
@@ -62,9 +62,9 @@ describe('CitizenBlockchain', () => {
 			const bc = new CitizenBlockchain([makeBlockObj(), makeBlockObj({ signed: true, date: new Date('2026-01-19') })]);
 			const tx = makeTransaction(new Date('2026-01-20'), 2)
 
-			bc.addTransaction(tx)
+			bc._addTransaction(tx)
 
-			assert.throws(() => { bc.addTransaction(tx) }, InvalidTransactionError, 'Transaction duplicate ' + tx.signature)
+			assert.throws(() => { bc._addTransaction(tx) }, InvalidTransactionError, 'Transaction duplicate ' + tx.signature)
 		})
 
 		it('Should add money to experience if type is PAY and target is blockchain owner.', () => {
@@ -227,12 +227,12 @@ describe('CitizenBlockchain', () => {
 				moneycount: 27,
 				date: new Date('2025-01-03')
 			}))
-			bc.addTransaction(makeTransaction({
+			bc._addTransaction(makeTransaction({
 				date: new Date('2025-01-03'),
 				type: TXTYPE.ENGAGE,
 				money: [20250103000, 20250103001]
 			}))
-			bc.addTransaction(makeTransaction({
+			bc._addTransaction(makeTransaction({
 				date: new Date('2025-01-03'),
 				type: TXTYPE.ENGAGE,
 				invests: [202501039000]
@@ -508,7 +508,7 @@ describe('CitizenBlockchain', () => {
 
 		it('Should return last block s money for valid blockchain', () => {
 			const bc = level3CitizenBlockchain()
-			bc.addTransaction(makeTransaction({
+			bc._addTransaction(makeTransaction({
 				type: TXTYPE.CREATE,
 				moneycount: 4,
 				investcount: 4
@@ -524,7 +524,7 @@ describe('CitizenBlockchain', () => {
 		it('Should throw error if private key does not belong to the blockchain owner.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk)
-			bc.addTransaction(makeTransaction({ type: TXTYPE.CREATE, moneycount: 3 }))
+			bc._addTransaction(makeTransaction({ type: TXTYPE.CREATE, moneycount: 3 }))
 
 			assert.throws(() => { bc.generatePaper(targetSk, 1, referentPk) }, UnauthorizedError)
 		})
@@ -539,7 +539,7 @@ describe('CitizenBlockchain', () => {
 		it('Should throw error if date is before last transaction.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
-			bc.addTransaction(makeTransaction({
+			bc._addTransaction(makeTransaction({
 				type: TXTYPE.CREATE,
 				moneycount: 3,
 				investscount: 3,
@@ -552,13 +552,13 @@ describe('CitizenBlockchain', () => {
 		it('Should return a valid transaction.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', intToDate('20250101'), referentSk, mySk, intToDate('20250101'))
-			bc.addTransaction(makeTransaction({
+			bc._addTransaction(makeTransaction({
 				type: TXTYPE.CREATE,
 				moneycount: 1,
 				investcount: 1,
 				date: new Date('2025-01-02')
 			}))
-			bc.addTransaction(makeTransaction({
+			bc._addTransaction(makeTransaction({
 				type: TXTYPE.CREATE,
 				moneycount: 3,
 				investcount: 3,
@@ -578,7 +578,7 @@ describe('CitizenBlockchain', () => {
 		it('Should add the created transaction to the blockchain.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk)
-			bc.addTransaction(makeTransaction({
+			bc._addTransaction(makeTransaction({
 				type: TXTYPE.CREATE,
 				moneycount: 3,
 				investcount: 3
@@ -594,7 +594,7 @@ describe('CitizenBlockchain', () => {
 		it('Should decrease money of the block.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk)
-			bc.addTransaction(makeTransaction({
+			bc._addTransaction(makeTransaction({
 				type: TXTYPE.CREATE,
 				moneycount: 3,
 				investcount: 3

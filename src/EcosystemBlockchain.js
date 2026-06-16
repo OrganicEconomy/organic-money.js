@@ -124,7 +124,7 @@ export class EcosystemBlockchain extends Blockchain {
     setAdmin(adminSk, targetPk, date = new Date()) {
         this.#assertAdmin(adminSk)
         const tx = new SetAdminTransaction(adminSk, targetPk, date)
-        this.addTransaction(tx)
+        this._addTransaction(tx)
         return tx
     }
 
@@ -132,7 +132,7 @@ export class EcosystemBlockchain extends Blockchain {
         this.#assertAdmin(adminSk)
         if (this.getAdmins().size <= 1) throw new InvalidTransactionError('Cannot remove the last admin.')
         const tx = new UnsetAdminTransaction(adminSk, targetPk, date)
-        this.addTransaction(tx)
+        this._addTransaction(tx)
         return tx
     }
 
@@ -143,7 +143,7 @@ export class EcosystemBlockchain extends Blockchain {
             if (!otherWithRatio) throw new InvalidTransactionError('At least one actor must have a ratio > 0.')
         }
         const tx = new SetActorTransaction(adminSk, targetPk, ratio, date)
-        this.addTransaction(tx)
+        this._addTransaction(tx)
         return tx
     }
 
@@ -157,21 +157,21 @@ export class EcosystemBlockchain extends Blockchain {
             if (!otherWithRatio) throw new InvalidTransactionError('At least one actor must have a ratio > 0.')
         }
         const tx = new UnsetActorTransaction(adminSk, targetPk, date)
-        this.addTransaction(tx)
+        this._addTransaction(tx)
         return tx
     }
 
     setPayer(adminSk, targetPk, cap, date = new Date()) {
         this.#assertAdmin(adminSk)
         const tx = new SetPayerTransaction(adminSk, targetPk, cap, date)
-        this.addTransaction(tx)
+        this._addTransaction(tx)
         return tx
     }
 
     unsetPayer(adminSk, targetPk, date = new Date()) {
         this.#assertAdmin(adminSk)
         const tx = new UnsetPayerTransaction(adminSk, targetPk, date)
-        this.addTransaction(tx)
+        this._addTransaction(tx)
         return tx
     }
 
@@ -182,7 +182,7 @@ export class EcosystemBlockchain extends Blockchain {
             throw new InvalidTransactionError('Transaction not targeting this ecosystem')
         if (engageTx.invests.length === 0)
             throw new InvalidTransactionError('No invests in transaction')
-        this.addTransaction(engageTx)
+        this._addTransaction(engageTx)
         this.lastblock.invests = this.lastblock.invests.concat(engageTx.invests)
         return engageTx
     }
@@ -192,7 +192,7 @@ export class EcosystemBlockchain extends Blockchain {
             throw new InvalidTransactionError('Invalid transaction')
         if (payTx.target !== this.getMyPublicKey())
             throw new InvalidTransactionError('Transaction not targeting this ecosystem')
-        this.addTransaction(payTx)
+        this._addTransaction(payTx)
         this.lastblock.money = this.lastblock.money.concat(payTx.money)
         return payTx
     }
@@ -216,7 +216,7 @@ export class EcosystemBlockchain extends Blockchain {
             throw new InvalidTransactionError('Transaction not targeting this ecosystem')
         if (engageTx.money.length === 0)
             throw new InvalidTransactionError('No money in transaction')
-        this.addTransaction(engageTx)
+        this._addTransaction(engageTx)
         this.lastblock.money = this.lastblock.money.concat(engageTx.money)
         return engageTx
     }
@@ -241,9 +241,9 @@ export class EcosystemBlockchain extends Blockchain {
             throw new InvalidTransactionError('Some invests are not yet available.')
         if (cap > 0) {
             const capUpdate = new SetPayerTransaction(ecoSk, tx.signer, cap - tx.invests.length, tx.date)
-            this.addTransaction(capUpdate)
+            this._addTransaction(capUpdate)
         }
-        this.addTransaction(tx)
+        this._addTransaction(tx)
         return tx
     }
 
@@ -270,7 +270,7 @@ export class EcosystemBlockchain extends Blockchain {
     earn(heartSk, actorPk, money, date = new Date()) {
         this.#assertIsMe(heartSk)
         const tx = new EarnTransaction(heartSk, actorPk, money, date)
-        this.addTransaction(tx)
+        this._addTransaction(tx)
         this.removeMoney(money)
         return tx
     }

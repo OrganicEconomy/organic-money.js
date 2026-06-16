@@ -67,7 +67,7 @@ export class CitizenBlockchain extends Blockchain {
 			i: invests
 		})
 		transaction.sign(privateKey)
-		this.addTransaction(transaction);
+		this._addTransaction(transaction);
 		return transaction;
 	}
 
@@ -85,7 +85,7 @@ export class CitizenBlockchain extends Blockchain {
 		const invests = this.#buildEngageIndexes(days, date, dailyAmount, buildInvestIndexes, this.getEngagedInvests)
 		const tx = new EngageTransaction({ d: dateToInt(date), p: targetPublicKey, i: invests, s: myPublicKey })
 		tx.sign(myPrivateKey)
-		this.addTransaction(tx)
+		this._addTransaction(tx)
 		return tx
 	}
 
@@ -103,7 +103,7 @@ export class CitizenBlockchain extends Blockchain {
 		const money = this.#buildEngageIndexes(days, date, dailyAmount, buildMoneyIndexes, this.getEngagedMoney)
 		const tx = new EngageTransaction({ d: dateToInt(date), p: targetPublicKey, m: money, s: myPublicKey })
 		tx.sign(myPrivateKey)
-		this.addTransaction(tx)
+		this._addTransaction(tx)
 		return tx
 	}
 
@@ -127,7 +127,7 @@ export class CitizenBlockchain extends Blockchain {
 			throw new InvalidTransactionError('Invalid transaction')
 		if (payTx.target !== this.getMyPublicKey())
 			throw new InvalidTransactionError('Transaction not targeting this citizen')
-		this.addTransaction(payTx)
+		this._addTransaction(payTx)
 		this.lastblock.experience += payTx.money.length
 		return payTx
 	}
@@ -152,7 +152,7 @@ export class CitizenBlockchain extends Blockchain {
 		if (publicFromPrivate(mySk) !== this.getMyPublicKey())
 			throw new UnauthorizedError('Private key does not match blockchain owner.')
 		const tx = new PayerOrderTransaction(mySk, supplierPk, invests, ecosystemPk, date)
-		this.addTransaction(tx)
+		this._addTransaction(tx)
 		return tx
 	}
 
@@ -162,7 +162,7 @@ export class CitizenBlockchain extends Blockchain {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
 		const transaction = new PayTransaction(mySk, targetPk, d, money)
-		this.addTransaction(transaction)
+		this._addTransaction(transaction)
 		this.removeMoney(money)
 		if (targetPk === this.getMyPublicKey()) {
 			this.lastblock.experience += money.length
@@ -188,7 +188,7 @@ export class CitizenBlockchain extends Blockchain {
 			throw new Error('Invalid date')
 		}
 		const transaction = new PaperTransaction(myPrivateKey, referentPublicKey, money, date)
-		this.addTransaction(transaction)
+		this._addTransaction(transaction)
 		this.removeMoney(money);
 		return transaction
 	}

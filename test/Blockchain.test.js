@@ -134,7 +134,7 @@ describe('Blockchain', () => {
 	describe('export', () => {
 		it('Should export every block and transaction.', () => {
 			const bc = new Blockchain([makeBlockObj({ signed: true, experience: 12 })])
-			bc.addTransaction(makeTransaction({
+			bc._addTransaction(makeTransaction({
 				moneycount: 4,
 				investscount: 4
 			}))
@@ -150,7 +150,7 @@ describe('Blockchain', () => {
 
 		it('Should import correctly from export.', () => {
 			const bc = new Blockchain([makeBlockObj({ signed: true, experience: 12 })])
-			bc.addTransaction(makeTransaction({
+			bc._addTransaction(makeTransaction({
 				moneycount: 4,
 				investscount: 4
 			}))
@@ -296,8 +296,8 @@ describe('Blockchain', () => {
 				moneycount: 4
 			})
 			const bc = new Blockchain([makeBlockObj({ signed: true, date: new Date('2025-01-01') })])
-			bc.addTransaction(tx1)
-			bc.addTransaction(tx2)
+			bc._addTransaction(tx1)
+			bc._addTransaction(tx2)
 
 			const result = bc.removeMoney([20250101000, 20250102000]);
 			const expected = [20250102001, 20250102002, 20250102003];
@@ -311,8 +311,8 @@ describe('Blockchain', () => {
 			const tx1 = makeTransaction({ date: new Date("2025-01-01"), investscount: 1 })
 			const tx2 = makeTransaction({ date: new Date("2025-01-02"), investscount: 4 })
 			const bc = new Blockchain([makeBlockObj({ signed: true, date: new Date('2025-01-01') })])
-			bc.addTransaction(tx1)
-			bc.addTransaction(tx2)
+			bc._addTransaction(tx1)
+			bc._addTransaction(tx2)
 
 			const toRemove = [tx1.invests[0], tx2.invests[0]]
 			const result = bc.removeInvests(toRemove)
@@ -321,7 +321,7 @@ describe('Blockchain', () => {
 		})
 	})
 
-	describe('addTransaction', () => {
+	describe('_addTransaction', () => {
 		it('Should add the given transaction to last block', () => {
 			const blockObj1 = makeBlockObj({ signed: true })
 			const blockObj2 = makeBlockObj({ signed: false })
@@ -329,7 +329,7 @@ describe('Blockchain', () => {
 
 			const tx = makeTransaction()
 
-			blockchain.addTransaction(tx)
+			blockchain._addTransaction(tx)
 
 			assert.deepEqual(blockchain.lastTransaction, tx)
 		})
@@ -340,7 +340,7 @@ describe('Blockchain', () => {
 
 			const tx = makeTransaction({ date: new Date('2026-01-20') })
 
-			blockchain.addTransaction(tx)
+			blockchain._addTransaction(tx)
 
 			assert.equal(blockchain.blocks.length, 2)
 		})
@@ -348,9 +348,9 @@ describe('Blockchain', () => {
 		it('Should NOT create a new block if last one is NOT signed', () => {
 			const bc = new Blockchain([makeBlockObj(), makeBlockObj({ signed: true, date: new Date('2026-01-19') })]);
 
-			bc.addTransaction(makeTransaction({ date: new Date('2026-01-20') }))
-			bc.addTransaction(makeTransaction({ date: new Date('2026-01-21') }))
-			bc.addTransaction(makeTransaction({ date: new Date('2026-01-22') }))
+			bc._addTransaction(makeTransaction({ date: new Date('2026-01-20') }))
+			bc._addTransaction(makeTransaction({ date: new Date('2026-01-21') }))
+			bc._addTransaction(makeTransaction({ date: new Date('2026-01-22') }))
 
 			assert.equal(bc.blocks.length, 2)
 		})
@@ -359,9 +359,9 @@ describe('Blockchain', () => {
 			const bc = new Blockchain([makeBlockObj(), makeBlockObj({ signed: true, date: new Date('2026-01-19') })]);
 			const tx = makeTransaction({ date: new Date('2026-01-20'), moneycount: 2 })
 
-			bc.addTransaction(tx)
+			bc._addTransaction(tx)
 
-			assert.throws(() => { bc.addTransaction(tx) }, InvalidTransactionError, 'Transaction duplicate ' + tx.signature)
+			assert.throws(() => { bc._addTransaction(tx) }, InvalidTransactionError, 'Transaction duplicate ' + tx.signature)
 		})
 
 		it('Should throw error if transaction date is already passed in the blockchain.', () => {
@@ -369,7 +369,7 @@ describe('Blockchain', () => {
 			bc.closeLastBlock(mySk)
 			const tx = makeTransaction({ date: new Date('2026-01-20') })
 
-			assert.throws(() => { bc.addTransaction(tx) }, InvalidTransactionError, 'Invalid date')
+			assert.throws(() => { bc._addTransaction(tx) }, InvalidTransactionError, 'Invalid date')
 		})
 
 		it('Should throw an error if transaction signature is invalid.', () => {
@@ -377,7 +377,7 @@ describe('Blockchain', () => {
 			const tx = makeTransaction({ date: new Date('2026-01-20') })
 			tx.signature = '0'.repeat(tx.signature.length)
 
-			assert.throws(() => { bc.addTransaction(tx) }, InvalidTransactionError, 'Invalid transaction')
+			assert.throws(() => { bc._addTransaction(tx) }, InvalidTransactionError, 'Invalid transaction')
 		})
 	})
 
@@ -420,7 +420,7 @@ describe('Blockchain', () => {
 
 		it('Should report money and invests.', () => {
 			const bc = new Blockchain([makeBlockObj({ signed: true, experience: 12 })])
-			bc.addTransaction(makeTransaction({
+			bc._addTransaction(makeTransaction({
 				moneycount: 4,
 				investscount: 4
 			}))
@@ -439,7 +439,7 @@ describe('Blockchain', () => {
 				money: [20250101000, 20250102000, 20250103000],
 				date: new Date("2025-01-02")
 			})
-			bc.addTransaction(tx)
+			bc._addTransaction(tx)
 			bc.closeLastBlock(mySk, new Date("2025-01-02"))
 
 			bc.newBlock()
@@ -455,7 +455,7 @@ describe('Blockchain', () => {
 				money: [20250101000, 20250102000, 20250103000],
 				date: new Date("2025-01-02")
 			})
-			bc.addTransaction(tx)
+			bc._addTransaction(tx)
 			bc.closeLastBlock(mySk, new Date("2025-01-03"))
 
 			bc.newBlock()

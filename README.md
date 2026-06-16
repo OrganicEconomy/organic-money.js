@@ -277,7 +277,7 @@ const payTx = blockchain.pay(citizenSk, bobPk, 5)
 
 // Bob records the transaction on his blockchain
 // (increases Bob's economic experience / total)
-bobBlockchain.addTransaction(payTx)
+bobBlockchain.receivePay(payTx)
 ```
 
 #### Engage invests into an ecosystem
@@ -427,7 +427,7 @@ eco.receivePayerOrder(ecoSk, payerOrderTx)
 const earnTx = eco.order(ecoSk, supplierPk, eco.invests.slice(0, 3))
 
 // The target records the earn transaction on their own blockchain
-supplierBlockchain.addTransaction(earnTx)
+supplierBlockchain.receiveEarn(earnTx)
 ```
 
 #### Distribute earnings to actors
@@ -441,7 +441,7 @@ const earns = eco.distributeSalary(ecoSk)
 // Each earn transaction is then added to the corresponding actor's blockchain
 for (const earnTx of earns) {
   const actorBlockchain = getBlockchainFor(earnTx.target)
-  actorBlockchain.addTransaction(earnTx)
+  actorBlockchain.receiveEarn(earnTx)
 }
 
 // Or target a single actor:
@@ -532,7 +532,7 @@ bob.createMoneyAndInvests(bobSk)
 
 // ── 5. Bob pays Alice 1 unit ──────────────────────────────────────────────────
 const payTx = bob.pay(bobSk, alicePk, 1)
-alice.addTransaction(payTx)
+alice.receivePay(payTx)
 // Alice's economic experience (total) increases → she is growing toward level 2
 
 console.log(alice.getMoneyBeforeNextLevel())  // 0 units received until level 2 (needs 1, has 1)
@@ -622,8 +622,8 @@ console.log(eco.invests.length)  // 55
 const earns = eco.distributeSalary(ecoSk)
 
 for (const earnTx of earns) {
-  if (earnTx.target === alicePk) alice.addTransaction(earnTx)
-  if (earnTx.target === bobPk)   bob.addTransaction(earnTx)
+  if (earnTx.target === alicePk) alice.receiveEarn(earnTx)
+  if (earnTx.target === bobPk)   bob.receiveEarn(earnTx)
 }
 
 // ── 7. Persist ────────────────────────────────────────────────────────────────

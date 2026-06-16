@@ -1159,12 +1159,12 @@ describe('BirthBlock', () => {
             assert.doesNotThrow(() => block.assertIsValid())
         })
 
-        it('Should throw a specific message if previousHash is not REF_HASH.', () => {
+        it('Should throw a message including the expected REF_HASH value if previousHash is wrong.', () => {
             const original = new BirthBlock(mySk, new Date('2025-11-01'), "Jean Bombeur")
             const tampered = new BirthBlock({ ...original.export(), p: 'wronghash', h: null })
             tampered.sign(mySk)
 
-            assert.throws(() => tampered.assertIsValid(), InvalidBlockchainError, /REF_HASH/)
+            assert.throws(() => tampered.assertIsValid(), InvalidBlockchainError, new RegExp(REF_HASH))
         })
 
         it('Should throw a specific message if experience is not 0.', () => {
@@ -1338,12 +1338,12 @@ describe('EcoBirthBlock', () => {
             assert.doesNotThrow(() => block.assertIsValid())
         })
 
-        it('Should throw a specific message if previousHash is not ECOREF_HASH.', () => {
+        it('Should throw a message including the expected ECOREF_HASH value if previousHash is wrong.', () => {
             const original = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
             const tampered = new EcoBirthBlock({ ...original.export(), p: 'wronghash', h: null })
             tampered.sign(mySk)
 
-            assert.throws(() => tampered.assertIsValid(), InvalidBlockchainError, /ECOREF_HASH/)
+            assert.throws(() => tampered.assertIsValid(), InvalidBlockchainError, new RegExp(ECOREF_HASH))
         })
     })
 })

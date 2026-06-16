@@ -326,7 +326,7 @@ export class BirthBlock extends CitizenBlock {
     assertIsValid() {
         super.assertIsValid()
         if (!this.isSigned()) throw new InvalidBlockchainError('BirthBlock must be signed.')
-        if (this.previousHash !== REF_HASH) throw new InvalidBlockchainError('BirthBlock previousHash must be REF_HASH.')
+        if (this.previousHash !== REF_HASH) throw new InvalidBlockchainError(`BirthBlock previousHash must be ${REF_HASH}.`)
         if (this.version !== Blockchain.VERSION) throw new InvalidBlockchainError('BirthBlock version mismatch.')
         if (this.transactions.length !== 2) throw new InvalidBlockchainError('BirthBlock must have exactly 2 transactions (INIT, CREATE).')
         if (this.money.length !== 1) throw new InvalidBlockchainError('BirthBlock must have exactly 1 money id.')
@@ -406,7 +406,7 @@ export class EcoBirthBlock extends Block {
     assertIsValid() {
         super.assertIsValid()
         if (!this.isSigned()) throw new InvalidBlockchainError('EcoBirthBlock must be signed.')
-        if (this.previousHash !== ECOREF_HASH) throw new InvalidBlockchainError('EcoBirthBlock previousHash must be ECOREF_HASH.')
+        if (this.previousHash !== ECOREF_HASH) throw new InvalidBlockchainError(`EcoBirthBlock previousHash must be ${ECOREF_HASH}.`)
         if (this.version !== Blockchain.VERSION) throw new InvalidBlockchainError('EcoBirthBlock version mismatch.')
         if (this.transactions.length !== 3) throw new InvalidBlockchainError('EcoBirthBlock must have exactly 3 transactions (INIT, SETADMIN, SETACTOR).')
         if (this.money.length !== 0) throw new InvalidBlockchainError('EcoBirthBlock must have no money.')

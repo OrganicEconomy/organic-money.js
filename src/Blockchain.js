@@ -194,15 +194,15 @@ export class Blockchain {
 		return result
 	}
 
+	_createNewBlock(data) {
+		return new Block({ ...data, t: BLOCKTYPE.ECOSYSTEM })
+	}
+
 	/**
 	 * Create a new block and add it to the Blockchain
 	 * Copy to this new block some transactions :
 	 *   - those with still running engagement
 	 */
-	_createNewBlock(data) {
-		return new Block({ ...data, t: BLOCKTYPE.ECOSYSTEM })
-	}
-
 	newBlock() {
 		if (!this.lastblock.isSigned()) {
 			throw new Error('Previous block not signed.')

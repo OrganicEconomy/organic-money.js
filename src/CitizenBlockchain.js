@@ -42,10 +42,8 @@ export class CitizenBlockchain extends Blockchain {
 	 * Throw an error if date is in the futur as one cannot create futur money.
 	 */
 	createMoneyAndInvests(privateKey, date = new Date()) {
-		const myPublicKey = publicFromPrivate(privateKey)
-		if (myPublicKey !== this.getMyPublicKey()) {
-			throw new UnauthorizedError('Private key does not match blockchain owner.')
-		}
+		this.#assertOwner(privateKey)
+		const myPublicKey = this.getMyPublicKey()
 		let startdate = new Date(date)
 
 		const today = new Date();
@@ -79,10 +77,8 @@ export class CitizenBlockchain extends Blockchain {
 	 * Add and return the transaction that engage invests of the BLockchain.
 	 */
 	engageInvests(myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
-		const myPublicKey = publicFromPrivate(myPrivateKey)
-		if (myPublicKey !== this.getMyPublicKey()) {
-			throw new UnauthorizedError('Private key does not match blockchain owner.')
-		}
+		this.#assertOwner(myPrivateKey)
+		const myPublicKey = this.getMyPublicKey()
 		if (dailyAmount > this.getAffordableInvestAmount(date)) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
@@ -97,10 +93,8 @@ export class CitizenBlockchain extends Blockchain {
 	 * Add and return the transaction that engage money of the BLockchain.
 	 */
 	engageMoney(myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
-		const myPublicKey = publicFromPrivate(myPrivateKey)
-		if (myPublicKey !== this.getMyPublicKey()) {
-			throw new UnauthorizedError('Private key does not match blockchain owner.')
-		}
+		this.#assertOwner(myPrivateKey)
+		const myPublicKey = this.getMyPublicKey()
 		if (dailyAmount > this.getAffordableMoneyAmount(date)) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
@@ -155,8 +149,7 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	payerOrder(mySk, ecosystemPk, supplierPk, invests, date = new Date()) {
-		if (publicFromPrivate(mySk) !== this.getMyPublicKey())
-			throw new UnauthorizedError('Private key does not match blockchain owner.')
+		this.#assertOwner(mySk)
 		const tx = new PayerOrderTransaction(mySk, supplierPk, invests, ecosystemPk, date)
 		this._addTransaction(tx)
 		return tx
@@ -243,9 +236,7 @@ export class CitizenBlockchain extends Blockchain {
 	 * Throws an error if given date is before last transaction date
 	 */
 	generatePaper(myPrivateKey, amount, referentPublicKey, date = new Date()) {
-		if (publicFromPrivate(myPrivateKey) !== this.getMyPublicKey()) {
-			throw new UnauthorizedError('Private key does not match blockchain owner.')
-		}
+		this.#assertOwner(myPrivateKey)
 		const money = this.getAvailableMoney(amount);
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')

@@ -168,7 +168,7 @@ export class EcosystemBlockchain extends Blockchain {
         }
     }
 
-    #assertIsMe(sk) {
+    #assertOwner(sk) {
         if (publicFromPrivate(sk) !== this.getMyPublicKey())
             throw new UnauthorizedError('Private key does not match blockchain owner.')
     }
@@ -289,7 +289,7 @@ export class EcosystemBlockchain extends Blockchain {
     }
 
     receivePayerOrder(ecoSk, tx) {
-        this.#assertIsMe(ecoSk)
+        this.#assertOwner(ecoSk)
         if (tx.type !== TXTYPE.PAYERORDER || !tx.isValid())
             throw new InvalidTransactionError('Invalid transaction.')
         if (tx.ecosystem !== this.getMyPublicKey())
@@ -318,7 +318,7 @@ export class EcosystemBlockchain extends Blockchain {
     }
 
     order(ecoSk, targetPk, invests, date = new Date()) {
-        this.#assertIsMe(ecoSk)
+        this.#assertOwner(ecoSk)
         const allInvestsAvailable = hasEnoughOccurrences(this.lastblock.invests, invests)
         if (!allInvestsAvailable)
             throw new InvalidTransactionError('Ecosystem does not have these invests available.')
@@ -338,7 +338,7 @@ export class EcosystemBlockchain extends Blockchain {
     }
 
     earn(heartSk, actorPk, money, date = new Date()) {
-        this.#assertIsMe(heartSk)
+        this.#assertOwner(heartSk)
         const tx = new EarnTransaction(heartSk, actorPk, money, date)
         this._addTransaction(tx)
         this.removeMoney(money)
@@ -346,7 +346,7 @@ export class EcosystemBlockchain extends Blockchain {
     }
 
     distributeSalary(heartSk, date = new Date()) {
-        this.#assertIsMe(heartSk)
+        this.#assertOwner(heartSk)
         const actors = this.getActors()
         const totalRatio = [...actors.values()].reduce((sum, r) => sum + r, 0)
         if (totalRatio === 0) return []

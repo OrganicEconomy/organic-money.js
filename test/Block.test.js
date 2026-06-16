@@ -182,7 +182,7 @@ describe('Block', () => {
                 previousHash: REF_HASH
             })
 
-            const expected = '0afdc73b8ed9ddda35375fa5cda2deefbec18e0066999581c612e5030edc0bc2'
+            const expected = '3207abb6079ae237198bd4135f9f2cbbe66f3da62fd9f84502a6c40150884cb2'
 
             const result = bytesToHex(block.hash())
 
@@ -196,7 +196,7 @@ describe('Block', () => {
             })
             block.signature = "titi"
 
-            const expected = '0afdc73b8ed9ddda35375fa5cda2deefbec18e0066999581c612e5030edc0bc2'
+            const expected = '3207abb6079ae237198bd4135f9f2cbbe66f3da62fd9f84502a6c40150884cb2'
 
             const result = bytesToHex(block.hash())
 
@@ -974,7 +974,7 @@ describe('BirthBlock', () => {
 
             assert.isTrue(block.isSigned())
             assert.equal(block.root, "78d83a0ce3c7f2cc4231b25167779df0fe225cbf43e4869ba9320b769729e91e")
-            assert.equal(block.signature, "3045022100e7172b8a8358cd5788ccd1d5d4d9b794eb3cc0496a63a5eb620842c88ee32a7f022045450f36a6617ccbf090952e74c9df0e56be65fa89bf582ef38ebb09308f9489")
+            assert.equal(block.signature, "3045022100c77f68ee57987245bc8218eebbbbfcdad912d713dd893dcb68ee82ea46222165022005f8e07e01a9cfcd7aaaf56d4d6ac492d67adf5ed1344535297413d68aa0f54f")
         })
 
         it('Should use todays date if none given.', () => {

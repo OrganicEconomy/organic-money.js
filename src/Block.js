@@ -9,8 +9,8 @@ import { CreateTransaction, InitTransaction, SetAdminTransaction, SetActorTransa
 import { UnauthorizedError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
 
-export const REF_HASH = 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5'
-export const ECOREF_HASH = 'ec051c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a1'
+export const REF_HASH = '1eb10cdeba5ec1a551cc0defa15ab1e1dea1157e50c1a1e7910ba11eb10cdeba'
+export const ECOREF_HASH = 'ec01eb10cec0deba5ec1a551cc0defa15ab1e1dea1157e50c1a1e7910ba1ec01'
 
 export const BLOCKTYPE = {
     CITIZEN: 1,

@@ -183,11 +183,15 @@ export class EcosystemBlockchain extends Blockchain {
             throw new InvalidTransactionError('Cap must be a non-negative integer.')
     }
 
+    #assertTargetsMe(pk) {
+        if (pk !== this.getMyPublicKey())
+            throw new InvalidTransactionError('Transaction not targeting this ecosystem')
+    }
+
     #assertReceivable(tx, type) {
         if (tx.type !== type || !tx.isValid())
             throw new InvalidTransactionError('Invalid transaction')
-        if (tx.ecosystem !== this.getMyPublicKey())
-            throw new InvalidTransactionError('Transaction not targeting this ecosystem')
+        this.#assertTargetsMe(tx.ecosystem)
         if (!this.isAdmin(tx.signer))
             throw new UnauthorizedError('Only admins can perform this action.')
     }
@@ -245,8 +249,7 @@ export class EcosystemBlockchain extends Blockchain {
     receiveInvests(engageTx) {
         if (engageTx.type !== TXTYPE.ENGAGE || !engageTx.isValid())
             throw new InvalidTransactionError('Invalid transaction')
-        if (engageTx.target !== this.getMyPublicKey())
-            throw new InvalidTransactionError('Transaction not targeting this ecosystem')
+        this.#assertTargetsMe(engageTx.target)
         if (engageTx.invests.length === 0)
             throw new InvalidTransactionError('No invests in transaction')
         this._addTransaction(engageTx)
@@ -257,8 +260,7 @@ export class EcosystemBlockchain extends Blockchain {
     receivePay(payTx) {
         if (payTx.type !== TXTYPE.PAY || !payTx.isValid())
             throw new InvalidTransactionError('Invalid transaction')
-        if (payTx.target !== this.getMyPublicKey())
-            throw new InvalidTransactionError('Transaction not targeting this ecosystem')
+        this.#assertTargetsMe(payTx.target)
         this._addTransaction(payTx)
         this.lastblock.money = this.lastblock.money.concat(payTx.money)
         return payTx
@@ -279,8 +281,7 @@ export class EcosystemBlockchain extends Blockchain {
     receiveMoney(engageTx) {
         if (engageTx.type !== TXTYPE.ENGAGE || !engageTx.isValid())
             throw new InvalidTransactionError('Invalid transaction')
-        if (engageTx.target !== this.getMyPublicKey())
-            throw new InvalidTransactionError('Transaction not targeting this ecosystem')
+        this.#assertTargetsMe(engageTx.target)
         if (engageTx.money.length === 0)
             throw new InvalidTransactionError('No money in transaction')
         this._addTransaction(engageTx)
@@ -292,8 +293,7 @@ export class EcosystemBlockchain extends Blockchain {
         this.#assertOwner(ecoSk)
         if (tx.type !== TXTYPE.PAYERORDER || !tx.isValid())
             throw new InvalidTransactionError('Invalid transaction.')
-        if (tx.ecosystem !== this.getMyPublicKey())
-            throw new InvalidTransactionError('Transaction not intended for this ecosystem.')
+        this.#assertTargetsMe(tx.ecosystem)
         if (!this.isPayer(tx.signer))
             throw new UnauthorizedError('Only payers can create payment orders.')
         const cap = this.getPayers().get(tx.signer)

@@ -247,7 +247,8 @@ export class CitizenBlockchain extends Blockchain {
 	 */
 	hasLevelUpOnLastTx() {
 		const lastTx = this.lastTransaction;
-		if (lastTx === null || lastTx.type !== TXTYPE.PAY) {
+		const experienceTxTypes = [TXTYPE.PAY, TXTYPE.EARN, TXTYPE.PAPER]
+		if (lastTx === null || !experienceTxTypes.includes(lastTx.type)) {
 			return false
 		}
 		return Math.floor(Math.cbrt(this.experience - lastTx.money.length)) + 1 < this.getLevel()

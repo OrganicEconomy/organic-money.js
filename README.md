@@ -264,7 +264,7 @@ blockchain.getLevel()                     // current level, e.g. 2
 blockchain.getAvailableMoneyAmount()      // count of spendable money units
 blockchain.getMoneyBeforeNextLevel()      // units to receive before next level
 blockchain.getMoneyBeforeNextLevel(true)  // same, as percentage (0–100)
-blockchain.hasLevelUpOnLastTx()           // true if last PAY triggered a level-up
+blockchain.hasLevelUpOnLastTx()           // true if last PAY, EARN or PAPER triggered a level-up
 ```
 
 #### Pay another citizen

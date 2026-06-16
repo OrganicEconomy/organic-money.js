@@ -752,6 +752,40 @@ describe('CitizenBlockchain', () => {
 
 			assert.isTrue(result)
 		})
+
+		it('Should return true after passed from 27 to 64 Total via EARN.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', intToDate('20240101'), mySk, targetSk)
+			bc.addBlock(makeBlock({
+				experience: 27
+			}))
+			bc.receiveEarn(makeTransaction({
+				type: TXTYPE.EARN,
+				moneycount: 37,
+				target: targetPk
+			}))
+
+			const result = bc.hasLevelUpOnLastTx()
+
+			assert.isTrue(result)
+		})
+
+		it('Should return true after passed from 27 to 64 Total via PAPER (cashPaper).', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', intToDate('20240101'), mySk, targetSk)
+			bc.addBlock(makeBlock({
+				experience: 27
+			}))
+			bc.cashPaper(makeTransaction({
+				type: TXTYPE.PAPER,
+				moneycount: 37,
+				target: targetPk
+			}))
+
+			const result = bc.hasLevelUpOnLastTx()
+
+			assert.isTrue(result)
+		})
 	})
 
 	describe('isWaitingValidation', () => {

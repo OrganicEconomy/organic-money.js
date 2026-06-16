@@ -116,7 +116,7 @@ export class Blockchain {
 
 		const papersHandler = this.lastblock.getPapersHandler()
 		if (papersHandler !== null && papersHandler !== tx.target) {
-			throw new InvalidTransactionError('Multiple papers target')
+			throw new InvalidTransactionError('Multiple papers target in same block')
 		}
 
 		this.addTransaction(tx)

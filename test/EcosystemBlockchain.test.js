@@ -4,7 +4,7 @@ import { assert } from 'chai';
 import { InvalidTransactionError, UnauthorizedError } from '../src/errors.js'
 import { EcosystemBlockchain } from '../src/EcosystemBlockchain.js'
 import { EcoBirthBlock, EcoInitializationBlock } from '../src/Block.js'
-import { EngageTransaction, EarnTransaction, PayTransaction, SetAdminTransaction, PayerOrderTransaction, TXTYPE } from '../src/Transaction.js'
+import { EngageTransaction, EarnTransaction, PayTransaction, PaperTransaction, SetAdminTransaction, PayerOrderTransaction, TXTYPE } from '../src/Transaction.js'
 import { publicFromPrivate, dateToInt, buildInvestIndexes, buildMoneyIndexes } from '../src/crypto.js'
 import { mySk, myPk, targetSk, targetPk, referentSk, referentPk } from './testUtils.js'
 const adminSk = targetSk, adminPk = targetPk
@@ -519,6 +519,43 @@ describe('EcosystemBlockchain', () => {
 
             const tx = new PayTransaction(adminSk, myPk, DATE2, [20250101000])
             const result = bc.receivePay(tx)
+
+            assert.equal(result, tx)
+        })
+    })
+
+    describe('cashPaper', () => {
+        it('Should throw if not a PaperTransaction.', () => {
+            const bc = makeStartedEco()
+
+            const tx = new SetAdminTransaction(adminSk, referentPk, DATE2)
+
+            assert.throws(() => bc.cashPaper(tx))
+        })
+
+        it('Should add money to lastblock.money, regardless of the paper target (the local heart ecosystem, not this one).', () => {
+            const bc = makeStartedEco()
+
+            const tx = new PaperTransaction(adminSk, referentPk, [20250101000, 20250101001], DATE2)
+            bc.cashPaper(tx)
+
+            assert.deepEqual(bc.lastblock.money, [20250101000, 20250101001])
+        })
+
+        it('Should record the transaction in the blockchain.', () => {
+            const bc = makeStartedEco()
+
+            const tx = new PaperTransaction(adminSk, referentPk, [20250101000], DATE2)
+            bc.cashPaper(tx)
+
+            assert.include(bc.lastblock.transactions, tx)
+        })
+
+        it('Should return the transaction.', () => {
+            const bc = makeStartedEco()
+
+            const tx = new PaperTransaction(adminSk, referentPk, [20250101000], DATE2)
+            const result = bc.cashPaper(tx)
 
             assert.equal(result, tx)
         })

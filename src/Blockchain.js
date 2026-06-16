@@ -2,7 +2,7 @@ import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { intToDate, dateToInt, infinityDate } from './crypto.js'
 
 import { TXTYPE } from './Transaction.js'
-import { Block, BlockMaker } from './Block.js'
+import { Block, BlockMaker, BLOCKTYPE } from './Block.js'
 
 export class Blockchain {
 	/***********************************************************************
@@ -200,7 +200,7 @@ export class Blockchain {
 	 *   - those with still running engagement
 	 */
 	_createNewBlock(data) {
-		return new Block(data)
+		return new Block({ ...data, t: BLOCKTYPE.ECOSYSTEM })
 	}
 
 	newBlock() {

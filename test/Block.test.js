@@ -3,7 +3,7 @@ import { assert } from 'chai';
 
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
 
-import { Block, CitizenBlock, BirthBlock, REF_HASH, InitializationBlock, EcoBirthBlock, EcoInitializationBlock, ECOREF_HASH, BlockMaker } from '../src/Block.js';
+import { Block, CitizenBlock, BirthBlock, REF_HASH, InitializationBlock, EcoBirthBlock, EcoInitializationBlock, ECOREF_HASH, BlockMaker, BLOCKTYPE } from '../src/Block.js';
 import { dateToInt, infinityDate, intToDate } from '../src/crypto.js';
 import { makeBlockObj, makeBlock, makeTransactions, makeTransaction, referentPk, targetPk, targetSk, mySk, referentSk, myPk } from './testUtils.js';
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
@@ -12,7 +12,7 @@ import { Blockchain } from '../src/Blockchain.js';
 
 describe('Block', () => {
     describe('constructor', () => {
-        it('Should set the 9 fields from given object (no total)', () => {
+        it('Should set the 10 fields from given object', () => {
             const d = new Date('2025-11-26')
             const obj = {
                 v: 1,
@@ -22,6 +22,7 @@ describe('Block', () => {
                 r: 'merkleroot',
                 m: [20251226000, 20251226001],
                 i: [202512269000, 202512269001],
+                t: BLOCKTYPE.ECOSYSTEM,
                 h: 'signature',
                 x: []
             }
@@ -35,6 +36,7 @@ describe('Block', () => {
             assert.equal(block.root, 'merkleroot')
             assert.deepEqual(block.money, [20251226000, 20251226001])
             assert.deepEqual(block.invests, [202512269000, 202512269001])
+            assert.equal(block.type, BLOCKTYPE.ECOSYSTEM)
             assert.equal(block.signature, 'signature')
             assert.deepEqual(block.transactions, [])
         })
@@ -48,7 +50,7 @@ describe('Block', () => {
                 r: 'merkleroot',
                 m: [20251226000, 20251226001],
                 i: [202512269000, 202512269001],
-                t: 12,
+                t: BLOCKTYPE.ECOSYSTEM,
                 h: 'signature',
                 x: []
             }
@@ -88,7 +90,7 @@ describe('Block', () => {
 
             assert.throws(() => {
                 new Block(obj)
-            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "h" (signature) and "x" (transactions) are mandatory.')
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (type), "h" (signature) and "x" (transactions) are mandatory.')
         })
 
         it('Should throw error if "d" (closedate) is missing', () => {
@@ -97,7 +99,7 @@ describe('Block', () => {
 
             assert.throws(() => {
                 new Block(obj)
-            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "h" (signature) and "x" (transactions) are mandatory.')
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (type), "h" (signature) and "x" (transactions) are mandatory.')
         })
 
         it('Should throw error if "p" (previousHash) is missing', () => {
@@ -106,7 +108,7 @@ describe('Block', () => {
 
             assert.throws(() => {
                 new Block(obj)
-            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "h" (signature) and "x" (transactions) are mandatory.')
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (type), "h" (signature) and "x" (transactions) are mandatory.')
         })
 
         it('Should throw error if "s" (signer) is missing', () => {
@@ -115,7 +117,7 @@ describe('Block', () => {
 
             assert.throws(() => {
                 new Block(obj)
-            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "h" (signature) and "x" (transactions) are mandatory.')
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (type), "h" (signature) and "x" (transactions) are mandatory.')
         })
 
         it('Should throw error if "r" (root) is missing', () => {
@@ -124,7 +126,7 @@ describe('Block', () => {
 
             assert.throws(() => {
                 new Block(obj)
-            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "h" (signature) and "x" (transactions) are mandatory.')
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (type), "h" (signature) and "x" (transactions) are mandatory.')
         })
 
         it('Should throw error if "m" (money) is missing', () => {
@@ -133,7 +135,7 @@ describe('Block', () => {
 
             assert.throws(() => {
                 new Block(obj)
-            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "h" (signature) and "x" (transactions) are mandatory.')
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (type), "h" (signature) and "x" (transactions) are mandatory.')
         })
 
         it('Should throw error if "i" (invests) is missing', () => {
@@ -142,14 +144,16 @@ describe('Block', () => {
 
             assert.throws(() => {
                 new Block(obj)
-            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "h" (signature) and "x" (transactions) are mandatory.')
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (type), "h" (signature) and "x" (transactions) are mandatory.')
         })
 
-        it('Should not throw if "t" is missing (t is not mandatory on base Block)', () => {
+        it('Should throw error if "t" (type) is missing', () => {
             const obj = makeBlockObj()
             delete obj.t
 
-            assert.doesNotThrow(() => { new Block(obj) })
+            assert.throws(() => {
+                new Block(obj)
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (type), "h" (signature) and "x" (transactions) are mandatory.')
         })
 
         it('Should throw error if "h" (signature) is missing', () => {
@@ -158,7 +162,7 @@ describe('Block', () => {
 
             assert.throws(() => {
                 new Block(obj)
-            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "h" (signature) and "x" (transactions) are mandatory.')
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (type), "h" (signature) and "x" (transactions) are mandatory.')
         })
 
         it('Should throw error if "x" (transactions) is missing', () => {
@@ -167,7 +171,7 @@ describe('Block', () => {
 
             assert.throws(() => {
                 new Block(obj)
-            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "h" (signature) and "x" (transactions) are mandatory.')
+            }, Error, 'Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (type), "h" (signature) and "x" (transactions) are mandatory.')
         })
     })
 
@@ -178,7 +182,7 @@ describe('Block', () => {
                 previousHash: REF_HASH
             })
 
-            const expected = '4915fa5d5f23e4ae6bb45a80967c0a51e78d439ba30615e963afae5272aa878f'
+            const expected = '0afdc73b8ed9ddda35375fa5cda2deefbec18e0066999581c612e5030edc0bc2'
 
             const result = bytesToHex(block.hash())
 
@@ -192,7 +196,7 @@ describe('Block', () => {
             })
             block.signature = "titi"
 
-            const expected = '4915fa5d5f23e4ae6bb45a80967c0a51e78d439ba30615e963afae5272aa878f'
+            const expected = '0afdc73b8ed9ddda35375fa5cda2deefbec18e0066999581c612e5030edc0bc2'
 
             const result = bytesToHex(block.hash())
 
@@ -292,7 +296,7 @@ describe('Block', () => {
     })
 
     describe('export', () => {
-        it('Should return the block without t field.', () => {
+        it('Should return the bare block as it was first.', () => {
             const bareBlock = {
                 v: 1,
                 d: 20251226,
@@ -301,6 +305,7 @@ describe('Block', () => {
                 r: 'merkleroot',
                 m: [20251226000, 20251226001],
                 i: [202512269000, 202512269001],
+                t: BLOCKTYPE.ECOSYSTEM,
                 h: 'signature',
                 x: []
             }
@@ -955,6 +960,7 @@ describe('BirthBlock', () => {
             assert.deepEqual(block.money, [20251126000])
             assert.deepEqual(block.invests, [202511269000])
             assert.equal(block.experience, 0)
+            assert.equal(block.type, BLOCKTYPE.CITIZENBIRTH)
             assert.ok(block.signature)
             assert.deepEqual(block.transactions, expectedTransactions)
         })
@@ -968,7 +974,7 @@ describe('BirthBlock', () => {
 
             assert.isTrue(block.isSigned())
             assert.equal(block.root, "78d83a0ce3c7f2cc4231b25167779df0fe225cbf43e4869ba9320b769729e91e")
-            assert.equal(block.signature, "304402201011a287a000934705e91816591912fcd28d1b5608994ef2225a36a3120b6ff802200f1ad37608fefd9602076972f9dbbfff2da117c127b74d94615af95f63f110c7")
+            assert.equal(block.signature, "3045022100e7172b8a8358cd5788ccd1d5d4d9b794eb3cc0496a63a5eb620842c88ee32a7f022045450f36a6617ccbf090952e74c9df0e56be65fa89bf582ef38ebb09308f9489")
         })
 
         it('Should use todays date if none given.', () => {
@@ -1021,6 +1027,7 @@ describe('InitializationBlock', () => {
             assert.deepEqual(block.money, [])
             assert.deepEqual(block.invests, [])
             assert.equal(block.experience, 0)
+            assert.equal(block.type, BLOCKTYPE.CITIZENINIT)
             assert.ok(block.signature)
             assert.deepEqual(block.transactions, [])
         })
@@ -1069,6 +1076,11 @@ describe('EcoBirthBlock', () => {
             const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
             assert.deepEqual(block.money, [])
             assert.deepEqual(block.invests, [])
+        })
+
+        it('Should have type ECOSYSTEMBIRTH.', () => {
+            const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+            assert.equal(block.type, BLOCKTYPE.ECOSYSTEMBIRTH)
         })
 
         it('Should have 3 transactions: Init, SetAdmin, SetActor.', () => {
@@ -1129,6 +1141,12 @@ describe('EcoInitializationBlock', () => {
             const prev = makePreviousEcoBirthBlock()
             const block = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
             assert.equal(block.previousHash, prev.signature)
+        })
+
+        it('Should have type ECOSYSTEMINIT.', () => {
+            const prev = makePreviousEcoBirthBlock()
+            const block = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
+            assert.equal(block.type, BLOCKTYPE.ECOSYSTEMINIT)
         })
 
         it('Should carry forward role transactions from previous block (SetAdmin + SetActor).', () => {

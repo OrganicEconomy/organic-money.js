@@ -1,5 +1,5 @@
 import { Blockchain } from "../src/Blockchain.js"
-import { CitizenBlock } from "../src/Block.js";
+import { CitizenBlock, BLOCKTYPE } from "../src/Block.js";
 import { Transaction, TXTYPE, TransactionMaker } from "../src/Transaction.js"
 import { buildInvestIndexes, buildMoneyIndexes } from "../src/crypto.js"
 import { dateToInt } from '../src/crypto.js';
@@ -80,6 +80,7 @@ export function makeBlock(options = {}) {
         r: "root" in options ? options.root : 'randomMerkleroot',
         m: "money" in options ? options.money : [],
         i: "invests" in options ? options.invests : [],
+        t: "type" in options ? options.type : BLOCKTYPE.CITIZEN,
         e: "experience" in options ? options.experience : 0,
         h: "signature" in options ? options.signature : "",
         x: transactions.map(x => x.export())

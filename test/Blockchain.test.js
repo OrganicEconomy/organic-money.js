@@ -7,7 +7,7 @@ import { Blockchain } from '../src/Blockchain.js';
 import { mySk, myPk, targetSk, targetPk, referentPk, makeBlockObj, makeBlock, makeTransaction } from './testUtils.js'
 import { TXTYPE } from '../src/Transaction.js';
 import { intToDate, dateToInt } from '../src/crypto.js';
-import { BirthBlock, InitializationBlock, REF_HASH } from '../src/Block.js';
+import { BirthBlock, InitializationBlock, REF_HASH, BLOCKTYPE } from '../src/Block.js';
 
 describe('Blockchain', () => {
 
@@ -144,7 +144,7 @@ describe('Blockchain', () => {
 			const result = bc.export()
 
 			assert.equal(result.length, 3)
-			assert.hasAllKeys(result[1], ['v', 'd', 'p', 's', 'r', 'm', 'i', 'h', 'x'])
+			assert.hasAllKeys(result[1], ['v', 'd', 'p', 's', 'r', 'm', 'i', 't', 'h', 'x'])
 			assert.hasAllKeys(result[1].x[0], ['v', 't', 'm', 'i', 'd', 's', 'p', 'h',])
 		})
 
@@ -477,7 +477,8 @@ describe('Blockchain', () => {
 		it('Should return the correct key from birth block.', () => {
 			const bc = new Blockchain([makeBlockObj({
 				previousHash: REF_HASH,
-				signer: targetPk
+				signer: targetPk,
+				type: BLOCKTYPE.CITIZENBIRTH
 			})])
 
 			const result = bc.getMyPublicKey()

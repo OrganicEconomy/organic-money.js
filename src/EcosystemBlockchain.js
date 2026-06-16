@@ -1,7 +1,7 @@
 import { InvalidTransactionError, UnauthorizedError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
 import { randomPrivateKey, publicFromPrivate, dateToInt, unitIdToDateInt, investIdToMoneyId } from './crypto.js'
-import { Block, EcoBirthBlock, EcoInitializationBlock, ECOREF_HASH } from './Block.js'
+import { EcoBirthBlock, EcoInitializationBlock } from './Block.js'
 import {
     SetAdminTransaction, UnsetAdminTransaction,
     SetActorTransaction, UnsetActorTransaction,
@@ -11,24 +11,6 @@ import {
 } from './Transaction.js'
 
 export class EcosystemBlockchain extends Blockchain {
-
-    constructor(blocks = []) {
-        super([])
-        blocks = blocks || []
-        for (let i = 0; i < blocks.length; i++) {
-            const obj = blocks[i]
-            if (obj.p === ECOREF_HASH) {
-                this.bks.push(new EcoBirthBlock(obj))
-                continue
-            }
-            const isInit = i < blocks.length - 1 && blocks[i + 1].p === ECOREF_HASH
-            if (isInit) {
-                this.bks.push(new EcoInitializationBlock(obj))
-                continue
-            }
-            this.bks.push(new Block(obj))
-        }
-    }
 
     isWaitingValidation() {
         return this.blocks.length === 1 && this.lastblock instanceof EcoBirthBlock

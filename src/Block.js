@@ -12,22 +12,33 @@ import { Blockchain } from './Blockchain.js'
 export const REF_HASH = 'c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a15eed5'
 export const ECOREF_HASH = 'ec051c1a551ca1c0deea5efea51b1e1dea112ed1dea0a5150f5e11ab1e50c1a1'
 
+export const BLOCKTYPE = {
+    CITIZEN: 1,
+    ECOSYSTEM: 2,
+    CITIZENBIRTH: 3,
+    CITIZENINIT: 4,
+    ECOSYSTEMBIRTH: 5,
+    ECOSYSTEMINIT: 6
+}
+
 export class BlockMaker {
     static make(blockObj) {
-        if (blockObj.p === ECOREF_HASH) return new EcoBirthBlock(blockObj)
-        if (blockObj.p === REF_HASH) return new BirthBlock(blockObj)
-        if (blockObj.h && blockObj.m.length === 1 && blockObj.i.length === 1
-            && blockObj.x.length === 0) return new InitializationBlock(blockObj)
-        if ("e" in blockObj) return new CitizenBlock(blockObj)
-        return new Block(blockObj)
+        switch (blockObj.t) {
+            case BLOCKTYPE.CITIZENBIRTH: return new BirthBlock(blockObj)
+            case BLOCKTYPE.CITIZENINIT: return new InitializationBlock(blockObj)
+            case BLOCKTYPE.ECOSYSTEMBIRTH: return new EcoBirthBlock(blockObj)
+            case BLOCKTYPE.ECOSYSTEMINIT: return new EcoInitializationBlock(blockObj)
+            case BLOCKTYPE.CITIZEN: return new CitizenBlock(blockObj)
+            default: return new Block(blockObj)
+        }
     }
 }
 
 export class Block {
 
     constructor(blockObj) {
-        if (!("v" in blockObj && "d" in blockObj && "p" in blockObj && "s" in blockObj && "r" in blockObj && "m" in blockObj && "i" in blockObj && "h" in blockObj && "x" in blockObj)) {
-            throw new Error('Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "h" (signature) and "x" (transactions) are mandatory.')
+        if (!("v" in blockObj && "d" in blockObj && "p" in blockObj && "s" in blockObj && "r" in blockObj && "m" in blockObj && "i" in blockObj && "t" in blockObj && "h" in blockObj && "x" in blockObj)) {
+            throw new Error('Fields "v" (Version), "d" (closedate), "p" (previousHash), "s" (signer), "r" (root), "m" (money), "i" (invests), "t" (type), "h" (signature) and "x" (transactions) are mandatory.')
         }
         this.version = blockObj.v
         this.closedate = intToDate(infinityDate)
@@ -39,6 +50,7 @@ export class Block {
         this.root = blockObj.r
         this.money = blockObj.m
         this.invests = blockObj.i
+        this.type = blockObj.t
         this.signature = blockObj.h
         this.transactions = blockObj.x.map(tx => TransactionMaker.make(tx))
     }
@@ -62,7 +74,8 @@ export class Block {
             s: this.signer,
             r: this.root,
             m: this.money,
-            i: this.invests
+            i: this.invests,
+            t: this.type
         }
         const packedblock = encode(block)
         return sha256(packedblock)
@@ -129,6 +142,7 @@ export class Block {
             r: this.root,
             m: this.money,
             i: this.invests,
+            t: this.type,
             h: this.signature,
             x: this.transactions.map(tx => tx.export())
         }
@@ -236,6 +250,7 @@ export class CitizenBlock extends Block {
             r: this.root,
             m: this.money,
             i: this.invests,
+            t: this.type,
             e: this.experience
         }
         const packedblock = encode(block)
@@ -260,6 +275,7 @@ export class BirthBlock extends CitizenBlock {
                 r: 0,
                 m: [],
                 i: [],
+                t: BLOCKTYPE.CITIZENBIRTH,
                 e: 0,
                 h: null,
                 x: []
@@ -312,6 +328,7 @@ export class InitializationBlock extends CitizenBlock {
                 r: 0,
                 m: previousBlock.money,
                 i: previousBlock.invests,
+                t: BLOCKTYPE.CITIZENINIT,
                 e: 0,
                 h: null,
                 x: []
@@ -354,6 +371,7 @@ export class EcoBirthBlock extends Block {
                 r: 0,
                 m: [],
                 i: [],
+                t: BLOCKTYPE.ECOSYSTEMBIRTH,
                 h: null,
                 x: []
             })
@@ -398,7 +416,7 @@ export class EcoInitializationBlock extends Block {
                 p: previousBlock.signature,
                 s: publicFromPrivate(objOrSk),
                 r: 0,
-                m: [], i: [], h: null, x: []
+                m: [], i: [], t: BLOCKTYPE.ECOSYSTEMINIT, h: null, x: []
             })
             const roleTxTypes = new Set([TXTYPE.SETADMIN, TXTYPE.SETACTOR, TXTYPE.SETPAYER])
             for (const tx of previousBlock.transactions) {

@@ -7,6 +7,7 @@ import { Block, CitizenBlock, BirthBlock, REF_HASH, InitializationBlock, EcoBirt
 import { dateToInt, infinityDate, intToDate } from '../src/crypto.js';
 import { makeBlockObj, makeBlock, makeTransactions, makeTransaction, referentPk, targetPk, targetSk, mySk, referentSk, myPk } from './testUtils.js';
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
+import { signHash } from '../src/crypto.js';
 import { UnauthorizedError } from '../src/errors.js';
 import { Blockchain } from '../src/Blockchain.js';
 
@@ -893,6 +894,73 @@ describe('Block', () => {
             assert.deepEqual(result, expected)
         })
     })
+
+    describe('isValid', () => {
+        it('Should return true for a signed block with valid transactions.', () => {
+            const tx = makeTransaction({ date: new Date('2025-01-01') })
+            const block = makeBlock({ transactions: [tx], signed: true })
+
+            assert.isTrue(block.isValid())
+        })
+
+        it('Should return true for an unsigned block (root not finalized yet).', () => {
+            const tx = makeTransaction({ date: new Date('2025-01-01') })
+            const block = makeBlock({ transactions: [tx], signed: false })
+
+            assert.isTrue(block.isValid())
+        })
+
+        it('Should return false if a signature is present but does not verify (garbage, not legitimately unsigned).', () => {
+            const tx = makeTransaction({ date: new Date('2025-01-01') })
+            const block = makeBlock({ transactions: [tx], signed: false })
+            block.signature = 'garbage'
+
+            assert.isFalse(block.isValid())
+        })
+
+        it('Should return false if a transaction is invalid.', () => {
+            const tx = makeTransaction({ date: new Date('2025-01-01') })
+            tx.signature = 'forged'
+            const block = makeBlock({ transactions: [tx], signed: false })
+
+            assert.isFalse(block.isValid())
+        })
+
+        it('Should return false if a transaction was swapped after signing (merkle root no longer matches).', () => {
+            const tx = makeTransaction({ date: new Date('2025-01-01') })
+            const block = makeBlock({ transactions: [tx], signed: true })
+            const otherTx = makeTransaction({ date: new Date('2025-01-02'), signer: targetPk, sk: targetSk })
+            block.transactions = [otherTx]
+
+            assert.isFalse(block.isValid())
+        })
+
+        it('Should return false if papers in the block target different ecosystems.', () => {
+            const paper1 = makeTransaction({ type: TXTYPE.PAPER, moneycount: 1, target: targetPk })
+            const paper2 = makeTransaction({ type: TXTYPE.PAPER, moneycount: 1, target: referentPk })
+            const block = makeBlock({ transactions: [paper1, paper2], signed: false })
+
+            assert.isFalse(block.isValid())
+        })
+
+        it('Should return true if signed by the papers target.', () => {
+            const paper = makeTransaction({ type: TXTYPE.PAPER, moneycount: 1, target: targetPk })
+            const block = makeBlock({ transactions: [paper], signed: false })
+            block.sign(targetSk)
+
+            assert.isTrue(block.isValid())
+        })
+
+        it('Should return false if signed by someone other than the papers target.', () => {
+            const paper = makeTransaction({ type: TXTYPE.PAPER, moneycount: 1, target: targetPk })
+            const block = makeBlock({ transactions: [paper], signed: false })
+            block.merkle()
+            block.signer = myPk
+            block.signature = signHash(block.hash(), mySk)
+
+            assert.isFalse(block.isValid())
+        })
+    })
 })
 
 describe('CitizenBlock', () => {
@@ -1009,6 +1077,28 @@ describe('BirthBlock', () => {
             assert.equal(result, myPk)
         })
     })
+
+    describe('isValid', () => {
+        it('Should return true for a properly constructed block.', () => {
+            const block = new BirthBlock(mySk, new Date('2025-11-01'), "Jean Bombeur")
+
+            assert.isTrue(block.isValid())
+        })
+
+        it('Should return false if a transaction was swapped after signing (merkle root no longer matches).', () => {
+            const block = new BirthBlock(mySk, new Date('2025-11-01'), "Jean Bombeur")
+            block.transactions[0] = makeTransaction({ type: TXTYPE.CREATE, date: new Date('2025-11-02'), signer: targetPk, sk: targetSk })
+
+            assert.isFalse(block.isValid())
+        })
+
+        it('Should return false if a transaction is invalid.', () => {
+            const block = new BirthBlock(mySk, new Date('2025-11-01'), "Jean Bombeur")
+            block.transactions[0].signature = 'forged'
+
+            assert.isFalse(block.isValid())
+        })
+    })
 })
 
 describe('InitializationBlock', () => {
@@ -1061,6 +1151,15 @@ describe('InitializationBlock', () => {
             const result = block.getMyPublicKey()
 
             assert.isNull(result)
+        })
+    })
+
+    describe('isValid', () => {
+        it('Should return true for a properly constructed block.', () => {
+            const previousBlock = makeBlock({ moneycount: 1, investscount: 1 })
+            const block = new InitializationBlock(targetSk, previousBlock)
+
+            assert.isTrue(block.isValid())
         })
     })
 })
@@ -1122,6 +1221,21 @@ describe('EcoBirthBlock', () => {
         it('Should return the signer (ecosystem public key).', () => {
             const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
             assert.equal(block.getMyPublicKey(), myPk)
+        })
+    })
+
+    describe('isValid', () => {
+        it('Should return true for a properly constructed block.', () => {
+            const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+
+            assert.isTrue(block.isValid())
+        })
+
+        it('Should return false if a transaction was swapped after signing (merkle root no longer matches).', () => {
+            const block = new EcoBirthBlock(mySk, targetPk, 'My Eco', new Date('2025-01-01'))
+            block.transactions[0] = makeTransaction({ type: TXTYPE.SETACTOR, date: new Date('2025-01-02'), signer: targetPk, sk: targetSk })
+
+            assert.isFalse(block.isValid())
         })
     })
 })
@@ -1187,6 +1301,23 @@ describe('EcoInitializationBlock', () => {
             const prev = makePreviousEcoBirthBlock()
             const block = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
             assert.isNull(block.getMyPublicKey())
+        })
+    })
+
+    describe('isValid', () => {
+        it('Should return true for a properly constructed block.', () => {
+            const prev = makePreviousEcoBirthBlock()
+            const block = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
+
+            assert.isTrue(block.isValid())
+        })
+
+        it('Should return false if a transaction was swapped after signing (merkle root no longer matches).', () => {
+            const prev = makePreviousEcoBirthBlock()
+            const block = new EcoInitializationBlock(targetSk, prev, new Date('2025-01-02'))
+            block.transactions[0] = makeTransaction({ type: TXTYPE.SETACTOR, date: new Date('2025-01-03'), signer: targetPk, sk: targetSk })
+
+            assert.isFalse(block.isValid())
         })
     })
 })

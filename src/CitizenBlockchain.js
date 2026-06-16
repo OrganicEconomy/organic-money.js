@@ -143,6 +143,8 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	cashPaper(tx) {
+		if (tx.signer === this.getMyPublicKey())
+			throw new InvalidTransactionError('Cannot cash a paper you signed yourself.')
 		super.cashPaper(tx)
 		this.lastblock.experience += tx.money.length
 		return tx
@@ -316,6 +318,61 @@ export class CitizenBlockchain extends Blockchain {
 			return false
 		}
 		return Math.floor(Math.cbrt(this.experience - lastTx.money.length)) + 1 < this.getLevel()
+	}
+
+	/**
+	 * Replays each block's transactions (oldest to newest within the block) to verify:
+	 *   - CREATE transactions mint exactly the amount implied by the level of the
+	 *     experience accumulated so far
+	 *   - the block's stored experience matches the running total after replay
+	 *     (i.e. the experience carried forward from the previous block, plus
+	 *     whatever PAY/EARN/PAPER targeting this citizen added)
+	 * The oldest block in the checked range has no predecessor to replay from, so
+	 * it's skipped — its own genesis invariants are covered by Block.isValid().
+	 */
+	isValid(depth = 0) {
+		if (!super.isValid(depth)) return false
+
+		const blocksToCheck = depth > 0 ? this.blocks.slice(0, depth) : this.blocks
+		const ownerKey = this.getMyPublicKey()
+
+		const seenCreateMoney = new Set()
+		const seenCreateInvests = new Set()
+
+		for (let i = 0; i < blocksToCheck.length; i++) {
+			const block = blocksToCheck[i]
+
+			for (const tx of block.transactions) {
+				if (tx.type !== TXTYPE.CREATE) continue
+				for (const id of tx.money) {
+					if (seenCreateMoney.has(id)) return false
+					seenCreateMoney.add(id)
+				}
+				for (const id of tx.invests) {
+					if (seenCreateInvests.has(id)) return false
+					seenCreateInvests.add(id)
+				}
+			}
+
+			if (i === blocksToCheck.length - 1) continue
+			const olderBlock = blocksToCheck[i + 1]
+
+			let runningExperience = olderBlock.experience
+			const chronological = block.transactions.slice().reverse()
+			for (const tx of chronological) {
+				if (tx.type === TXTYPE.CREATE) {
+					const level = Math.floor(Math.cbrt(runningExperience)) + 1
+					if (tx.money.length !== level || tx.invests.length !== level) return false
+				}
+				if (tx.type === TXTYPE.PAY && tx.target === ownerKey) runningExperience += tx.money.length
+				if (tx.type === TXTYPE.EARN && tx.target === ownerKey) runningExperience += tx.money.length
+				if (tx.type === TXTYPE.PAPER && tx.signer !== ownerKey) runningExperience += tx.money.length
+			}
+
+			if (runningExperience !== block.experience) return false
+		}
+
+		return true
 	}
 
 	/**

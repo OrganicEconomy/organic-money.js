@@ -81,6 +81,64 @@ export class EcosystemBlockchain extends Blockchain {
         return this.lastblock.invests.filter(i => unitIdToDateInt(i) <= dateInt).length
     }
 
+    /**
+     * Beyond the generic Blockchain checks, verifies invariants that only make
+     * sense for an ecosystem:
+     *   - the current state always has at least one admin and one actor with ratio > 0
+     *   - (full history only, depth=0) replaying every role transaction chronologically
+     *     reproduces exactly the admins/actors/payers reported by the current block,
+     *     and no PAYERORDER ever exceeded the payer cap in effect at the time
+     */
+    isValid(depth = 0) {
+        if (!super.isValid(depth)) return false
+
+        if (this.getAdmins().size === 0) return false
+        const actors = this.getActors()
+        if (![...actors.values()].some(ratio => ratio > 0)) return false
+
+        if (depth === 0) {
+            const chronologicalBlocks = this.blocks.slice().reverse()
+            const admins = new Set()
+            const replayedActors = new Map()
+            const payerCaps = new Map()
+
+            for (const block of chronologicalBlocks) {
+                for (const tx of block.transactions.slice().reverse()) {
+                    if (tx.type === TXTYPE.SETADMIN) admins.add(tx.target)
+                    if (tx.type === TXTYPE.UNSETADMIN) admins.delete(tx.target)
+                    if (tx.type === TXTYPE.SETACTOR) replayedActors.set(tx.target, tx.ratio)
+                    if (tx.type === TXTYPE.UNSETACTOR) replayedActors.delete(tx.target)
+                    if (tx.type === TXTYPE.SETPAYER) payerCaps.set(tx.target, tx.cap)
+                    if (tx.type === TXTYPE.UNSETPAYER) payerCaps.delete(tx.target)
+                    if (tx.type === TXTYPE.PAYERORDER) {
+                        const cap = payerCaps.get(tx.signer)
+                        if (cap === undefined) return false
+                        if (cap > 0 && tx.invests.length > cap) return false
+                    }
+                }
+            }
+
+            const currentAdmins = this.getAdmins()
+            if (admins.size !== currentAdmins.size) return false
+            for (const pk of admins) {
+                if (!currentAdmins.has(pk)) return false
+            }
+
+            if (replayedActors.size !== actors.size) return false
+            for (const [pk, ratio] of replayedActors) {
+                if (actors.get(pk) !== ratio) return false
+            }
+
+            const currentPayers = this.getPayers()
+            if (payerCaps.size !== currentPayers.size) return false
+            for (const [pk, cap] of payerCaps) {
+                if (currentPayers.get(pk) !== cap) return false
+            }
+        }
+
+        return true
+    }
+
     newBlock() {
         const oldTransactions = this.lastblock.transactions
         const activeAdmins = this.getAdmins()
@@ -248,11 +306,14 @@ export class EcosystemBlockchain extends Blockchain {
         const allInvestsMature = tx.invests.every(i => unitIdToDateInt(i) <= orderDateInt)
         if (!allInvestsMature)
             throw new InvalidTransactionError('Some invests are not yet available.')
+        this._addTransaction(tx)
         if (cap > 0) {
-            const capUpdate = new SetPayerTransaction(ecoSk, tx.signer, cap - tx.invests.length, this.getMyPublicKey(), tx.date)
+            const remainingCap = cap - tx.invests.length
+            const capUpdate = remainingCap === 0
+                ? new UnsetPayerTransaction(ecoSk, tx.signer, this.getMyPublicKey(), tx.date)
+                : new SetPayerTransaction(ecoSk, tx.signer, remainingCap, this.getMyPublicKey(), tx.date)
             this._addTransaction(capUpdate)
         }
-        this._addTransaction(tx)
         return tx
     }
 

@@ -178,7 +178,48 @@ export class Blockchain {
 		return this.blocks.length === 0
 	}
 
-	isValid() {
+	/**
+	 * @param {number} [depth=0] how many of the most recent blocks to check.
+	 *   0 means the whole chain since genesis.
+	 */
+	isValid(depth = 0) {
+		const blocksToCheck = depth > 0 ? this.blocks.slice(0, depth) : this.blocks
+
+		// Role/structural transactions are intentionally re-presented (same object, same
+		// signature) across blocks by carry-forward mechanisms (newBlock, EcoInitializationBlock),
+		// so duplication is expected and must not be flagged as a replay.
+		const carriedForwardTypes = new Set([
+			TXTYPE.SETADMIN, TXTYPE.UNSETADMIN, TXTYPE.SETACTOR, TXTYPE.UNSETACTOR, TXTYPE.SETPAYER, TXTYPE.UNSETPAYER
+		])
+
+		let ownerKey = null
+		const seenSignatures = new Set()
+
+		for (let i = 0; i < blocksToCheck.length; i++) {
+			const block = blocksToCheck[i]
+
+			if (!block.isValid()) return false
+			if (i > 0 && !block.isSigned()) return false
+
+			if (i < blocksToCheck.length - 1) {
+				const olderBlock = blocksToCheck[i + 1]
+				if (block.previousHash !== olderBlock.signature) return false
+				if (!(olderBlock.closedate <= block.closedate)) return false
+			}
+
+			const pk = block.getMyPublicKey()
+			if (pk !== null) {
+				if (ownerKey !== null && ownerKey !== pk) return false
+				ownerKey = pk
+			}
+
+			for (const tx of block.transactions) {
+				if (carriedForwardTypes.has(tx.type)) continue
+				if (seenSignatures.has(tx.signature)) return false
+				seenSignatures.add(tx.signature)
+			}
+		}
+
 		return true
 	}
 

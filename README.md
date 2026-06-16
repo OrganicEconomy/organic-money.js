@@ -202,6 +202,23 @@ Each block is a sealed, signed snapshot of the blockchain state. When a transact
 
 The chain is immutable once closed: the next block's `previousHash` references the previous block's signature, forming the chain.
 
+### Validating a blockchain
+
+`blockchain.isValid(depth = 0)` re-verifies a chain — useful after deserializing data from storage or the network, since it may have been tampered with. `depth = 0` checks the whole chain since genesis; `depth = N` checks only the N most recent blocks (faster, but can't validate things that depend on earlier history).
+
+Generic checks (any `Blockchain`):
+- each block's signature is cryptographically valid, and its merkle root matches its current transactions
+- `previousHash` correctly chains to the previous block's signature
+- only the most recent block may be unsigned (open)
+- closedates are non-decreasing from oldest to newest
+- the owner's public key never changes across blocks
+- no transaction signature is replayed across blocks (role transactions are exempt — they're intentionally carried forward)
+- if a block contains `PAPER` transactions, they all share the same target, and the block's signer is that target
+
+`CitizenBlockchain` additionally replays each block's transactions to verify `CREATE` mints exactly the amount implied by the level of accumulated experience, that experience correctly reflects `PAY`/`EARN`/`PAPER` targeting the citizen, that it carries forward correctly between blocks, and that no two `CREATE` transactions across the chain reuse the same money/invest id.
+
+`EcosystemBlockchain` additionally checks that the current state always has at least one admin and one actor with a ratio > 0, and (full history only) that replaying every role transaction reproduces the current admins/actors/payers exactly, with no `PAYERORDER` ever exceeding the payer cap in effect at the time.
+
 ---
 
 ## Installation

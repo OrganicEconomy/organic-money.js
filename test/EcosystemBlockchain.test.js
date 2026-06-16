@@ -807,6 +807,31 @@ describe('EcosystemBlockchain', () => {
             assert.equal(result, tx)
         })
 
+        it('Should record the capUpdate chronologically after the order it stems from (order added first, capUpdate added last).', () => {
+            const bc = makeStartedEco()
+
+            ecoSetPayer(bc, adminSk, referentPk, 5, DATE2)
+            const invests = buildInvestIndexes(DATE2, 2)
+            bc.lastblock.invests = invests
+            const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
+            bc.receivePayerOrder(mySk, tx)
+
+            // storage is newest-first: index 0 is the last one added
+            assert.equal(bc.lastblock.transactions[0].type, TXTYPE.SETPAYER)
+            assert.equal(bc.lastblock.transactions[1], tx)
+        })
+
+        it('Should dissolve the payer (not make them unlimited) when their cap reaches exactly zero.', () => {
+            const bc = makeStartedEco()
+
+            ecoSetPayer(bc, adminSk, referentPk, 2, DATE2)
+            const invests = buildInvestIndexes(DATE2, 2)
+            bc.lastblock.invests = invests
+            bc.receivePayerOrder(mySk, new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2))
+
+            assert.isFalse(bc.isPayer(referentPk))
+        })
+
         it('Should not throw if cap is 0 (unlimited) even with many invests.', () => {
             const bc = makeStartedEco()
 
@@ -1122,6 +1147,59 @@ describe('EcosystemBlockchain', () => {
             const bc2 = new EcosystemBlockchain(exported)
 
             assert.deepEqual(bc2, bc)
+        })
+    })
+
+    describe('isValid', () => {
+        it('Should return true for a freshly started ecosystem.', () => {
+            const bc = makeStartedEco()
+
+            assert.isTrue(bc.isValid())
+        })
+
+        it('Should return true after a realistic flow of role changes and a payer order.', () => {
+            const bc = makeStartedEco()
+            ecoSetActor(bc, adminSk, referentPk, 2, DATE2)
+            ecoSetPayer(bc, adminSk, referentPk, 5, DATE2)
+            const invests = buildInvestIndexes(DATE2, 2)
+            bc.lastblock.invests = invests
+            bc.receivePayerOrder(mySk, new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2))
+
+            assert.isTrue(bc.isValid())
+        })
+
+        it('Should return false if there are no admins.', () => {
+            const bc = makeStartedEco()
+            bc.lastblock.transactions = bc.lastblock.transactions.filter(tx => tx.type !== TXTYPE.SETADMIN)
+
+            assert.isFalse(bc.isValid())
+        })
+
+        it('Should return false if no actor has a ratio > 0.', () => {
+            const bc = makeStartedEco()
+            bc.lastblock.transactions = bc.lastblock.transactions.filter(tx => tx.type !== TXTYPE.SETACTOR)
+
+            assert.isFalse(bc.isValid())
+        })
+
+        it('Should return false if a payer order in history exceeded the cap in effect at the time.', () => {
+            const bc = makeStartedEco()
+            ecoSetPayer(bc, adminSk, referentPk, 1, DATE2)
+            const invests = buildInvestIndexes(DATE2, 2)
+            bc.lastblock.invests = invests
+            const tx = new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2)
+            // bypass receivePayerOrder's own cap check to simulate a tampered/forged history
+            bc._addTransaction(tx)
+
+            assert.isFalse(bc.isValid())
+        })
+
+        it('Should return false if the current admin state does not match the replayed history (forged SETADMIN not stemming from history).', () => {
+            const bc = makeStartedEco()
+            const forgedAdmin = new SetAdminTransaction(referentSk, referentPk, bc.getMyPublicKey(), DATE2)
+            bc.lastblock.transactions.unshift(forgedAdmin)
+
+            assert.isFalse(bc.isValid())
         })
     })
 })

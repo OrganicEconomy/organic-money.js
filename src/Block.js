@@ -169,6 +169,28 @@ export class Block {
     }
 
     isValid() {
+        for (const tx of this.transactions) {
+            if (!tx.isValid()) return false
+        }
+
+        let papersTarget = null
+        for (const tx of this.transactions) {
+            if (tx.type === TXTYPE.PAPER) {
+                if (papersTarget !== null && papersTarget !== tx.target) return false
+                papersTarget = tx.target
+            }
+        }
+
+        if (this.signature) {
+            if (!this.isSigned()) return false
+
+            const leaves = this.transactions.map(x => x.signature)
+            const tree = new MerkleTree(leaves, sha256)
+            if (this.root !== tree.getRoot().toString('hex')) return false
+
+            if (papersTarget !== null && this.signer !== papersTarget) return false
+        }
+
         return true
     }
 
@@ -291,26 +313,16 @@ export class BirthBlock extends CitizenBlock {
 
     getMyPublicKey() { return this.signer }
 
-    // TODO : test it
     isValid() {
-        const signature = this.signature
-        const messageHash = this.hash()
-        const publicKey = this.signer
-
-        for (let tx of this.transactions) {
-            if (!tx.isValid()) {
-                return false;
-            }
-        }
+        if (!super.isValid()) return false
+        if (!this.isSigned()) return false
 
         return this.previousHash === REF_HASH &&
             this.version === Blockchain.VERSION &&
             this.transactions.length === 2 &&
-            this.root.length === 64 &&
             this.money.length === 1 &&
             this.invests.length === 1 &&
-            this.experience === 0 &&
-            secp256k1.verify(signature, messageHash, publicKey)
+            this.experience === 0
     }
 }
 
@@ -342,19 +354,15 @@ export class InitializationBlock extends CitizenBlock {
 
     getMyPublicKey() { return null }
 
-    // TODO : test it
     isValid() {
-        const signature = this.signature
-        const messageHash = this.hash()
-        const publicKey = this.signer
+        if (!super.isValid()) return false
+        if (!this.isSigned()) return false
 
         return this.version === Blockchain.VERSION &&
             this.transactions.length === 0 &&
-            this.root.length === 64 &&
             this.money.length === 1 &&
             this.invests.length === 1 &&
-            this.experience === 0 &&
-            secp256k1.verify(signature, messageHash, publicKey)
+            this.experience === 0
     }
 }
 
@@ -388,20 +396,14 @@ export class EcoBirthBlock extends Block {
     getMyPublicKey() { return this.signer }
 
     isValid() {
-        const signature = this.signature
-        const messageHash = this.hash()
-        const publicKey = this.signer
-
-        for (let tx of this.transactions) {
-            if (!tx.isValid()) return false
-        }
+        if (!super.isValid()) return false
+        if (!this.isSigned()) return false
 
         return this.previousHash === ECOREF_HASH &&
             this.version === Blockchain.VERSION &&
             this.transactions.length === 3 &&
             this.money.length === 0 &&
-            this.invests.length === 0 &&
-            secp256k1.verify(signature, messageHash, publicKey)
+            this.invests.length === 0
     }
 }
 
@@ -434,14 +436,11 @@ export class EcoInitializationBlock extends Block {
     getMyPublicKey() { return null }
 
     isValid() {
-        const signature = this.signature
-        const messageHash = this.hash()
-        const publicKey = this.signer
+        if (!super.isValid()) return false
+        if (!this.isSigned()) return false
 
         return this.version === Blockchain.VERSION &&
-            this.root.length === 64 &&
             this.money.length === 0 &&
-            this.invests.length === 0 &&
-            secp256k1.verify(signature, messageHash, publicKey)
+            this.invests.length === 0
     }
 }

@@ -660,14 +660,35 @@ console.log(ecoRestored.isAdmin(alicePk))  // true — roles preserved
 | 3 | `PAY` | Transfer money to another citizen | `money[]`, `target` |
 | 4 | `ENGAGE` | Commit money or invests for N days | `money[]` or `invests[]`, `target` |
 | 5 | `PAPER` | Convert digital money into a paper certificate | `money[]`, `target` (local eco public key) |
-| 6 | `SETADMIN` | Assign an ecosystem admin | `target` |
-| 7 | `SETACTOR` | Assign an ecosystem actor | `target`, `ratio` |
-| 8 | `SETPAYER` | Assign an ecosystem payer | `target`, `cap` |
-| 9 | `UNSETADMIN` | Remove an ecosystem admin | `target` |
-| 10 | `UNSETACTOR` | Remove an ecosystem actor | `target` |
-| 11 | `UNSETPAYER` | Remove an ecosystem payer | `target` |
+| 6 | `SETADMIN` | Assign an ecosystem admin (signed by another admin on their blockchain) | `target`, `e` (ecosystem pk) |
+| 7 | `SETACTOR` | Assign an ecosystem actor | `target`, `ratio`, `e` (ecosystem pk) |
+| 8 | `SETPAYER` | Assign an ecosystem payer | `target`, `cap`, `e` (ecosystem pk) |
+| 9 | `UNSETADMIN` | Remove an ecosystem admin | `target`, `e` (ecosystem pk) |
+| 10 | `UNSETACTOR` | Remove an ecosystem actor | `target`, `e` (ecosystem pk) |
+| 11 | `UNSETPAYER` | Remove an ecosystem payer | `target`, `e` (ecosystem pk) |
 | 12 | `PAYERORDER` | Payer issues an invest order (signed by payer on their blockchain) | `invests[]`, `target`, `e` (ecosystem pk) |
 | 13 | `EARN` | Distribute earnings to an actor or supplier | `money[]`, `target` |
+
+### Transaction exchange methods
+
+Every transaction is created on one blockchain and received on another, mirroring how data moves between two independent parties. `SETADMIN`, `SETACTOR`, `SETPAYER` and their `unset` counterparts carry an `e` (ecosystem) field so a role transaction signed for one ecosystem can't be replayed onto another the same admin happens to manage — the same protection `PAYERORDER` already had.
+
+| Type | Created by | Received by |
+|------|-----------|-------------|
+| `PAY` | `CitizenBlockchain.pay` | `CitizenBlockchain.receivePay` and `EcosystemBlockchain.receivePay` |
+| `ENGAGE` (invests) | `CitizenBlockchain.engageInvests` | `EcosystemBlockchain.receiveInvests` |
+| `ENGAGE` (money) | `CitizenBlockchain.engageMoney` | `EcosystemBlockchain.receiveMoney` |
+| `PAPER` | `CitizenBlockchain.generatePaper` | `CitizenBlockchain.cashPaper` and `EcosystemBlockchain.cashPaper` |
+| `PAYERORDER` | `CitizenBlockchain.payerOrder` | `EcosystemBlockchain.receivePayerOrder` |
+| `EARN` | `EcosystemBlockchain.earn` / `order` / `distributeSalary` | `CitizenBlockchain.receiveEarn` and `EcosystemBlockchain.receiveEarn` |
+| `SETADMIN` | `CitizenBlockchain.setAdmin` | `EcosystemBlockchain.receiveSetAdmin` |
+| `UNSETADMIN` | `CitizenBlockchain.unsetAdmin` | `EcosystemBlockchain.receiveUnsetAdmin` |
+| `SETACTOR` | `CitizenBlockchain.setActor` | `EcosystemBlockchain.receiveSetActor` |
+| `UNSETACTOR` | `CitizenBlockchain.unsetActor` | `EcosystemBlockchain.receiveUnsetActor` |
+| `SETPAYER` | `CitizenBlockchain.setPayer` | `EcosystemBlockchain.receiveSetPayer` |
+| `UNSETPAYER` | `CitizenBlockchain.unsetPayer` | `EcosystemBlockchain.receiveUnsetPayer` |
+
+`INIT` and `CREATE` never leave their own blockchain: `INIT` is built directly inside `BirthBlock`/`EcoBirthBlock` at genesis, and `CREATE` is a citizen's own daily money generation — neither is ever sent anywhere.
 
 ---
 

@@ -220,6 +220,7 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	pay(mySk, targetPk, amount, d = new Date()) {
+		this.#assertOwner(mySk)
 		const money = this.getAvailableMoney(amount)
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')

@@ -941,7 +941,11 @@ describe('CitizenBlockchain', () => {
 	describe('pay', () => {
 		it('Should make valid transaction.', () => {
 			const bc = new CitizenBlockchain([
-				makeBlockObj({ date: new Date('2025-01-01'), moneycount: 3 }),
+				makeBlockObj({
+					date: new Date('2025-01-01'),
+					moneycount: 3,
+					transactions: [makeTransaction({ type: TXTYPE.CREATE, signer: myPk })]
+				}),
 				makeBlockObj({ signed: true, date: new Date('2025-01-01') })
 			])
 
@@ -960,7 +964,11 @@ describe('CitizenBlockchain', () => {
 
 		it('Should decrease money of the block.', () => {
 			const bc = new CitizenBlockchain([
-				makeBlockObj({ date: new Date('2025-01-03'), moneycount: 5, type: TXTYPE.CREATE }),
+				makeBlockObj({
+					date: new Date('2025-01-03'),
+					moneycount: 5,
+					transactions: [makeTransaction({ type: TXTYPE.CREATE, signer: myPk })]
+				}),
 				makeBlockObj({ signed: true, date: new Date('2025-01-02') })
 			])
 
@@ -986,8 +994,20 @@ describe('CitizenBlockchain', () => {
 			assert.equal(bc.lastblock.experience, 30)
 		})
 
+		it('Should throw UnauthorizedError if private key does not match blockchain owner.', () => {
+			const bc = new CitizenBlockchain([
+				makeBlockObj({ date: new Date('2025-01-01'), moneycount: 3 }),
+				makeBlockObj({ signed: true, date: new Date('2025-01-01') })
+			])
+
+			assert.throws(() => { bc.pay(targetSk, targetPk, 3, new Date('2025-01-03')) }, UnauthorizedError)
+		})
+
 		it('Should throw error if blockchain can t afford it.', () => {
-			const bc = new CitizenBlockchain([makeBlockObj(), makeBlockObj({ signed: true, date: new Date('2026-01-19') })])
+			const bc = new CitizenBlockchain([
+				makeBlockObj({ transactions: [makeTransaction({ type: TXTYPE.CREATE, signer: myPk })] }),
+				makeBlockObj({ signed: true, date: new Date('2026-01-19') })
+			])
 
 			assert.throws(() => { bc.pay(mySk, targetPk, 2) }, InvalidTransactionError, 'Unsufficient funds.')
 		})

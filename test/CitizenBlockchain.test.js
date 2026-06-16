@@ -67,7 +67,7 @@ describe('CitizenBlockchain', () => {
 			assert.throws(() => { bc.addTransaction(tx) }, InvalidTransactionError, 'Transaction duplicate ' + tx.signature)
 		})
 
-		it('Should add money to total if type is PAY and target is blockchain owner.', () => {
+		it('Should add money to experience if type is PAY and target is blockchain owner.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), targetSk, mySk)
 
@@ -82,7 +82,7 @@ describe('CitizenBlockchain', () => {
 			bc.receivePay(tx)
 
 			assert.isTrue(tx.isValid())
-			assert.equal(bc.total, 7)
+			assert.equal(bc.experience, 7)
 		})
 	})
 	
@@ -318,7 +318,7 @@ describe('CitizenBlockchain', () => {
 
 		it('Should throw error if daily amount is unaffordable.', () => {
 			const bc = level3CitizenBlockchain()
-			const dailyAmount = 5 // total is 27 so daily creation is 3+1=4
+			const dailyAmount = 5 // experience is 27 so daily creation is 3+1=4
 
 			const fn = () => { bc.engageInvests(mySk, targetPk, dailyAmount, 12) }
 
@@ -402,7 +402,7 @@ describe('CitizenBlockchain', () => {
 
 		it('Should throw error if daily amount is unaffordable.', () => {
 			const bc = level3CitizenBlockchain()
-			const dailyAmount = 5 // total is 27 so daily creation is 3+1=4
+			const dailyAmount = 5 // experience is 27 so daily creation is 3+1=4
 
 			const fn = () => { bc.engageMoney(mySk, targetPk, dailyAmount, 12) }
 
@@ -628,7 +628,7 @@ describe('CitizenBlockchain', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', intToDate('20240101'), mySk, targetSk)
 			bc.addBlock(makeBlock({
-				total: 0
+				experience: 0
 			}))
 
 			for (let i = 1; i < 8; i++) {
@@ -645,7 +645,7 @@ describe('CitizenBlockchain', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', intToDate('20240101'), mySk, targetSk)
 			bc.addBlock(makeBlock({
-				total: 8
+				experience: 8
 			}))
 
 			for (let i = 8; i < 26; i++) {
@@ -667,11 +667,11 @@ describe('CitizenBlockchain', () => {
 			assert.equal(result, 0)
 		})
 
-		it('Should return 16 for total at 11 (target is 27)', () => {
+		it('Should return 16 for experience at 11 (target is 27)', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', intToDate('20240101'), mySk)
 			bc.addBlock(makeBlock({
-				total: 11
+				experience: 11
 			}))
 
 			const result = bc.getMoneyBeforeNextLevel()
@@ -683,7 +683,7 @@ describe('CitizenBlockchain', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', intToDate('20240101'), mySk)
 			bc.addBlock(makeBlock({
-				total: 11
+				experience: 11
 			}))
 
 			const result = bc.getMoneyBeforeNextLevel(true)
@@ -706,7 +706,7 @@ describe('CitizenBlockchain', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', intToDate('20240101'), mySk, targetSk)
 			bc.addBlock(makeBlock({
-				total: 27
+				experience: 27
 			}))
 			bc.receivePay(makeTransaction({
 				type: TXTYPE.PAY,
@@ -723,7 +723,7 @@ describe('CitizenBlockchain', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', intToDate('20240101'), mySk, targetSk)
 			bc.addBlock(makeBlock({
-				total: 27
+				experience: 27
 			}))
 			bc.receivePay(makeTransaction({
 				type: TXTYPE.PAY,
@@ -740,7 +740,7 @@ describe('CitizenBlockchain', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', intToDate('20240101'), mySk, targetSk)
 			bc.addBlock(makeBlock({
-				total: 63
+				experience: 63
 			}))
 			bc.receivePay(makeTransaction({
 				type: TXTYPE.PAY,
@@ -936,12 +936,12 @@ describe('CitizenBlockchain', () => {
 			assert.deepEqual(bc.lastblock.money, [20250103003, 20250103004])
 		})
 
-		it('Should increase total if I am the target.', () => {
+		it('Should increase experience if I am the target.', () => {
 			const bc = new CitizenBlockchain([
 				makeBlockObj({
 					date: new Date('2025-01-03'),
 					moneycount: 4,
-					total: 26,
+					experience: 26,
 					transactions: [makeTransaction({ type: TXTYPE.CREATE, signer: myPk })]
 				}),
 				makeBlockObj({ signed: true, date: new Date('2025-01-02') })
@@ -949,7 +949,7 @@ describe('CitizenBlockchain', () => {
 
 			bc.pay(mySk, myPk, 4, new Date('2025-01-03'))
 
-			assert.equal(bc.lastblock.total, 30)
+			assert.equal(bc.lastblock.experience, 30)
 		})
 
 		it('Should throw error if blockchain can t afford it.', () => {
@@ -996,9 +996,9 @@ describe('CitizenBlockchain', () => {
 	})
 
 	describe('cashPaper', () => {
-		it('Should increment total by money.length.', () => {
+		it('Should increment experience by money.length.', () => {
 			const bc = level3CitizenBlockchain()
-			const totalBefore = bc.lastblock.total
+			const experienceBefore = bc.lastblock.experience
 
 			const paper = makeTransaction({
 				type: TXTYPE.PAPER,
@@ -1007,19 +1007,19 @@ describe('CitizenBlockchain', () => {
 			})
 			bc.cashPaper(paper)
 
-			assert.equal(bc.lastblock.total, totalBefore + 3)
+			assert.equal(bc.lastblock.experience, experienceBefore + 3)
 		})
 	})
 
 	describe('newBlock', () => {
-		it('Should preserve total when creating a new block.', () => {
+		it('Should preserve experience when creating a new block.', () => {
 			const bc = level3CitizenBlockchain()
-			const totalBefore = bc.lastblock.total
+			const experienceBefore = bc.lastblock.experience
 			bc.closeLastBlock(mySk)
 
 			bc.newBlock()
 
-			assert.equal(bc.lastblock.total, totalBefore)
+			assert.equal(bc.lastblock.experience, experienceBefore)
 		})
 	})
 
@@ -1086,14 +1086,14 @@ describe('CitizenBlockchain', () => {
 			assert.throws(() => bc.receivePay(tx))
 		})
 
-		it('Should increment total by money.length.', () => {
+		it('Should increment experience by money.length.', () => {
 			const bc = level3CitizenBlockchain()
-			const totalBefore = bc.lastblock.total
+			const experienceBefore = bc.lastblock.experience
 
 			const tx = new PayTransaction(referentSk, myPk, DATE2, [20250101000, 20250101001])
 			bc.receivePay(tx)
 
-			assert.equal(bc.lastblock.total, totalBefore + 2)
+			assert.equal(bc.lastblock.experience, experienceBefore + 2)
 		})
 
 		it('Should record the transaction in the blockchain.', () => {
@@ -1134,14 +1134,14 @@ describe('CitizenBlockchain', () => {
 			assert.throws(() => bc.receiveEarn(tx))
 		})
 
-		it('Should increment total by money.length.', () => {
+		it('Should increment experience by money.length.', () => {
 			const bc = level3CitizenBlockchain()
-			const totalBefore = bc.lastblock.total
+			const experienceBefore = bc.lastblock.experience
 
 			const tx = new EarnTransaction(referentSk, myPk, [20250101000, 20250101001], DATE2)
 			bc.receiveEarn(tx)
 
-			assert.equal(bc.lastblock.total, totalBefore + 2)
+			assert.equal(bc.lastblock.experience, experienceBefore + 2)
 		})
 
 		it('Should record the transaction in the blockchain.', () => {

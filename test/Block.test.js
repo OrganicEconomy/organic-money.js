@@ -178,7 +178,7 @@ describe('Block', () => {
                 previousHash: REF_HASH
             })
 
-            const expected = '8bdc8f1436a86f07fdb4fad2d10a5d02499dd14e49d385aae6ac6b9a714c8d5c'
+            const expected = '4915fa5d5f23e4ae6bb45a80967c0a51e78d439ba30615e963afae5272aa878f'
 
             const result = bytesToHex(block.hash())
 
@@ -192,7 +192,7 @@ describe('Block', () => {
             })
             block.signature = "titi"
 
-            const expected = '8bdc8f1436a86f07fdb4fad2d10a5d02499dd14e49d385aae6ac6b9a714c8d5c'
+            const expected = '4915fa5d5f23e4ae6bb45a80967c0a51e78d439ba30615e963afae5272aa878f'
 
             const result = bytesToHex(block.hash())
 
@@ -892,23 +892,23 @@ describe('Block', () => {
 
 describe('CitizenBlock', () => {
     describe('constructor', () => {
-        it('Should set total from t field', () => {
-            const obj = { ...makeBlockObj(), t: 12 }
+        it('Should set experience from e field', () => {
+            const obj = { ...makeBlockObj(), e: 12 }
             const block = new CitizenBlock(obj)
-            assert.equal(block.total, 12)
+            assert.equal(block.experience, 12)
         })
 
-        it('Should throw if "t" is missing', () => {
+        it('Should throw if "e" is missing', () => {
             const obj = makeBlockObj()
-            delete obj.t
-            assert.throws(() => { new CitizenBlock(obj) }, Error, 'Field "t" (total) is mandatory.')
+            delete obj.e
+            assert.throws(() => { new CitizenBlock(obj) }, Error, 'Field "e" (experience) is mandatory.')
         })
     })
 
     describe('export', () => {
-        it('Should include t in exported object', () => {
-            const block = new CitizenBlock({ ...makeBlockObj(), t: 7 })
-            assert.equal(block.export().t, 7)
+        it('Should include e in exported object', () => {
+            const block = new CitizenBlock({ ...makeBlockObj(), e: 7 })
+            assert.equal(block.export().e, 7)
         })
     })
 
@@ -916,7 +916,7 @@ describe('CitizenBlock', () => {
         it('Should differ from base Block hash with same data', () => {
             const obj = makeBlockObj()
             const base = new Block(obj)
-            const citizen = new CitizenBlock({ ...obj, t: 0 })
+            const citizen = new CitizenBlock({ ...obj, e: 0 })
             assert.notDeepEqual(citizen.hash(), base.hash())
         })
     })
@@ -954,7 +954,7 @@ describe('BirthBlock', () => {
             assert.ok(block.root)
             assert.deepEqual(block.money, [20251126000])
             assert.deepEqual(block.invests, [202511269000])
-            assert.equal(block.total, 0)
+            assert.equal(block.experience, 0)
             assert.ok(block.signature)
             assert.deepEqual(block.transactions, expectedTransactions)
         })
@@ -968,7 +968,7 @@ describe('BirthBlock', () => {
 
             assert.isTrue(block.isSigned())
             assert.equal(block.root, "78d83a0ce3c7f2cc4231b25167779df0fe225cbf43e4869ba9320b769729e91e")
-            assert.equal(block.signature, "3045022100f1a11c1f44ab8ac17cacb4fd1b364cda7cfebfc25c7fb9026faeec3ffe5d44bf02206bb2de41ad154a4c3baf04565e9e1976f81d32d2e93f78e564f50a01044af29b")
+            assert.equal(block.signature, "304402201011a287a000934705e91816591912fcd28d1b5608994ef2225a36a3120b6ff802200f1ad37608fefd9602076972f9dbbfff2da117c127b74d94615af95f63f110c7")
         })
 
         it('Should use todays date if none given.', () => {
@@ -1020,7 +1020,7 @@ describe('InitializationBlock', () => {
             assert.equal(block.root, 0)
             assert.deepEqual(block.money, [])
             assert.deepEqual(block.invests, [])
-            assert.equal(block.total, 0)
+            assert.equal(block.experience, 0)
             assert.ok(block.signature)
             assert.deepEqual(block.transactions, [])
         })

@@ -18,7 +18,7 @@ export class BlockMaker {
         if (blockObj.p === REF_HASH) return new BirthBlock(blockObj)
         if (blockObj.h && blockObj.m.length === 1 && blockObj.i.length === 1
             && blockObj.x.length === 0) return new InitializationBlock(blockObj)
-        if ("t" in blockObj) return new CitizenBlock(blockObj)
+        if ("e" in blockObj) return new CitizenBlock(blockObj)
         return new Block(blockObj)
     }
 }
@@ -216,11 +216,11 @@ export class Block {
 export class CitizenBlock extends Block {
 
     constructor(blockObj) {
-        if (!("t" in blockObj)) {
-            throw new Error('Field "t" (total) is mandatory.')
+        if (!("e" in blockObj)) {
+            throw new Error('Field "e" (experience) is mandatory.')
         }
         super(blockObj)
-        this.total = blockObj.t
+        this.experience = blockObj.e
     }
 
     toString() {
@@ -236,14 +236,14 @@ export class CitizenBlock extends Block {
             r: this.root,
             m: this.money,
             i: this.invests,
-            t: this.total
+            e: this.experience
         }
         const packedblock = encode(block)
         return sha256(packedblock)
     }
 
     export() {
-        return { ...super.export(), t: this.total }
+        return { ...super.export(), e: this.experience }
     }
 }
 
@@ -260,11 +260,11 @@ export class BirthBlock extends CitizenBlock {
                 r: 0,
                 m: [],
                 i: [],
-                t: 0,
+                e: 0,
                 h: null,
                 x: []
             })
-            
+
             this.add(new InitTransaction(objOrSk, name, birthdate))
             this.add(new CreateTransaction(objOrSk, 1, date))
             this.sign(objOrSk, date)
@@ -293,7 +293,7 @@ export class BirthBlock extends CitizenBlock {
             this.root.length === 64 &&
             this.money.length === 1 &&
             this.invests.length === 1 &&
-            this.total === 0 &&
+            this.experience === 0 &&
             secp256k1.verify(signature, messageHash, publicKey)
     }
 }
@@ -312,7 +312,7 @@ export class InitializationBlock extends CitizenBlock {
                 r: 0,
                 m: previousBlock.money,
                 i: previousBlock.invests,
-                t: 0,
+                e: 0,
                 h: null,
                 x: []
             })
@@ -336,7 +336,7 @@ export class InitializationBlock extends CitizenBlock {
             this.root.length === 64 &&
             this.money.length === 1 &&
             this.invests.length === 1 &&
-            this.total === 0 &&
+            this.experience === 0 &&
             secp256k1.verify(signature, messageHash, publicKey)
     }
 }

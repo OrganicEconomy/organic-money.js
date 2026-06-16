@@ -12,14 +12,14 @@ import { BirthBlock, InitializationBlock, REF_HASH } from '../src/Block.js';
 describe('Blockchain', () => {
 
 	describe('constructor', () => {
-		it('Should load given blocks objects to Blocks.', () => {
+		it('Should load given blocks objects to CitizenBlocks.', () => {
 			const blockObj1 = makeBlockObj()
 			const blockObj2 = makeBlockObj()
 			const bc = new Blockchain([blockObj1, blockObj2])
 
 			assert.equal(bc.blocks.length, 2)
-			assert.equal(bc.blocks[0].toString(), '[Block]')
-			assert.equal(bc.blocks[1].toString(), '[Block]')
+			assert.equal(bc.blocks[0].toString(), '[CitizenBlock]')
+			assert.equal(bc.blocks[1].toString(), '[CitizenBlock]')
 		})
 
 		it('Should instanciate BirthBlock or InitializationBlock when those are.', () => {
@@ -133,7 +133,7 @@ describe('Blockchain', () => {
 
 	describe('export', () => {
 		it('Should export every block and transaction.', () => {
-			const bc = new Blockchain([makeBlockObj({ signed: true, total: 12 })])
+			const bc = new Blockchain([makeBlockObj({ signed: true, experience: 12 })])
 			bc.addTransaction(makeTransaction({
 				moneycount: 4,
 				investscount: 4
@@ -149,7 +149,7 @@ describe('Blockchain', () => {
 		})
 
 		it('Should import correctly from export.', () => {
-			const bc = new Blockchain([makeBlockObj({ signed: true, total: 12 })])
+			const bc = new Blockchain([makeBlockObj({ signed: true, experience: 12 })])
 			bc.addTransaction(makeTransaction({
 				moneycount: 4,
 				investscount: 4
@@ -419,7 +419,7 @@ describe('Blockchain', () => {
 		})
 
 		it('Should report money and invests.', () => {
-			const bc = new Blockchain([makeBlockObj({ signed: true, total: 12 })])
+			const bc = new Blockchain([makeBlockObj({ signed: true, experience: 12 })])
 			bc.addTransaction(makeTransaction({
 				moneycount: 4,
 				investscount: 4

@@ -7,8 +7,8 @@ import { CreateTransaction, EngageTransaction, PaperTransaction, PayTransaction,
 
 export class CitizenBlockchain extends Blockchain {
 
-	get total() {
-		return this.lastblock.total
+	get experience() {
+		return this.lastblock.experience
 	}
 
 	makeFilteredMoneyIndexes(level, fromdate, toDate) {
@@ -128,24 +128,24 @@ export class CitizenBlockchain extends Blockchain {
 		if (payTx.target !== this.getMyPublicKey())
 			throw new InvalidTransactionError('Transaction not targeting this citizen')
 		this.addTransaction(payTx)
-		this.lastblock.total += payTx.money.length
+		this.lastblock.experience += payTx.money.length
 		return payTx
 	}
 
 	receiveEarn(earnTx) {
 		super.receiveEarn(earnTx)
-		this.lastblock.total += earnTx.money.length
+		this.lastblock.experience += earnTx.money.length
 		return earnTx
 	}
 
 	cashPaper(tx) {
 		super.cashPaper(tx)
-		this.lastblock.total += tx.money.length
+		this.lastblock.experience += tx.money.length
 		return tx
 	}
 
 	_createNewBlock(data) {
-		return new CitizenBlock({ ...data, t: this.lastblock.total })
+		return new CitizenBlock({ ...data, e: this.lastblock.experience })
 	}
 
 	payerOrder(mySk, ecosystemPk, supplierPk, invests, date = new Date()) {
@@ -165,7 +165,7 @@ export class CitizenBlockchain extends Blockchain {
 		this.addTransaction(transaction)
 		this.removeMoney(money)
 		if (targetPk === this.getMyPublicKey()) {
-			this.lastblock.total += money.length
+			this.lastblock.experience += money.length
 		}
 		return transaction
 	}
@@ -224,7 +224,7 @@ export class CitizenBlockchain extends Blockchain {
 	 */
 	getLevel() {
 		if (this.isEmpty() || !this.isValidated()) { return 0 }
-		return Math.floor(Math.cbrt(this.total)) + 1
+		return Math.floor(Math.cbrt(this.experience)) + 1
 	}
 
 	/**
@@ -238,7 +238,7 @@ export class CitizenBlockchain extends Blockchain {
 		if (asPercent) {
 			return Math.floor(100 * (1 - (this.getMoneyBeforeNextLevel() / Math.pow(level, 3))))
 		}
-		return Math.pow(level, 3) - this.total
+		return Math.pow(level, 3) - this.experience
 	}
 
 	/**
@@ -250,7 +250,7 @@ export class CitizenBlockchain extends Blockchain {
 		if (lastTx === null || lastTx.type !== TXTYPE.PAY) {
 			return false
 		}
-		return Math.floor(Math.cbrt(this.total - lastTx.money.length)) + 1 < this.getLevel()
+		return Math.floor(Math.cbrt(this.experience - lastTx.money.length)) + 1 < this.getLevel()
 	}
 
 	/**

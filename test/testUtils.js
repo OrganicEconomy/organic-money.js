@@ -80,7 +80,7 @@ export function makeBlock(options = {}) {
         r: "root" in options ? options.root : 'randomMerkleroot',
         m: "money" in options ? options.money : [],
         i: "invests" in options ? options.invests : [],
-        t: "total" in options ? options.total : 0,
+        e: "experience" in options ? options.experience : 0,
         h: "signature" in options ? options.signature : "",
         x: transactions.map(x => x.export())
     })

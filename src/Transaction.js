@@ -49,7 +49,6 @@ export class TransactionMaker {
                 return new UnsetPayerTransaction(txObj)
             case TXTYPE.PAYERORDER:
                 return new PayerOrderTransaction(txObj)
-
             case TXTYPE.EARN:
                 return new EarnTransaction(txObj)
             default:

@@ -331,6 +331,68 @@ describe('Blockchain', () => {
 				assert.doesNotThrow(() => bc.assertIsValid(2))
 			})
 		})
+
+		describe('banList parameter', () => {
+			it('Should throw if a block was signed by a banned key strictly after the ban date.', () => {
+				const block = makeBlock({ date: new Date('2025-01-02'), signed: true })
+				const bc = new Blockchain([block.export()])
+				const banList = new Map([[myPk, new Date('2025-01-01')]])
+
+				assert.throws(() => bc.assertIsValid(0, banList), InvalidBlockchainError, /banned/i)
+			})
+
+			it('Should not throw if a block was signed on the ban date (day-level precision — ban applies the next day).', () => {
+				const block = makeBlock({ date: new Date('2025-01-01'), signed: true })
+				const bc = new Blockchain([block.export()])
+				const banList = new Map([[myPk, new Date('2025-01-01')]])
+
+				assert.doesNotThrow(() => bc.assertIsValid(0, banList))
+			})
+
+			it('Should not throw if a block was signed before the ban date.', () => {
+				const block = makeBlock({ date: new Date('2025-01-01'), signed: true })
+				const bc = new Blockchain([block.export()])
+				const banList = new Map([[myPk, new Date('2025-01-02')]])
+
+				assert.doesNotThrow(() => bc.assertIsValid(0, banList))
+			})
+
+			it('Should throw if a transaction was signed by a banned key strictly after the ban date.', () => {
+				const tx = makeTransaction({ date: new Date('2025-01-02'), sk: targetSk, signer: targetPk })
+				const block = makeBlock({ date: new Date('2025-01-02'), transactions: [tx], signed: true })
+				const bc = new Blockchain([block.export()])
+				const banList = new Map([[targetPk, new Date('2025-01-01')]])
+
+				assert.throws(() => bc.assertIsValid(0, banList), InvalidBlockchainError, /banned/i)
+			})
+
+			it('Should not throw if a transaction was signed on the ban date (day-level precision).', () => {
+				const tx = makeTransaction({ date: new Date('2025-01-01'), sk: targetSk, signer: targetPk })
+				const block = makeBlock({ date: new Date('2025-01-01'), transactions: [tx], signed: true })
+				const bc = new Blockchain([block.export()])
+				const banList = new Map([[targetPk, new Date('2025-01-01')]])
+
+				assert.doesNotThrow(() => bc.assertIsValid(0, banList))
+			})
+
+			it('Should not throw if a transaction was signed before the ban date.', () => {
+				const tx = makeTransaction({ date: new Date('2025-01-01'), sk: targetSk, signer: targetPk })
+				const block = makeBlock({ date: new Date('2025-01-01'), transactions: [tx], signed: true })
+				const bc = new Blockchain([block.export()])
+				const banList = new Map([[targetPk, new Date('2025-01-02')]])
+
+				assert.doesNotThrow(() => bc.assertIsValid(0, banList))
+			})
+
+			it('Should not throw if the target of a transaction is banned (only signers are checked).', () => {
+				const tx = makeTransaction({ type: TXTYPE.PAY, date: new Date('2025-01-02'), target: targetPk, money: [20250102000] })
+				const block = makeBlock({ date: new Date('2025-01-02'), transactions: [tx], signed: true })
+				const bc = new Blockchain([block.export()])
+				const banList = new Map([[targetPk, new Date('2025-01-01')]])
+
+				assert.doesNotThrow(() => bc.assertIsValid(0, banList))
+			})
+		})
 	})
 
 	describe('export', () => {

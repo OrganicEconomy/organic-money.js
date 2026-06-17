@@ -182,16 +182,16 @@ export class Blockchain {
 	 * @param {number} [depth=0] how many of the most recent blocks to check.
 	 *   0 means the whole chain since genesis.
 	 */
-	isValid(depth = 0) {
+	isValid(depth = 0, banList = new Map()) {
 		try {
-			this.assertIsValid(depth)
+			this.assertIsValid(depth, banList)
 			return true
 		} catch {
 			return false
 		}
 	}
 
-	assertIsValid(depth = 0) {
+	assertIsValid(depth = 0, banList = new Map()) {
 		const blocksToCheck = depth > 0 ? this.blocks.slice(0, depth) : this.blocks
 
 		// Role/structural transactions are intentionally re-presented (same object, same
@@ -209,6 +209,8 @@ export class Blockchain {
 
 			block.assertIsValid()
 			if (i > 0 && !block.isSigned()) throw new InvalidBlockchainError(`Block at index ${i} must be signed.`)
+			if (block.signer && banList.has(block.signer) && block.closedate > banList.get(block.signer))
+				throw new InvalidBlockchainError(`Block signer ${block.signer} was banned before this block was closed.`)
 
 			if (i < blocksToCheck.length - 1) {
 				const olderBlock = blocksToCheck[i + 1]
@@ -230,6 +232,8 @@ export class Blockchain {
 				if (seenSignatures.has(tx.signature))
 					throw new InvalidBlockchainError(`Transaction ${tx.signature} is duplicated across blocks.`)
 				seenSignatures.add(tx.signature)
+				if (banList.has(tx.signer) && tx.date > banList.get(tx.signer))
+					throw new InvalidBlockchainError(`Transaction signer ${tx.signer} was banned before this transaction was created.`)
 			}
 		}
 	}

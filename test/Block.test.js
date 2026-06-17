@@ -4,7 +4,7 @@ import { assert } from 'chai';
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
 
 import { Block, CitizenBlock, BirthBlock, REF_HASH, InitializationBlock, EcoBirthBlock, EcoInitializationBlock, ECOREF_HASH, BlockMaker, BLOCKTYPE } from '../src/Block.js';
-import { dateToInt, infinityDate, intToDate } from '../src/crypto.js';
+import { buildInvestIndexes, buildMoneyIndexes, dateToInt, infinityDate, intToDate } from '../src/crypto.js';
 import { makeBlockObj, makeBlock, makeTransactions, makeTransaction, referentPk, targetPk, targetSk, mySk, referentSk, myPk } from './testUtils.js';
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
 import { signHash } from '../src/crypto.js';
@@ -235,7 +235,7 @@ describe('Block', () => {
             const block = makeBlock({
                 date: new Date('2026-01-21'),
                 previousHash: Blockchain.REF_HASH,
-                transactions: [new CreateTransaction(mySk, 1, new Date('2026-01-22'))]
+                transactions: [new CreateTransaction(mySk, buildMoneyIndexes(new Date('2026-01-22'), 1), buildInvestIndexes(new Date('2026-01-22'), 1), new Date('2026-01-22'))]
             })
 
             const expected = '304502210088927c127b2c9f291b4f86adb0e69a50ffc080dccd359269def8a494be13571d02203f6904fdc34b047ac0f2bed3d71f1406dd70dd50b8d751fca639fb8492320717'
@@ -250,7 +250,7 @@ describe('Block', () => {
             const block = makeBlock({
                 date: new Date('2026-01-21'),
                 previousHash: Blockchain.REF_HASH,
-                transactions: [new CreateTransaction(mySk, 1, new Date('2026-01-22'))],
+                transactions: [new CreateTransaction(mySk, buildMoneyIndexes(new Date('2026-01-22'), 1), buildInvestIndexes(new Date('2026-01-22'), 1), new Date('2026-01-22'))],
                 signed: false,
                 signer: ""
             })

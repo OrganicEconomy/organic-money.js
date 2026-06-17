@@ -4,7 +4,7 @@ import { assert } from 'chai';
 import { CreateTransaction, EarnTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayerOrderTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, UnsetAdminTransaction, UnsetActorTransaction, UnsetPayerTransaction, Transaction, TransactionMaker, TXTYPE } from '../src/Transaction.js';
 import { makeTransactionObj, makeTransaction, mySk, myPk, referentPk, targetPk, targetSk } from './testUtils.js';
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
-import { buildMoneyIndexes } from '../src/crypto.js';
+import { buildMoneyIndexes, buildInvestIndexes } from '../src/crypto.js';
 import { Blockchain } from '../src/Blockchain.js';
 
 describe('Transaction', () => {
@@ -404,12 +404,14 @@ describe('CreateTransaction', () => {
             assert.equal(tx.version, 12)
         })
 
-        it('Should accept 2 parameters : signer sk and level.', () => {
-            const tx = new CreateTransaction(targetSk, 3)
+        it('Should accept signer sk, money and invests arrays (using today as date).', () => {
+            const money = buildMoneyIndexes(new Date(), 3)
+            const invests = buildInvestIndexes(new Date(), 3)
+            const tx = new CreateTransaction(targetSk, money, invests)
 
             assert.equal(tx.type, TXTYPE.CREATE)
-            assert.equal(tx.money.length, 3)
-            assert.equal(tx.invests.length, 3)
+            assert.deepEqual(tx.money, money)
+            assert.deepEqual(tx.invests, invests)
             assert.equal(tx.date.getDate(), new Date().getDate())
             assert.equal(tx.signer, targetPk)
             assert.equal(tx.target, "")
@@ -417,13 +419,16 @@ describe('CreateTransaction', () => {
             assert.isTrue(tx.isValid())
         })
 
-        it('Should accept 3 parameters : signer sk, level and date.', () => {
-            const tx = new CreateTransaction(targetSk, 3, new Date("2026-01-12"))
+        it('Should accept signer sk, money, invests and a date.', () => {
+            const date = new Date("2026-01-12")
+            const money = buildMoneyIndexes(date, 3)
+            const invests = buildInvestIndexes(date, 3)
+            const tx = new CreateTransaction(targetSk, money, invests, date)
 
             assert.equal(tx.type, TXTYPE.CREATE)
-            assert.equal(tx.money.length, 3)
-            assert.equal(tx.invests.length, 3)
-            assert.equal(tx.date.getTime(), new Date("2026-01-12").getTime())
+            assert.deepEqual(tx.money, money)
+            assert.deepEqual(tx.invests, invests)
+            assert.equal(tx.date.getTime(), date.getTime())
             assert.equal(tx.signer, targetPk)
             assert.equal(tx.target, "")
             assert.equal(tx.version, Blockchain.VERSION)

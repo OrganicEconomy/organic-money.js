@@ -4,7 +4,7 @@ import { hexToBytes, toHex } from 'ethereum-cryptography/utils.js'
 import { MerkleTree } from 'merkletreejs'
 import { secp256k1 } from 'ethereum-cryptography/secp256k1.js'
 
-import { dateToInt, infinityDate, intToDate, publicFromPrivate } from "./crypto.js"
+import { buildInvestIndexes, buildMoneyIndexes, dateToInt, infinityDate, intToDate, publicFromPrivate } from "./crypto.js"
 import { CreateTransaction, InitTransaction, SetAdminTransaction, SetActorTransaction, TransactionMaker, TXTYPE } from './Transaction.js'
 import { UnauthorizedError, InvalidBlockchainError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
@@ -314,7 +314,7 @@ export class BirthBlock extends CitizenBlock {
             })
 
             this.add(new InitTransaction(objOrSk, name, birthdate))
-            this.add(new CreateTransaction(objOrSk, 1, date))
+            this.add(new CreateTransaction(objOrSk, buildMoneyIndexes(date, 1), buildInvestIndexes(date, 1), date))
             this.sign(objOrSk, date)
         }
     }

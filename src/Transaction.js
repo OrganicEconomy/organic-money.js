@@ -176,24 +176,16 @@ export class InitTransaction extends Transaction {
 }
 
 export class CreateTransaction extends Transaction {
-    constructor(objOrSk, level=0, date=null) {
+    constructor(objOrSk, money = [], invests = [], date = null) {
         if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
-            objOrSk = Object.assign({}, {
-                v: Blockchain.VERSION,
-                t: TXTYPE.CREATE,
-                h: '',
-                p: '',
-            }, objOrSk)
-            
             super(objOrSk)
         } else {
-            date = date || new Date()
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.CREATE,
-                m: buildMoneyIndexes(date, level),
-                i: buildInvestIndexes(date, level),
-                d: dateToInt(date),
+                m: money,
+                i: invests,
+                d: dateToInt(date || new Date()),
                 s: publicFromPrivate(objOrSk),
                 p: "",
                 h: ""

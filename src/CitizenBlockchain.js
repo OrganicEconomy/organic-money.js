@@ -61,13 +61,7 @@ export class CitizenBlockchain extends Blockchain {
 		const money = this.makeFilteredMoneyIndexes(level, startdate, date)
 		const invests = this.makeFilteredInvestsIndexes(level, startdate, date)
 
-		const transaction = new CreateTransaction({
-			d: dateToInt(date),
-			s: myPublicKey,
-			m: money,
-			i: invests
-		})
-		transaction.sign(privateKey)
+		const transaction = new CreateTransaction(privateKey, money, invests, date)
 		this._addTransaction(transaction);
 		return transaction;
 	}

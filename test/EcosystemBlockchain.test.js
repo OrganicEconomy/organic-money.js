@@ -1321,6 +1321,13 @@ describe('EcosystemBlockchain', () => {
             assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /cap/i)
         })
 
+        it('Should forward the banList to the base class checks (block signer banned).', () => {
+            const bc = makeStartedEco()
+            const banList = new Map([[myPk, new Date('2000-01-01')]])
+
+            assert.throws(() => bc.assertIsValid(0, banList), InvalidBlockchainError, /banned/i)
+        })
+
         it('Should throw a specific message if the current admin state does not match the replayed history (forged SETADMIN not stemming from history).', () => {
             const bc = makeStartedEco()
             // Carry the EcoInitializationBlock forward so it is no longer the lastblock: forging a

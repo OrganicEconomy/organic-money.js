@@ -310,17 +310,17 @@ export class CitizenBlockchain extends Blockchain {
 	 * The oldest block in the checked range has no predecessor to replay from, so
 	 * it's skipped — its own genesis invariants are covered by Block.isValid().
 	 */
-	isValid(depth = 0) {
+	isValid(depth = 0, banList = new Map()) {
 		try {
-			this.assertIsValid(depth)
+			this.assertIsValid(depth, banList)
 			return true
 		} catch {
 			return false
 		}
 	}
 
-	assertIsValid(depth = 0) {
-		super.assertIsValid(depth)
+	assertIsValid(depth = 0, banList = new Map()) {
+		super.assertIsValid(depth, banList)
 
 		const blocksToCheck = depth > 0 ? this.blocks.slice(0, depth) : this.blocks
 		const ownerKey = this.getMyPublicKey()

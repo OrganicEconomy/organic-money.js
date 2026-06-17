@@ -1419,6 +1419,14 @@ describe('CitizenBlockchain', () => {
 			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /experience/i)
 		})
 
+		it('Should forward the banList to the base class checks (block signer banned).', () => {
+			const block = makeBlock({ date: new Date('2025-01-02'), signed: true })
+			const bc = new CitizenBlockchain([block.export()])
+			const banList = new Map([[myPk, new Date('2025-01-01')]])
+
+			assert.throws(() => bc.assertIsValid(0, banList), InvalidBlockchainError, /banned/i)
+		})
+
 		it('Should throw a specific message if two CREATE transactions across the chain reuse the same date, producing overlapping money ids.', () => {
 			const create1 = makeTransaction({ type: TXTYPE.CREATE, date: new Date('2025-01-01'), moneycount: 1, investscount: 1, signer: myPk, sk: mySk })
 			const oldest = makeBlock({ date: new Date('2025-01-01'), experience: 0, transactions: [create1], signed: true })

@@ -89,17 +89,17 @@ export class EcosystemBlockchain extends Blockchain {
      *     reproduces exactly the admins/actors/payers reported by the current block,
      *     and no PAYERORDER ever exceeded the payer cap in effect at the time
      */
-    isValid(depth = 0) {
+    isValid(depth = 0, banList = new Map()) {
         try {
-            this.assertIsValid(depth)
+            this.assertIsValid(depth, banList)
             return true
         } catch {
             return false
         }
     }
 
-    assertIsValid(depth = 0) {
-        super.assertIsValid(depth)
+    assertIsValid(depth = 0, banList = new Map()) {
+        super.assertIsValid(depth, banList)
 
         if (this.getAdmins().size === 0) throw new InvalidBlockchainError('Ecosystem must have at least one admin.')
         const actors = this.getActors()

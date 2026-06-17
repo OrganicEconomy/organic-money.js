@@ -101,7 +101,7 @@ describe('CitizenBlockchain', () => {
 			const tomorrow = new Date();
 			tomorrow.setDate(tomorrow.getDate() + 1);
 
-			assert.throws(() => { bc.createMoneyAndInvests(mySk, tomorrow) }, 'Cannot create futur money, live the moment.')
+			assert.throws(() => { bc.createMoneyAndInvests(mySk, tomorrow) }, InvalidTransactionError)
 		})
 
 		it('Should return transaction in OK case.', () => {
@@ -546,7 +546,7 @@ describe('CitizenBlockchain', () => {
 				date: new Date('2025-01-05')
 			}))
 
-			assert.throws(() => { bc.generatePaper(mySk, 2, referentPk, new Date('2025-01-03')) }, Error, 'Invalid date')
+			assert.throws(() => { bc.generatePaper(mySk, 2, referentPk, new Date('2025-01-03')) }, InvalidTransactionError)
 		})
 
 		it('Should return a valid transaction.', () => {

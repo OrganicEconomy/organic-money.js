@@ -47,7 +47,7 @@ export class CitizenBlockchain extends Blockchain {
 
 		const today = new Date();
 		if (date > today) {
-			throw new Error('Cannot create futur money, live the moment.')
+			throw new InvalidTransactionError('Cannot create futur money, live the moment.')
 		}
 		const lastCreationTx = this.getLastCreationTransaction();
 		if (lastCreationTx) {
@@ -236,7 +236,7 @@ export class CitizenBlockchain extends Blockchain {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
 		if (date < this.getLastTransactionDate()) {
-			throw new Error('Invalid date')
+			throw new InvalidTransactionError('Invalid date')
 		}
 		const transaction = new PaperTransaction(myPrivateKey, referentPublicKey, money, date)
 		this._addTransaction(transaction)

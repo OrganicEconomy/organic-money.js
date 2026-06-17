@@ -160,7 +160,7 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	#assertValidCap(cap) {
-		if (!Number.isInteger(cap) || cap < 0)
+		if (!Number.isInteger(cap) || cap < -1)
 			throw new InvalidTransactionError('Cap must be a non-negative integer.')
 	}
 

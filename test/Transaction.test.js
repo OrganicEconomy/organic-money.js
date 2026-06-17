@@ -1270,8 +1270,8 @@ describe('SetPayerTransaction', () => {
             assert.isFalse(result)
         })
 
-        it('Should return false if cap is negative.', () => {
-            const tx = new SetPayerTransaction(mySk, targetPk, -1, referentPk, new Date())
+        it('Should return false if cap is less than -1.', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, -2, referentPk, new Date())
             assert.isFalse(tx.isValid())
         })
 
@@ -1280,7 +1280,12 @@ describe('SetPayerTransaction', () => {
             assert.isFalse(tx.isValid())
         })
 
-        it('Should return true if cap is 0 (unlimited).', () => {
+        it('Should return true if cap is -1 (unlimited).', () => {
+            const tx = new SetPayerTransaction(mySk, targetPk, -1, referentPk, new Date())
+            assert.isTrue(tx.isValid())
+        })
+
+        it('Should return true if cap is 0 (exhausted, not carried to next block).', () => {
             const tx = new SetPayerTransaction(mySk, targetPk, 0, referentPk, new Date())
             assert.isTrue(tx.isValid())
         })

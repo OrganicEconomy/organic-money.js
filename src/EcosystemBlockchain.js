@@ -124,7 +124,7 @@ export class EcosystemBlockchain extends Blockchain {
                     if (tx.type === TXTYPE.PAYERORDER) {
                         const cap = payerCaps.get(tx.signer)
                         if (cap === undefined) throw new InvalidBlockchainError('A PAYERORDER was issued by a non-payer at the time it was recorded.')
-                        if (cap > 0 && tx.invests.length > cap) throw new InvalidBlockchainError('A PAYERORDER exceeded the payer cap in effect at the time.')
+                        if (cap !== -1 && tx.invests.length > cap) throw new InvalidBlockchainError('A PAYERORDER exceeded the payer cap in effect at the time.')
                         payerOrderSigs.add(tx.signature)
                     }
                     if (tx.type === TXTYPE.EARN && tx.x) {
@@ -178,7 +178,7 @@ export class EcosystemBlockchain extends Blockchain {
                 newBlock.transactions.push(tx)
                 copiedActors.add(tx.target)
             }
-            if (tx.type === TXTYPE.SETPAYER && activePayers.has(tx.target) && !copiedPayers.has(tx.target)) {
+            if (tx.type === TXTYPE.SETPAYER && activePayers.has(tx.target) && activePayers.get(tx.target) !== 0 && !copiedPayers.has(tx.target)) {
                 newBlock.transactions.push(tx)
                 copiedPayers.add(tx.target)
             }
@@ -191,7 +191,7 @@ export class EcosystemBlockchain extends Blockchain {
     }
 
     #assertValidCap(cap) {
-        if (!Number.isInteger(cap) || cap < 0)
+        if (!Number.isInteger(cap) || cap < -1)
             throw new InvalidTransactionError('Cap must be a non-negative integer.')
     }
 
@@ -309,7 +309,7 @@ export class EcosystemBlockchain extends Blockchain {
         if (!this.isPayer(tx.signer))
             throw new UnauthorizedError('Only payers can create payment orders.')
         const cap = this.getPayers().get(tx.signer)
-        if (cap > 0 && tx.invests.length > cap)
+        if (cap !== -1 && tx.invests.length > cap)
             throw new InvalidTransactionError('Order exceeds payer capacity.')
         const allInvestsAvailable = hasEnoughOccurrences(this.lastblock.invests, tx.invests)
         if (!allInvestsAvailable)
@@ -319,11 +319,9 @@ export class EcosystemBlockchain extends Blockchain {
         if (!allInvestsMature)
             throw new InvalidTransactionError('Some invests are not yet available.')
         this._addTransaction(tx)
-        if (cap > 0) {
+        if (cap !== -1) {
             const remainingCap = cap - tx.invests.length
-            const capUpdate = remainingCap === 0
-                ? new UnsetPayerTransaction(ecoSk, tx.signer, this.getMyPublicKey(), tx.date)
-                : new SetPayerTransaction(ecoSk, tx.signer, remainingCap, this.getMyPublicKey(), tx.date)
+            const capUpdate = new SetPayerTransaction(ecoSk, tx.signer, remainingCap, this.getMyPublicKey(), tx.date)
             this._addTransaction(capUpdate)
         }
         return tx

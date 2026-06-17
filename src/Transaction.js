@@ -495,7 +495,7 @@ export class SetPayerTransaction extends Transaction {
         this.invests.length === 0 &&
         !! this.target &&
         this.target.length === 66 &&
-        Number.isInteger(this.cap) && this.cap >= 0 &&
+        Number.isInteger(this.cap) && this.cap >= -1 &&
         !! this.ecosystem &&
         this.ecosystem.length === 66
     }

@@ -146,7 +146,7 @@ An `EcosystemBlockchain` represents a collective entity (cooperative, associatio
 |------|-------------|-----------|
 | **Admin** | Manages the ecosystem: assigns roles | — |
 | **Actor** | Contributor who receives a proportional salary | `ratio` |
-| **Payer** | Authorized to issue invest orders (optionally capped) | `cap` |
+| **Payer** | Authorized to issue invest orders (optionally capped; `-1` = unlimited) | `cap` |
 
 Two separate economic flows pass through an ecosystem:
 
@@ -217,7 +217,7 @@ Generic checks (any `Blockchain`):
 
 `CitizenBlockchain` additionally replays each block's transactions to verify `CREATE` mints exactly the amount implied by the level of accumulated experience, that experience correctly reflects `PAY`/`EARN`/`PAPER` targeting the citizen, that it carries forward correctly between blocks, and that no two `CREATE` transactions across the chain reuse the same money/invest id.
 
-`EcosystemBlockchain` additionally checks that the current state always has at least one admin and one actor with a ratio > 0, and (full history only) that replaying every role transaction reproduces the current admins/actors/payers exactly, with no `PAYERORDER` ever exceeding the payer cap in effect at the time.
+`EcosystemBlockchain` additionally checks that the current state always has at least one admin and one actor with a ratio > 0, and (full history only) that replaying every role transaction reproduces the current admins/actors/payers exactly, with no `PAYERORDER` ever exceeding the payer cap in effect at the time, and that no `PAYERORDER` is exercised more than once (double-spend check via `EARN.x`).
 
 ---
 
@@ -381,8 +381,8 @@ eco.receiveSetActor(aliceActorTx)
 const bobActorTx = adminBc.setActor(adminSk, ecoPk, bobPk, 1)       // Bob: ratio 1
 eco.receiveSetActor(bobActorTx)
 
-// Add a payer (can issue invest orders; 0 = no cap)
-const payerTx = adminBc.setPayer(adminSk, ecoPk, alicePk, 0)
+// Add a payer (can issue invest orders; -1 = unlimited)
+const payerTx = adminBc.setPayer(adminSk, ecoPk, alicePk, -1)
 eco.receiveSetPayer(payerTx)
 
 // Add another admin
@@ -623,8 +623,8 @@ console.log(eco.isActor(alicePk))   // true (ratio 1)
 const bobActorTx = alice.setActor(aliceSk, ecoPk, bobPk, 1)
 eco.receiveSetActor(bobActorTx)
 
-// Alice becomes a payer (can issue invest orders, uncapped)
-const alicePayerTx = alice.setPayer(aliceSk, ecoPk, alicePk, 0)
+// Alice becomes a payer (can issue invest orders, unlimited)
+const alicePayerTx = alice.setPayer(aliceSk, ecoPk, alicePk, -1)
 eco.receiveSetPayer(alicePayerTx)
 
 // ── 3. Both citizens engage invests into the ecosystem ────────────────────────
@@ -679,12 +679,12 @@ console.log(ecoRestored.isAdmin(alicePk))  // true — roles preserved
 | 5 | `PAPER` | Convert digital money into a paper certificate | `money[]`, `target` (local eco public key) |
 | 6 | `SETADMIN` | Assign an ecosystem admin (signed by another admin on their blockchain) | `target`, `e` (ecosystem pk) |
 | 7 | `SETACTOR` | Assign an ecosystem actor | `target`, `ratio`, `e` (ecosystem pk) |
-| 8 | `SETPAYER` | Assign an ecosystem payer | `target`, `cap`, `e` (ecosystem pk) |
+| 8 | `SETPAYER` | Assign an ecosystem payer (`cap=-1` = unlimited, `cap=0` = exhausted, `cap>0` = limited) | `target`, `cap`, `e` (ecosystem pk) |
 | 9 | `UNSETADMIN` | Remove an ecosystem admin | `target`, `e` (ecosystem pk) |
 | 10 | `UNSETACTOR` | Remove an ecosystem actor | `target`, `e` (ecosystem pk) |
 | 11 | `UNSETPAYER` | Remove an ecosystem payer | `target`, `e` (ecosystem pk) |
 | 12 | `PAYERORDER` | Payer issues an invest order (signed by payer on their blockchain) | `invests[]`, `target`, `e` (ecosystem pk) |
-| 13 | `EARN` | Distribute earnings to an actor or supplier | `money[]`, `target` |
+| 13 | `EARN` | Distribute earnings to an actor or supplier | `money[]`, `target`, `x` (PayerOrder signature — present only when triggered by `order()`, prevents double-spend) |
 
 ### Transaction exchange methods
 

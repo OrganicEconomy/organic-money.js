@@ -709,9 +709,10 @@ export class PayerOrderTransaction extends Transaction {
 }
 
 export class EarnTransaction extends Transaction {
-    constructor(objOrSk, targetPk = null, money = [], date = null) {
+    constructor(objOrSk, targetPk = null, money = [], payerOrderSig = null, date = null) {
         if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
             super(objOrSk)
+            this.x = objOrSk.x || null
         } else {
             super({
                 v: Blockchain.VERSION,
@@ -723,11 +724,31 @@ export class EarnTransaction extends Transaction {
                 p: targetPk,
                 h: ""
             })
+            this.x = payerOrderSig
             this.sign(objOrSk)
         }
     }
 
     toString() { return '[EarnTransaction]' }
+
+    hash() {
+        if (this.x === null) return super.hash()
+        return sha256(encode({
+            d: dateToInt(this.date),
+            m: this.money,
+            i: this.invests,
+            s: this.signer,
+            t: this.type,
+            p: this.target,
+            v: this.version,
+            x: this.x
+        }))
+    }
+
+    export() {
+        if (this.x === null) return super.export()
+        return { ...super.export(), x: this.x }
+    }
 
     isValid() {
         return super.isValid() &&

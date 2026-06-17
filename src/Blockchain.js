@@ -305,18 +305,15 @@ export class Blockchain {
 
 	/**
 	 * Return the whole history of transactions
-	 * @param {number} [limit=0] the max number of blocks to look in
+	 * @param {number} [depth=0] how many of the most recent blocks to look in.
+	 *   0 means the whole chain since genesis.
 	 */
-	getHistory(limit = 0) {
-		let i = 0
+	getHistory(depth = 0) {
 		let result = []
-		this.blocks.forEach(block => {
-			result = result.concat(block.transactions)
-			i++
-			if (limit > 0 && i >= limit) {
-				return result
-			}
-		})
+		for (let i = 0; i < this.blocks.length; i++) {
+			result = result.concat(this.blocks[i].transactions)
+			if (depth > 0 && i + 1 >= depth) break
+		}
 		return result
 	}
 

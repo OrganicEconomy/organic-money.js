@@ -724,4 +724,37 @@ describe('Blockchain', () => {
 		})
 	})
 
+	describe('getHistory', () => {
+		it('Should return transactions from every block when depth is 0 (default).', () => {
+			const tx1 = makeTransaction({ date: new Date('2025-01-01') })
+			const tx2 = makeTransaction({ date: new Date('2025-01-02') })
+			const tx3 = makeTransaction({ date: new Date('2025-01-03') })
+			const bc = new Blockchain([
+				makeBlockObj({ date: new Date('2025-01-03'), transactions: [tx3] }),
+				makeBlockObj({ date: new Date('2025-01-02'), transactions: [tx2], signed: true }),
+				makeBlockObj({ date: new Date('2025-01-01'), transactions: [tx1], signed: true })
+			])
+
+			const result = bc.getHistory()
+
+			assert.equal(result.length, 3)
+		})
+
+		it('Should only look in the given number of most recent blocks when depth > 0.', () => {
+			const tx1 = makeTransaction({ date: new Date('2025-01-01') })
+			const tx2 = makeTransaction({ date: new Date('2025-01-02') })
+			const tx3 = makeTransaction({ date: new Date('2025-01-03') })
+			const bc = new Blockchain([
+				makeBlockObj({ date: new Date('2025-01-03'), transactions: [tx3] }),
+				makeBlockObj({ date: new Date('2025-01-02'), transactions: [tx2], signed: true }),
+				makeBlockObj({ date: new Date('2025-01-01'), transactions: [tx1], signed: true })
+			])
+
+			const result = bc.getHistory(2)
+
+			assert.equal(result.length, 2)
+			assert.notInclude(result.map(tx => tx.signature), tx1.signature)
+		})
+	})
+
 })

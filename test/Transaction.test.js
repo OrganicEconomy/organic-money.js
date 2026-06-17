@@ -1,7 +1,7 @@
 import { describe, it } from 'mocha';
 import { assert } from 'chai';
 
-import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, UnsetAdminTransaction, UnsetActorTransaction, UnsetPayerTransaction, Transaction, TransactionMaker, TXTYPE } from '../src/Transaction.js';
+import { CreateTransaction, EarnTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayerOrderTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, UnsetAdminTransaction, UnsetActorTransaction, UnsetPayerTransaction, Transaction, TransactionMaker, TXTYPE } from '../src/Transaction.js';
 import { makeTransactionObj, makeTransaction, mySk, myPk, referentPk, targetPk, targetSk } from './testUtils.js';
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
 import { buildMoneyIndexes } from '../src/crypto.js';
@@ -1720,6 +1720,60 @@ describe('UnsetPayerTransaction', () => {
             const result = tx.isValid()
 
             assert.isTrue(result)
+        })
+    })
+})
+
+describe('EarnTransaction', () => {
+    const money = [20250101000]
+    const date = new Date('2025-01-01')
+    const fakePayerOrderSig = 'ab'.repeat(70)
+
+    describe('constructor (from key)', () => {
+        it('Should set x to null when no payerOrderSig is given.', () => {
+            const tx = new EarnTransaction(mySk, targetPk, money)
+            assert.isNull(tx.x)
+        })
+
+        it('Should set x to the given payerOrderSig.', () => {
+            const tx = new EarnTransaction(mySk, targetPk, money, fakePayerOrderSig, date)
+            assert.equal(tx.x, fakePayerOrderSig)
+        })
+
+        it('Should produce a valid transaction when x is null.', () => {
+            const tx = new EarnTransaction(mySk, targetPk, money)
+            assert.isTrue(tx.isValid())
+        })
+
+        it('Should produce a valid transaction when x is set.', () => {
+            const tx = new EarnTransaction(mySk, targetPk, money, fakePayerOrderSig, date)
+            assert.isTrue(tx.isValid())
+        })
+    })
+
+    describe('constructor (from object)', () => {
+        it('Should restore x from serialized object.', () => {
+            const original = new EarnTransaction(mySk, targetPk, money, fakePayerOrderSig, date)
+            const restored = new EarnTransaction(original.export())
+            assert.equal(restored.x, fakePayerOrderSig)
+        })
+
+        it('Should set x to null when missing from serialized object.', () => {
+            const original = new EarnTransaction(mySk, targetPk, money)
+            const restored = new EarnTransaction(original.export())
+            assert.isNull(restored.x)
+        })
+    })
+
+    describe('export', () => {
+        it('Should not include x in export when x is null.', () => {
+            const tx = new EarnTransaction(mySk, targetPk, money)
+            assert.isUndefined(tx.export().x)
+        })
+
+        it('Should include x in export when x is set.', () => {
+            const tx = new EarnTransaction(mySk, targetPk, money, fakePayerOrderSig, date)
+            assert.equal(tx.export().x, fakePayerOrderSig)
         })
     })
 })

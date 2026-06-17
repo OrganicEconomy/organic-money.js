@@ -110,6 +110,8 @@ export class EcosystemBlockchain extends Blockchain {
             const admins = new Set()
             const replayedActors = new Map()
             const payerCaps = new Map()
+            const payerOrderSigs = new Set()
+            const consumedPayerOrders = new Set()
 
             for (const block of chronologicalBlocks) {
                 for (const tx of block.transactions.slice().reverse()) {
@@ -123,6 +125,14 @@ export class EcosystemBlockchain extends Blockchain {
                         const cap = payerCaps.get(tx.signer)
                         if (cap === undefined) throw new InvalidBlockchainError('A PAYERORDER was issued by a non-payer at the time it was recorded.')
                         if (cap > 0 && tx.invests.length > cap) throw new InvalidBlockchainError('A PAYERORDER exceeded the payer cap in effect at the time.')
+                        payerOrderSigs.add(tx.signature)
+                    }
+                    if (tx.type === TXTYPE.EARN && tx.x) {
+                        if (!payerOrderSigs.has(tx.x))
+                            throw new InvalidBlockchainError('An EARN references a PayerOrder that does not exist in the chain.')
+                        if (consumedPayerOrders.has(tx.x))
+                            throw new InvalidBlockchainError('A PayerOrder has been exercised more than once.')
+                        consumedPayerOrders.add(tx.x)
                     }
                 }
             }
@@ -333,20 +343,28 @@ export class EcosystemBlockchain extends Blockchain {
         const allInvestsMature = invests.every(i => unitIdToDateInt(i) <= orderDateInt)
         if (!allInvestsMature)
             throw new InvalidTransactionError('Some invests are not yet available.')
-        const authorizedInvests = this.lastblock.transactions
-            .filter(tx => tx.type === TXTYPE.PAYERORDER && tx.target === targetPk)
-            .flatMap(tx => tx.invests)
-        if (!hasEnoughOccurrences(authorizedInvests, invests))
+        const consumedPayerOrderSigs = new Set(
+            this.lastblock.transactions
+                .filter(tx => tx.type === TXTYPE.EARN && tx.x)
+                .map(tx => tx.x)
+        )
+        const payerOrder = this.lastblock.transactions.find(tx =>
+            tx.type === TXTYPE.PAYERORDER &&
+            tx.target === targetPk &&
+            !consumedPayerOrderSigs.has(tx.signature) &&
+            hasEnoughOccurrences(tx.invests, invests)
+        )
+        if (!payerOrder)
             throw new InvalidTransactionError('No payer authorization for these invests.')
         const money = invests.map(investIdToMoneyId)
         this.removeInvests(invests)
         this.lastblock.money = this.lastblock.money.concat(money)
-        return this.earn(ecoSk, targetPk, money, date)
+        return this.earn(ecoSk, targetPk, money, payerOrder.signature, date)
     }
 
-    earn(heartSk, actorPk, money, date = new Date()) {
+    earn(heartSk, actorPk, money, payerOrderSig = null, date = new Date()) {
         this.#assertOwner(heartSk)
-        const tx = new EarnTransaction(heartSk, actorPk, money, date)
+        const tx = new EarnTransaction(heartSk, actorPk, money, payerOrderSig, date)
         this._addTransaction(tx)
         this.removeMoney(money)
         return tx
@@ -368,7 +386,7 @@ export class EcosystemBlockchain extends Blockchain {
             if (ratio === 0) continue
             const money = availableMoney.slice(offset, offset + ratio * cycles)
             offset += ratio * cycles
-            const tx = this.earn(heartSk, actorPk, money, date)
+            const tx = this.earn(heartSk, actorPk, money, null, date)
             earns.push(tx)
         }
         return earns

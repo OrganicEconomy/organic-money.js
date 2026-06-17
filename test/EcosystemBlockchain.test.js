@@ -918,6 +918,28 @@ describe('EcosystemBlockchain', () => {
             )
         })
 
+        it('Should not let a single PAYERORDER authorization be redeemed twice, even when a duplicate invest id (from a different citizen) is sitting in the pool.', () => {
+            const bc = makeStartedEco()
+            ecoSetPayer(bc, adminSk, referentPk, 0, DATE2)
+
+            // Two different citizens engaging the same day/slot legitimately produce the same invest id.
+            const engageTx1 = makeEngageTx(referentSk, bc.getMyPublicKey(), DATE2)
+            const engageTx2 = makeEngageTx(targetSk, bc.getMyPublicKey(), DATE2)
+            bc.receiveInvests(engageTx1)
+            bc.receiveInvests(engageTx2)
+
+            // The payer only ever authorized ONE unit of this invest id.
+            bc.receivePayerOrder(mySk, new PayerOrderTransaction(referentSk, targetPk, engageTx1.invests, myPk, DATE2))
+
+            bc.order(mySk, targetPk, engageTx1.invests, DATE2)
+
+            assert.throws(
+                () => bc.order(mySk, targetPk, engageTx1.invests, DATE3),
+                InvalidTransactionError,
+                'No payer authorization for these invests.'
+            )
+        })
+
         it('Should create an EarnTransaction, convert invests to money, and remove invests from lastblock.', () => {
             const bc = makeStartedEco()
 
@@ -968,20 +990,31 @@ describe('EcosystemBlockchain', () => {
 
             assert.doesNotThrow(() => bc.order(mySk, targetPk, invests, DATE2))
         })
+
+        it('Should set x on the returned EarnTransaction to the PAYERORDER signature.', () => {
+            const bc = makeStartedEco()
+            ecoSetPayer(bc, adminSk, referentPk, 0, DATE2)
+            const engageTx = makeEngageTx(referentSk, myPk)
+            bc.receiveInvests(engageTx)
+            const payerOrderTx = new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2)
+            bc.receivePayerOrder(mySk, payerOrderTx)
+            const earnTx = bc.order(mySk, targetPk, engageTx.invests, DATE2)
+            assert.equal(earnTx.x, payerOrderTx.signature)
+        })
     })
 
     describe('earn', () => {
         it('Should throw UnauthorizedError if heartSk does not match getMyPublicKey.', () => {
             const bc = makeStartedEco()
 
-            assert.throws(() => bc.earn(referentSk, adminPk, [20250101000], DATE2))
+            assert.throws(() => bc.earn(referentSk, adminPk, [20250101000], null, DATE2))
         })
 
         it('Should create an EarnTransaction and remove money from lastblock.', () => {
             const bc = makeStartedEco()
 
             bc.lastblock.money = [20250101000, 20250101001, 20250101002]
-            const tx = bc.earn(mySk, adminPk, [20250101000], DATE2)
+            const tx = bc.earn(mySk, adminPk, [20250101000], null, DATE2)
 
             assert.equal(tx.type, TXTYPE.EARN)
             assert.equal(tx.target, adminPk)
@@ -990,11 +1023,18 @@ describe('EcosystemBlockchain', () => {
             assert.notInclude(bc.lastblock.money, 20250101000)
         })
 
+        it('Should set x to null on the returned EarnTransaction (salary earn has no origin PAYERORDER).', () => {
+            const bc = makeStartedEco()
+            bc.lastblock.money = [20250101000]
+            const tx = bc.earn(mySk, adminPk, [20250101000], null, DATE2)
+            assert.isNull(tx.x)
+        })
+
         it('Should only remove one occurrence per requested id, even if the id appears more than once (different citizens can generate the same money id).', () => {
             const bc = makeStartedEco()
 
             bc.lastblock.money = [20250101000, 20250101000, 20250101001]
-            bc.earn(mySk, adminPk, [20250101000], DATE2)
+            bc.earn(mySk, adminPk, [20250101000], null, DATE2)
 
             assert.deepEqual(bc.lastblock.money, [20250101000, 20250101001])
         })
@@ -1147,7 +1187,7 @@ describe('EcosystemBlockchain', () => {
             bc.receivePayerOrder(mySk,new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2))
             bc.order(mySk, targetPk, engageTx.invests, DATE2)
             bc.lastblock.money = buildMoneyIndexes(DATE2, 6)
-            bc.earn(mySk, adminPk, bc.lastblock.money.slice(0, 3), DATE2)
+            bc.earn(mySk, adminPk, bc.lastblock.money.slice(0, 3), null, DATE2)
 
             bc.closeLastBlock(mySk, DATE2)
             ecoSetActor(bc,adminSk, adminPk, 2, DATE3)

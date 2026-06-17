@@ -210,6 +210,9 @@ export class CitizenBlockchain extends Blockchain {
 		this._addTransaction(transaction)
 		this.removeMoney(money)
 		if (targetPk === this.getMyPublicKey()) {
+			// Self-pay: a "sober" citizen who chooses not to consume still gains
+			// experience from their own money, rewarding frugality the same way
+			// work does — without triggering a production/consumption cycle.
 			this.lastblock.experience += money.length
 		}
 		return transaction

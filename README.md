@@ -130,6 +130,8 @@ level = floor(∛economic_experience) + 1
 
 **Economic experience** is the cumulative count of money units ever received by the citizen (via PAY and EARN transactions). It is stored as the `total` field in each block. This encourages economic participation and gives a natural catch-up mechanic: anyone can grow, but growth requires genuine exchange.
 
+A citizen can also pay themselves (`pay(sk, myPk, amount)`). The money is removed from their wallet and their experience increases — no consumption cycle is triggered. This deliberately rewards **sobriety**: a frugal citizen who chooses not to consume still grows at the same rate as one who spends, without stimulating production or pollution.
+
 | Level | Units/day | Economic experience to reach |
 |-------|-----------|------------------------------|
 | 1     | 1         | 0 (starting level)           |

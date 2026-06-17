@@ -249,15 +249,22 @@ export class PayTransaction extends Transaction {
 }
 
 export class EngageTransaction extends Transaction {
-    constructor(objOrSk) {
-        objOrSk = Object.assign({}, {
-            v: Blockchain.VERSION,
-            t: TXTYPE.ENGAGE,
-            h: "",
-            m: [],
-            i: []
-        }, objOrSk)
-        super(objOrSk)
+    constructor(objOrSk, targetPk = null, invests = [], money = [], date = null) {
+        if (typeof objOrSk === 'object' && !Array.isArray(objOrSk) && objOrSk !== null) {
+            super(objOrSk)
+        } else {
+            super({
+                v: Blockchain.VERSION,
+                t: TXTYPE.ENGAGE,
+                m: money,
+                i: invests,
+                d: dateToInt(date),
+                s: publicFromPrivate(objOrSk),
+                p: targetPk,
+                h: ""
+            })
+            this.sign(objOrSk)
+        }
     }
 
     toString() {

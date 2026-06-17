@@ -643,6 +643,26 @@ describe('EngageTransaction', () => {
         })
     })
 
+    describe('constructor (from key)', () => {
+        it('Should produce a valid signed transaction with invests.', () => {
+            const invests = [202501039000, 202501039001]
+            const tx = new EngageTransaction(mySk, referentPk, invests, [], new Date('2025-01-03'))
+            assert.isTrue(tx.isValid())
+            assert.equal(tx.target, referentPk)
+            assert.deepEqual(tx.invests, invests)
+            assert.deepEqual(tx.money, [])
+        })
+
+        it('Should produce a valid signed transaction with money.', () => {
+            const money = [20250103000, 20250103001]
+            const tx = new EngageTransaction(mySk, referentPk, [], money, new Date('2025-01-03'))
+            assert.isTrue(tx.isValid())
+            assert.equal(tx.target, referentPk)
+            assert.deepEqual(tx.money, money)
+            assert.deepEqual(tx.invests, [])
+        })
+    })
+
     describe('isValid', () => {
 
         it('Should return false if money AND invests are both empty arrays.', () => {

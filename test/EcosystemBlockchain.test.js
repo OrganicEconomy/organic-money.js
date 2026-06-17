@@ -22,9 +22,7 @@ function makeStartedEco(secretKey = mySk) {
 
 function makeEngageTx(signerSk, ecoPublicKey, date = DATE2) {
     const invests = buildInvestIndexes(date, 1)
-    const tx = new EngageTransaction({ d: dateToInt(date), p: ecoPublicKey, i: invests, s: publicFromPrivate(signerSk) })
-    tx.sign(signerSk)
-    return tx
+    return new EngageTransaction(signerSk, ecoPublicKey, invests, [], date)
 }
 
 // Role transactions (SetAdmin/SetActor/SetPayer and their unset) are created on the
@@ -475,8 +473,7 @@ describe('EcosystemBlockchain', () => {
             const bc = makeStartedEco()
 
             const invests = buildInvestIndexes(DATE2, 1)
-            const tx = new EngageTransaction({ d: dateToInt(DATE2), p: referentPk, i: invests, s: adminPk })
-            tx.sign(adminSk)
+            const tx = new EngageTransaction(adminSk, referentPk, invests, [], DATE2)
 
             assert.throws(() => bc.receiveInvests(tx))
         })
@@ -485,8 +482,7 @@ describe('EcosystemBlockchain', () => {
             const bc = makeStartedEco()
 
             const money = buildMoneyIndexes(DATE2, 1)
-            const tx = new EngageTransaction({ d: dateToInt(DATE2), p: myPk, m: money, s: adminPk })
-            tx.sign(adminSk)
+            const tx = new EngageTransaction(adminSk, myPk, [], money, DATE2)
 
             assert.throws(() => bc.receiveInvests(tx))
         })
@@ -532,8 +528,7 @@ describe('EcosystemBlockchain', () => {
             const bc = makeStartedEco()
 
             const money = buildMoneyIndexes(DATE2, 1)
-            const tx = new EngageTransaction({ d: dateToInt(DATE2), p: referentPk, m: money, s: adminPk })
-            tx.sign(adminSk)
+            const tx = new EngageTransaction(adminSk, referentPk, [], money, DATE2)
 
             assert.throws(() => bc.receiveMoney(tx))
         })
@@ -550,8 +545,7 @@ describe('EcosystemBlockchain', () => {
             const bc = makeStartedEco()
 
             const money = buildMoneyIndexes(DATE2, 1)
-            const tx = new EngageTransaction({ d: dateToInt(DATE2), p: myPk, m: money, s: adminPk })
-            tx.sign(adminSk)
+            const tx = new EngageTransaction(adminSk, myPk, [], money, DATE2)
             bc.receiveMoney(tx)
 
             assert.deepEqual(bc.lastblock.money, money)
@@ -561,8 +555,7 @@ describe('EcosystemBlockchain', () => {
             const bc = makeStartedEco()
 
             const money = buildMoneyIndexes(DATE2, 1)
-            const tx = new EngageTransaction({ d: dateToInt(DATE2), p: myPk, m: money, s: adminPk })
-            tx.sign(adminSk)
+            const tx = new EngageTransaction(adminSk, myPk, [], money, DATE2)
             bc.receiveMoney(tx)
 
             assert.include(bc.lastblock.transactions, tx)
@@ -572,8 +565,7 @@ describe('EcosystemBlockchain', () => {
             const bc = makeStartedEco()
 
             const money = buildMoneyIndexes(DATE2, 1)
-            const tx = new EngageTransaction({ d: dateToInt(DATE2), p: myPk, m: money, s: adminPk })
-            tx.sign(adminSk)
+            const tx = new EngageTransaction(adminSk, myPk, [], money, DATE2)
             const result = bc.receiveMoney(tx)
 
             assert.equal(result, tx)

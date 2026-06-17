@@ -82,8 +82,7 @@ export class CitizenBlockchain extends Blockchain {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
 		const invests = this.#buildEngageIndexes(days, date, dailyAmount, buildInvestIndexes, this.getEngagedInvests)
-		const tx = new EngageTransaction({ d: dateToInt(date), p: targetPublicKey, i: invests, s: myPublicKey })
-		tx.sign(myPrivateKey)
+		const tx = new EngageTransaction(myPrivateKey, targetPublicKey, invests, [], date)
 		this._addTransaction(tx)
 		return tx
 	}
@@ -98,8 +97,7 @@ export class CitizenBlockchain extends Blockchain {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
 		const money = this.#buildEngageIndexes(days, date, dailyAmount, buildMoneyIndexes, this.getEngagedMoney)
-		const tx = new EngageTransaction({ d: dateToInt(date), p: targetPublicKey, m: money, s: myPublicKey })
-		tx.sign(myPrivateKey)
+		const tx = new EngageTransaction(myPrivateKey, targetPublicKey, [], money, date)
 		this._addTransaction(tx)
 		return tx
 	}

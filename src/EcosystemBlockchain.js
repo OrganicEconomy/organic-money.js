@@ -1,6 +1,6 @@
 import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
-import { randomPrivateKey, publicFromPrivate, dateToInt, unitIdToDateInt, investIdToMoneyId, hasEnoughOccurrences } from './crypto.js'
+import { randomPrivateKey, dateToInt, unitIdToDateInt, investIdToMoneyId, hasEnoughOccurrences } from './crypto.js'
 import { Block, EcoBirthBlock, EcoInitializationBlock, BLOCKTYPE } from './Block.js'
 import {
     SetAdminTransaction, UnsetAdminTransaction,
@@ -185,11 +185,6 @@ export class EcosystemBlockchain extends Blockchain {
         }
     }
 
-    #assertOwner(sk) {
-        if (publicFromPrivate(sk) !== this.getMyPublicKey())
-            throw new UnauthorizedError('Private key does not match blockchain owner.')
-    }
-
     #assertValidRatio(ratio) {
         if (!Number.isInteger(ratio) || ratio < 0)
             throw new InvalidTransactionError('Ratio must be a non-negative integer.')
@@ -307,7 +302,7 @@ export class EcosystemBlockchain extends Blockchain {
     }
 
     receivePayerOrder(ecoSk, tx) {
-        this.#assertOwner(ecoSk)
+        this._assertOwner(ecoSk)
         if (tx.type !== TXTYPE.PAYERORDER || !tx.isValid())
             throw new InvalidTransactionError('Invalid transaction.')
         this.#assertTargetsMe(tx.ecosystem)
@@ -335,7 +330,7 @@ export class EcosystemBlockchain extends Blockchain {
     }
 
     order(ecoSk, targetPk, invests, date = new Date()) {
-        this.#assertOwner(ecoSk)
+        this._assertOwner(ecoSk)
         const allInvestsAvailable = hasEnoughOccurrences(this.lastblock.invests, invests)
         if (!allInvestsAvailable)
             throw new InvalidTransactionError('Ecosystem does not have these invests available.')
@@ -363,7 +358,7 @@ export class EcosystemBlockchain extends Blockchain {
     }
 
     earn(heartSk, actorPk, money, payerOrderSig = null, date = new Date()) {
-        this.#assertOwner(heartSk)
+        this._assertOwner(heartSk)
         const tx = new EarnTransaction(heartSk, actorPk, money, payerOrderSig, date)
         this._addTransaction(tx)
         this.removeMoney(money)
@@ -371,7 +366,7 @@ export class EcosystemBlockchain extends Blockchain {
     }
 
     distributeSalary(heartSk, date = new Date()) {
-        this.#assertOwner(heartSk)
+        this._assertOwner(heartSk)
         const actors = this.getActors()
         const totalRatio = [...actors.values()].reduce((sum, r) => sum + r, 0)
         if (totalRatio === 0) return []

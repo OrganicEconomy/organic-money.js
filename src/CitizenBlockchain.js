@@ -1,7 +1,6 @@
 import { Blockchain } from './Blockchain.js'
 import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from './errors.js'
-import { randomPrivateKey, publicFromPrivate, 
-	dateToInt, buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
+import { randomPrivateKey, dateToInt, buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
 import { CitizenBlock, BirthBlock, InitializationBlock, BLOCKTYPE } from './Block.js'
 import {
 	CreateTransaction, EngageTransaction, PaperTransaction, PayTransaction, PayerOrderTransaction,
@@ -42,7 +41,7 @@ export class CitizenBlockchain extends Blockchain {
 	 * Throw an error if date is in the futur as one cannot create futur money.
 	 */
 	createMoneyAndInvests(privateKey, date = new Date()) {
-		this.#assertOwner(privateKey)
+		this._assertOwner(privateKey)
 		const myPublicKey = this.getMyPublicKey()
 		let startdate = new Date(date)
 
@@ -77,7 +76,7 @@ export class CitizenBlockchain extends Blockchain {
 	 * Add and return the transaction that engage invests of the BLockchain.
 	 */
 	engageInvests(myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
-		this.#assertOwner(myPrivateKey)
+		this._assertOwner(myPrivateKey)
 		const myPublicKey = this.getMyPublicKey()
 		if (dailyAmount > this.getAffordableInvestAmount(date)) {
 			throw new InvalidTransactionError('Unsufficient funds.')
@@ -93,7 +92,7 @@ export class CitizenBlockchain extends Blockchain {
 	 * Add and return the transaction that engage money of the BLockchain.
 	 */
 	engageMoney(myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
-		this.#assertOwner(myPrivateKey)
+		this._assertOwner(myPrivateKey)
 		const myPublicKey = this.getMyPublicKey()
 		if (dailyAmount > this.getAffordableMoneyAmount(date)) {
 			throw new InvalidTransactionError('Unsufficient funds.')
@@ -149,15 +148,10 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	payerOrder(mySk, ecosystemPk, supplierPk, invests, date = new Date()) {
-		this.#assertOwner(mySk)
+		this._assertOwner(mySk)
 		const tx = new PayerOrderTransaction(mySk, supplierPk, invests, ecosystemPk, date)
 		this._addTransaction(tx)
 		return tx
-	}
-
-	#assertOwner(sk) {
-		if (publicFromPrivate(sk) !== this.getMyPublicKey())
-			throw new UnauthorizedError('Private key does not match blockchain owner.')
 	}
 
 	#assertValidRatio(ratio) {
@@ -171,21 +165,21 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	setAdmin(mySk, ecosystemPk, targetPk, date = new Date()) {
-		this.#assertOwner(mySk)
+		this._assertOwner(mySk)
 		const tx = new SetAdminTransaction(mySk, targetPk, ecosystemPk, date)
 		this._addTransaction(tx)
 		return tx
 	}
 
 	unsetAdmin(mySk, ecosystemPk, targetPk, date = new Date()) {
-		this.#assertOwner(mySk)
+		this._assertOwner(mySk)
 		const tx = new UnsetAdminTransaction(mySk, targetPk, ecosystemPk, date)
 		this._addTransaction(tx)
 		return tx
 	}
 
 	setActor(mySk, ecosystemPk, targetPk, ratio, date = new Date()) {
-		this.#assertOwner(mySk)
+		this._assertOwner(mySk)
 		this.#assertValidRatio(ratio)
 		const tx = new SetActorTransaction(mySk, targetPk, ratio, ecosystemPk, date)
 		this._addTransaction(tx)
@@ -193,14 +187,14 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	unsetActor(mySk, ecosystemPk, targetPk, date = new Date()) {
-		this.#assertOwner(mySk)
+		this._assertOwner(mySk)
 		const tx = new UnsetActorTransaction(mySk, targetPk, ecosystemPk, date)
 		this._addTransaction(tx)
 		return tx
 	}
 
 	setPayer(mySk, ecosystemPk, targetPk, cap, date = new Date()) {
-		this.#assertOwner(mySk)
+		this._assertOwner(mySk)
 		this.#assertValidCap(cap)
 		const tx = new SetPayerTransaction(mySk, targetPk, cap, ecosystemPk, date)
 		this._addTransaction(tx)
@@ -208,14 +202,14 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	unsetPayer(mySk, ecosystemPk, targetPk, date = new Date()) {
-		this.#assertOwner(mySk)
+		this._assertOwner(mySk)
 		const tx = new UnsetPayerTransaction(mySk, targetPk, ecosystemPk, date)
 		this._addTransaction(tx)
 		return tx
 	}
 
 	pay(mySk, targetPk, amount, d = new Date()) {
-		this.#assertOwner(mySk)
+		this._assertOwner(mySk)
 		const money = this.getAvailableMoney(amount)
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')
@@ -236,7 +230,7 @@ export class CitizenBlockchain extends Blockchain {
 	 * Throws an error if given date is before last transaction date
 	 */
 	generatePaper(myPrivateKey, amount, referentPublicKey, date = new Date()) {
-		this.#assertOwner(myPrivateKey)
+		this._assertOwner(myPrivateKey)
 		const money = this.getAvailableMoney(amount);
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')

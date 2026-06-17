@@ -1,5 +1,5 @@
 import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from './errors.js'
-import { intToDate, dateToInt, infinityDate } from './crypto.js'
+import { intToDate, dateToInt, infinityDate, publicFromPrivate } from './crypto.js'
 
 import { TXTYPE } from './Transaction.js'
 import { Block, BlockMaker, BLOCKTYPE } from './Block.js'
@@ -261,6 +261,11 @@ export class Blockchain {
 		return result
 	}
 
+	_assertOwner(sk) {
+		if (publicFromPrivate(sk) !== this.getMyPublicKey())
+			throw new UnauthorizedError('Private key does not match blockchain owner.')
+	}
+
 	_createNewBlock(data) {
 		return new Block({ ...data, t: BLOCKTYPE.ECOSYSTEM })
 	}
@@ -300,6 +305,7 @@ export class Blockchain {
 	 * Sign the last block of the Blockchain
 	 */
 	closeLastBlock(privateKey, date=new Date()) {
+		if (this.getMyPublicKey() !== null) this._assertOwner(privateKey)
 		return this.lastblock.sign(privateKey, date)
 	}
 

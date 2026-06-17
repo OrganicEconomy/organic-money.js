@@ -756,5 +756,17 @@ describe('Blockchain', () => {
 			assert.notInclude(result.map(tx => tx.signature), tx1.signature)
 		})
 	})
+})
+
+describe('closeLastBlock', () => {
+	it('Should throw UnauthorizedError if the private key does not match the blockchain owner.', () => {
+		const createTx = makeTransaction({ type: TXTYPE.CREATE })
+		const bc = new Blockchain([makeBlockObj({ transactions: [createTx] })])
+
+		assert.throws(
+			() => bc.closeLastBlock(targetSk),
+			UnauthorizedError
+		)
+	})
 
 })

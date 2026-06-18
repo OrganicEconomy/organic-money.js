@@ -398,6 +398,13 @@ describe('EcosystemBlockchain', () => {
 
             assert.throws(() => ecoUnsetAdmin(bc,mySk, adminPk, DATE2))
         })
+
+        it('unsetAdmin should throw if target is not currently an admin (even when there are multiple admins).', () => {
+            const bc = makeStartedEco()
+            ecoSetAdmin(bc, adminSk, myPk, DATE2)  // 2 admins so the size check doesn't fire
+
+            assert.throws(() => ecoUnsetAdmin(bc, adminSk, referentPk, DATE2), InvalidTransactionError)
+        })
     })
 
     describe('setActor / unsetActor authorization', () => {
@@ -413,6 +420,12 @@ describe('EcosystemBlockchain', () => {
             const bc = makeStartedEco()
 
             assert.throws(() => ecoSetPayer(bc,referentSk, referentPk, 10, DATE2))
+        })
+
+        it('unsetPayer should throw if target is not currently a payer.', () => {
+            const bc = makeStartedEco()
+
+            assert.throws(() => ecoUnsetPayer(bc, adminSk, referentPk, DATE2), InvalidTransactionError)
         })
     })
 

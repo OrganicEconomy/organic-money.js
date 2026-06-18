@@ -5,8 +5,8 @@ import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } fr
 import { Blockchain } from '../src/Blockchain.js';
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js';
 import { mySk, myPk, targetSk, targetPk, makeBlock, makeBlockObj, makeTransaction, referentSk, referentPk } from './testUtils.js'
-import { dateToInt, intToDate, randomPrivateKey, buildInvestIndexes } from '../src/crypto.js'
-import { TXTYPE, PayerOrderTransaction, EarnTransaction, PayTransaction } from '../src/Transaction.js'
+import { dateToInt, intToDate, randomPrivateKey, buildInvestIndexes, buildMoneyIndexes } from '../src/crypto.js'
+import { TXTYPE, PayerOrderTransaction, EarnTransaction, PayTransaction, CreateTransaction } from '../src/Transaction.js'
 
 
 describe('CitizenBlockchain', () => {
@@ -1183,6 +1183,14 @@ describe('CitizenBlockchain', () => {
 
 			assert.equal(result, tx)
 		})
+
+		it('Should throw if the payer is the same citizen (self-pay must use pay()).', () => {
+			const bc = level3CitizenBlockchain()
+
+			const tx = new PayTransaction(mySk, myPk, DATE2, [20250101000])
+
+			assert.throws(() => bc.receivePay(tx), InvalidTransactionError)
+		})
 	})
 
 	describe('receiveEarn', () => {
@@ -1425,6 +1433,59 @@ describe('CitizenBlockchain', () => {
 			const banList = new Map([[myPk, new Date('2025-01-01')]])
 
 			assert.throws(() => bc.assertIsValid(0, banList), InvalidBlockchainError, /banned/i)
+		})
+
+		it('Should not throw for a CREATE where money and invests span different days due to heterogeneous engagement (some days partially or fully engaged).', () => {
+			// level=1 over 3 days.
+			// day2 invests are fully engaged → no invests from day2 in the CREATE.
+			// day3 money is fully engaged    → no money from day3 in the CREATE.
+			// Valid CREATE: money=[day1_m, day2_m], invests=[day1_i, day3_i]
+			const D1 = new Date('2025-01-01')
+			const D2 = new Date('2025-01-02')
+			const D3 = new Date('2025-01-03')
+			const heterogeneousCreate = new CreateTransaction(mySk,
+				[...buildMoneyIndexes(D1, 1), ...buildMoneyIndexes(D2, 1)],
+				[...buildInvestIndexes(D1, 1), ...buildInvestIndexes(D3, 1)],
+				D3
+			)
+			const oldest = makeBlock({ date: D1, experience: 0, transactions: [], signed: true })
+			const newest = makeBlock({ date: D3, previousHash: oldest.signature, experience: 0, transactions: [heterogeneousCreate], signed: true })
+			const bc = new CitizenBlockchain([newest.export(), oldest.export()])
+
+			assert.doesNotThrow(() => bc.assertIsValid())
+		})
+
+		it('Should not throw for a CREATE where money.length !== invests.length due to full-day engagement on one side.', () => {
+			// level=1. day2 invests are all engaged → 2 money items (day1+day2) but only 1 invest (day1).
+			const D1 = new Date('2025-01-01')
+			const D2 = new Date('2025-01-02')
+			const asymmetricCreate = new CreateTransaction(mySk,
+				[...buildMoneyIndexes(D1, 1), ...buildMoneyIndexes(D2, 1)],
+				[...buildInvestIndexes(D1, 1)],
+				D2
+			)
+			const oldest = makeBlock({ date: D1, experience: 0, transactions: [], signed: true })
+			const newest = makeBlock({ date: D2, previousHash: oldest.signature, experience: 0, transactions: [asymmetricCreate], signed: true })
+			const bc = new CitizenBlockchain([newest.export(), oldest.export()])
+
+			assert.doesNotThrow(() => bc.assertIsValid())
+		})
+
+		it('Should throw if a CREATE has the right total invest count but all invests concentrated on fewer days than the money (wrong day distribution).', () => {
+			const D1 = new Date('2025-01-01')
+			const D2 = new Date('2025-01-02')
+			// level=1, money from 2 days → 2 items. Invests should be 1 per day = 2 total, one per day.
+			// Attack: 2 invests both from day 1 → same total but wrong distribution.
+			const maliciousCreate = new CreateTransaction(mySk,
+				[...buildMoneyIndexes(D1, 1), ...buildMoneyIndexes(D2, 1)],
+				[...buildInvestIndexes(D1, 2)],
+				D2
+			)
+			const oldest = makeBlock({ date: D1, experience: 0, transactions: [], signed: true })
+			const newest = makeBlock({ date: D2, previousHash: oldest.signature, experience: 0, transactions: [maliciousCreate], signed: true })
+			const bc = new CitizenBlockchain([newest.export(), oldest.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /level/i)
 		})
 
 		it('Should throw a specific message if two CREATE transactions across the chain reuse the same date, producing overlapping money ids.', () => {

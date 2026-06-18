@@ -225,6 +225,7 @@ export class EcosystemBlockchain extends Blockchain {
 
     receiveUnsetAdmin(tx) {
         this.#assertReceivable(tx, TXTYPE.UNSETADMIN)
+        if (!this.isAdmin(tx.target)) throw new InvalidTransactionError('Target is not an admin.')
         if (this.getAdmins().size <= 1) throw new InvalidTransactionError('Cannot remove the last admin.')
         this._addTransaction(tx)
         return tx
@@ -264,6 +265,7 @@ export class EcosystemBlockchain extends Blockchain {
 
     receiveUnsetPayer(tx) {
         this.#assertReceivable(tx, TXTYPE.UNSETPAYER)
+        if (!this.isPayer(tx.target)) throw new InvalidTransactionError('Target is not a payer.')
         this._addTransaction(tx)
         return tx
     }

@@ -116,6 +116,8 @@ export class CitizenBlockchain extends Blockchain {
 			throw new InvalidTransactionError('Invalid transaction')
 		if (payTx.target !== this.getMyPublicKey())
 			throw new InvalidTransactionError('Transaction not targeting this citizen')
+		if (payTx.signer === this.getMyPublicKey())
+			throw new InvalidTransactionError('Self-pay: use pay() instead of receivePay()')
 		this._addTransaction(payTx)
 		this.lastblock.experience += payTx.money.length
 		return payTx
@@ -351,8 +353,9 @@ export class CitizenBlockchain extends Blockchain {
 			for (const tx of chronological) {
 				if (tx.type === TXTYPE.CREATE) {
 					const level = Math.floor(Math.cbrt(runningExperience)) + 1
-					const numDays = new Set(tx.money.map(id => unitIdToDateInt(id))).size
-					if (tx.money.length !== level * numDays || tx.invests.length !== level * numDays)
+					const moneyDays = new Set(tx.money.map(id => unitIdToDateInt(id)))
+					const investDays = new Set(tx.invests.map(id => unitIdToDateInt(id)))
+					if (tx.money.length !== level * moneyDays.size || tx.invests.length !== level * investDays.size)
 						throw new InvalidBlockchainError(`CREATE transaction at block index ${i} mints the wrong amount of money/invests for the level implied by accumulated experience.`)
 				}
 				if (tx.type === TXTYPE.PAY && tx.target === ownerKey) runningExperience += tx.money.length

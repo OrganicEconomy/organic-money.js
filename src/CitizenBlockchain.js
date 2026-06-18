@@ -1,6 +1,6 @@
 import { Blockchain } from './Blockchain.js'
 import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from './errors.js'
-import { randomPrivateKey, dateToInt, buildInvestIndexes, buildMoneyIndexes } from './crypto.js'
+import { randomPrivateKey, dateToInt, buildInvestIndexes, buildMoneyIndexes, unitIdToDateInt } from './crypto.js'
 import { CitizenBlock, BirthBlock, InitializationBlock, BLOCKTYPE } from './Block.js'
 import {
 	CreateTransaction, EngageTransaction, PaperTransaction, PayTransaction, PayerOrderTransaction,
@@ -351,7 +351,8 @@ export class CitizenBlockchain extends Blockchain {
 			for (const tx of chronological) {
 				if (tx.type === TXTYPE.CREATE) {
 					const level = Math.floor(Math.cbrt(runningExperience)) + 1
-					if (tx.money.length !== level || tx.invests.length !== level)
+					const numDays = new Set(tx.money.map(id => unitIdToDateInt(id))).size
+					if (tx.money.length !== level * numDays || tx.invests.length !== level * numDays)
 						throw new InvalidBlockchainError(`CREATE transaction at block index ${i} mints the wrong amount of money/invests for the level implied by accumulated experience.`)
 				}
 				if (tx.type === TXTYPE.PAY && tx.target === ownerKey) runningExperience += tx.money.length

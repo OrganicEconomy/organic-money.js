@@ -221,6 +221,25 @@ Generic checks (any `Blockchain`):
 
 `EcosystemBlockchain` additionally checks that the current state always has at least one admin and one actor with a ratio > 0, and (full history only) that replaying every role transaction reproduces the current admins/actors/payers exactly, with no `PAYERORDER` ever exceeding the payer cap in effect at the time, and that no `PAYERORDER` is exercised more than once (double-spend check via `EARN.x`).
 
+**Replay protection scope** — `_addTransaction` scans only the 3 most recent blocks for duplicate transaction signatures. This is a best-effort local guard against accidental replays, not a security boundary. The authoritative replay check is `assertIsValid`, which scans the entire chain. Always call `assertIsValid` after deserializing a chain received from an untrusted source.
+
+### Server responsibilities
+
+The library verifies only what it can see locally. Two classes of check are intentionally delegated to the server layer:
+
+**Cross-chain asset validation** — `receiveInvests`, `receivePay`, and `receiveMoney` accept any transaction that is cryptographically valid (correct signature, well-formed fields). The library does **not** verify that the sender actually holds the assets they claim to transfer, because it has no access to the sender's blockchain at call time. Before calling these methods, the server must:
+
+1. Load and `assertIsValid()` the sender's blockchain.
+2. Confirm the incoming transaction exists in the sender's history:
+   ```js
+   const known = senderBlockchain.getHistory().some(tx => tx.signature === incomingTx.signature)
+   if (!known) throw new Error('Transaction not found in sender blockchain.')
+   ```
+
+Without this check, a malicious actor could sign an `ENGAGE` or `PAY` transaction with arbitrary asset IDs they do not own and inject phantom assets into an ecosystem.
+
+**Key legitimacy** — `validateAccount` accepts any key as the referent and does not verify that the referent holds a valid `CitizenBlockchain`. Enforcing that only real, validated citizens can vouch for newcomers is a server-side concern.
+
 ---
 
 ## Installation
@@ -418,10 +437,10 @@ eco.isPayer(alicePk)  // boolean
 
 ```js
 // Count invests whose date has been reached (usable in orders today)
-eco.getAffordableInvestsAmount()
+eco.getAffordableInvestAmount()
 
 // Count invests that will be mature by a future date
-eco.getAffordableInvestsAmount(new Date('2025-03-01'))
+eco.getAffordableInvestAmount(new Date('2025-03-01'))
 ```
 
 #### Receive citizen investments

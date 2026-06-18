@@ -1,7 +1,7 @@
 import { encode, decode } from 'msgpack-lite'
 import { sha256 } from 'ethereum-cryptography/sha256.js'
 
-import { buildInvestIndexes, buildMoneyIndexes, dateToInt, intToDate, publicFromPrivate } from "./crypto.js"
+import { buildInvestIndexes, buildMoneyIndexes, dateToInt, intToDate, publicFromPrivate, verifySignature } from "./crypto.js"
 import { hexToBytes, toHex } from 'ethereum-cryptography/utils.js'
 import { secp256k1 } from 'ethereum-cryptography/secp256k1.js'
 import { Blockchain } from './Blockchain.js'
@@ -122,7 +122,7 @@ export class Transaction {
                 this.date <= new Date() &&
                 Object.prototype.toString.call(this.money) == '[object Array]' &&
                 Object.prototype.toString.call(this.invests) == '[object Array]' &&
-                secp256k1.verify(this.signature, this.hash(), this.signer)
+                verifySignature(this.hash(), this.signature, this.signer)
         } catch {
             return false
         }
@@ -700,6 +700,7 @@ export class PayerOrderTransaction extends Transaction {
         return super.isValid() &&
             this.type === TXTYPE.PAYERORDER &&
             this.money.length === 0 &&
+            this.invests.length > 0 &&
             !! this.target &&
             this.target.length === 66 &&
             !! this.ecosystem &&

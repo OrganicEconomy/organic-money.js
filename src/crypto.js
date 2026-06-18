@@ -33,7 +33,7 @@ export function publicFromPrivate(privateKey) {
 }
 
 export function dateToInt(date) {
-    return +('' + date.getFullYear() + ("0" + (date.getMonth() + 1)).slice(-2) + ("0" + date.getDate()).slice(-2))
+    return +('' + date.getUTCFullYear() + ("0" + (date.getUTCMonth() + 1)).slice(-2) + ("0" + date.getUTCDate()).slice(-2))
 }
 
 export function intToDate(dateint) {

@@ -76,7 +76,7 @@ export class EcosystemBlockchain extends Blockchain {
     isActor(pk)  { return this.getActors().has(pk) }
     isPayer(pk)  { return this.getPayers().has(pk) }
 
-    getAffordableInvestsAmount(date = new Date()) {
+    getAffordableInvestAmount(date = new Date()) {
         const dateInt = dateToInt(date)
         return this.lastblock.invests.filter(i => unitIdToDateInt(i) <= dateInt).length
     }
@@ -234,6 +234,7 @@ export class EcosystemBlockchain extends Blockchain {
 
     receiveUnsetActor(tx) {
         this.#assertReceivable(tx, TXTYPE.UNSETACTOR)
+        if (!this.isActor(tx.target)) throw new InvalidTransactionError('Target is not an actor.')
         if (this.isAdmin(tx.target)) throw new InvalidTransactionError('Cannot remove actor who is still admin.')
         if (this.isPayer(tx.target)) throw new InvalidTransactionError('Cannot remove actor who is still payer.')
         const actorRatio = this.getActors().get(tx.target)
@@ -336,12 +337,13 @@ export class EcosystemBlockchain extends Blockchain {
         const allInvestsMature = invests.every(i => unitIdToDateInt(i) <= orderDateInt)
         if (!allInvestsMature)
             throw new InvalidTransactionError('Some invests are not yet available.')
+        const recentTxs = this.getHistory(3)
         const consumedPayerOrderSigs = new Set(
-            this.lastblock.transactions
+            recentTxs
                 .filter(tx => tx.type === TXTYPE.EARN && tx.x)
                 .map(tx => tx.x)
         )
-        const payerOrder = this.lastblock.transactions.find(tx =>
+        const payerOrder = recentTxs.find(tx =>
             tx.type === TXTYPE.PAYERORDER &&
             tx.target === targetPk &&
             !consumedPayerOrderSigs.has(tx.signature) &&

@@ -699,10 +699,10 @@ describe('EcosystemBlockchain', () => {
         })
     })
 
-    describe('getAffordableInvestsAmount', () => {
+    describe('getAffordableInvestAmount', () => {
         it('Should return 0 when there are no invests.', () => {
             const bc = makeStartedEco()
-            assert.equal(bc.getAffordableInvestsAmount(DATE2), 0)
+            assert.equal(bc.getAffordableInvestAmount(DATE2), 0)
         })
 
         it('Should count only invests whose date has been reached.', () => {
@@ -711,13 +711,13 @@ describe('EcosystemBlockchain', () => {
                 ...buildInvestIndexes(DATE1, 2), // mature at DATE2
                 ...buildInvestIndexes(DATE3, 2)  // not yet mature at DATE2
             ]
-            assert.equal(bc.getAffordableInvestsAmount(DATE2), 2)
+            assert.equal(bc.getAffordableInvestAmount(DATE2), 2)
         })
 
         it('Should count invests whose date is before or equal to the given date.', () => {
             const bc = makeStartedEco()
             bc.lastblock.invests = buildInvestIndexes(DATE2, 3)
-            assert.equal(bc.getAffordableInvestsAmount(DATE2), 3)
+            assert.equal(bc.getAffordableInvestAmount(DATE2), 3)
         })
 
         it('Should count all invests when date is in the future.', () => {
@@ -727,7 +727,7 @@ describe('EcosystemBlockchain', () => {
                 ...buildInvestIndexes(DATE2, 1),
                 ...buildInvestIndexes(DATE3, 1)
             ]
-            assert.equal(bc.getAffordableInvestsAmount(DATE3), 3)
+            assert.equal(bc.getAffordableInvestAmount(DATE3), 3)
         })
     })
 

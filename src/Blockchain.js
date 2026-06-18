@@ -86,6 +86,9 @@ export class Blockchain {
 		if (this.getHistory(3).filter(element => element.signature === transaction.signature).length > 0) {
 			throw new InvalidTransactionError('Transaction duplicate ' + transaction.signature)
 		}
+		if (!this.lastClosedBlock) {
+			throw new InvalidTransactionError('No signed block exists to anchor transaction date.')
+		}
 		if (this.lastClosedBlock.closedate > transaction.date) {
 			throw new InvalidTransactionError('Invalid date')
 		}

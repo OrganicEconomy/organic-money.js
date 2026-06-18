@@ -4,7 +4,7 @@ import { hexToBytes, toHex } from 'ethereum-cryptography/utils.js'
 import { MerkleTree } from 'merkletreejs'
 import { secp256k1 } from 'ethereum-cryptography/secp256k1.js'
 
-import { buildInvestIndexes, buildMoneyIndexes, dateToInt, infinityDate, intToDate, publicFromPrivate } from "./crypto.js"
+import { buildInvestIndexes, buildMoneyIndexes, dateToInt, infinityDate, intToDate, publicFromPrivate, verifySignature } from "./crypto.js"
 import { CreateTransaction, InitTransaction, SetAdminTransaction, SetActorTransaction, TransactionMaker, TXTYPE } from './Transaction.js'
 import { UnauthorizedError, InvalidBlockchainError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
@@ -205,11 +205,7 @@ export class Block {
     }
 
     isSigned() {
-        try {
-            return secp256k1.verify(this.signature, this.hash(), this.signer)
-        } catch {
-            return false
-        }
+        return verifySignature(this.hash(), this.signature, this.signer)
     }
 
     /**

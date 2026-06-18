@@ -116,11 +116,20 @@ export class EcosystemBlockchain extends Blockchain {
             for (const block of chronologicalBlocks) {
                 for (const tx of block.transactions.slice().reverse()) {
                     if (tx.type === TXTYPE.SETADMIN) admins.add(tx.target)
-                    if (tx.type === TXTYPE.UNSETADMIN) admins.delete(tx.target)
+                    if (tx.type === TXTYPE.UNSETADMIN) {
+                        if (!admins.has(tx.target)) throw new InvalidBlockchainError('UNSETADMIN targets a non-admin.')
+                        admins.delete(tx.target)
+                    }
                     if (tx.type === TXTYPE.SETACTOR) replayedActors.set(tx.target, tx.ratio)
-                    if (tx.type === TXTYPE.UNSETACTOR) replayedActors.delete(tx.target)
+                    if (tx.type === TXTYPE.UNSETACTOR) {
+                        if (!replayedActors.has(tx.target)) throw new InvalidBlockchainError('UNSETACTOR targets a non-actor.')
+                        replayedActors.delete(tx.target)
+                    }
                     if (tx.type === TXTYPE.SETPAYER) payerCaps.set(tx.target, tx.cap)
-                    if (tx.type === TXTYPE.UNSETPAYER) payerCaps.delete(tx.target)
+                    if (tx.type === TXTYPE.UNSETPAYER) {
+                        if (!payerCaps.has(tx.target)) throw new InvalidBlockchainError('UNSETPAYER targets a non-payer.')
+                        payerCaps.delete(tx.target)
+                    }
                     if (tx.type === TXTYPE.PAYERORDER) {
                         const cap = payerCaps.get(tx.signer)
                         if (cap === undefined) throw new InvalidBlockchainError('A PAYERORDER was issued by a non-payer at the time it was recorded.')

@@ -1343,5 +1343,32 @@ describe('EcosystemBlockchain', () => {
 
             assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /replayed/i)
         })
+
+        it('Should throw if an UNSETACTOR targets a key that was never an actor.', () => {
+            const bc = makeStartedEco()
+            // referentPk is never set as actor in makeStartedEco — inject directly to bypass runtime guard
+            const tx = makeAdminBc(adminSk).unsetActor(adminSk, bc.getMyPublicKey(), referentPk, DATE2)
+            bc._addTransaction(tx)
+
+            assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /non-actor/i)
+        })
+
+        it('Should throw if an UNSETADMIN targets a key that was never an admin.', () => {
+            const bc = makeStartedEco()
+            // mySk/myPk is the eco owner, not an admin — inject directly to bypass runtime guard
+            const tx = makeAdminBc(adminSk).unsetAdmin(adminSk, bc.getMyPublicKey(), myPk, DATE2)
+            bc._addTransaction(tx)
+
+            assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /non-admin/i)
+        })
+
+        it('Should throw if an UNSETPAYER targets a key that was never a payer.', () => {
+            const bc = makeStartedEco()
+            // referentPk is never set as payer in makeStartedEco — inject directly to bypass runtime guard
+            const tx = makeAdminBc(adminSk).unsetPayer(adminSk, bc.getMyPublicKey(), referentPk, DATE2)
+            bc._addTransaction(tx)
+
+            assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /non-payer/i)
+        })
     })
 })

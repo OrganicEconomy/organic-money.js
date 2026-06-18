@@ -198,10 +198,9 @@ export class CreateTransaction extends Transaction {
         return '[CreateTransaction]'
     }
 
+    // money and invests can both be empty if all items were engaged before this CREATE
     isValid() {
         return super.isValid() &&
-        this.invests.length > 0 &&
-        this.money.length > 0 &&
         this.type === TXTYPE.CREATE &&
         this.target === ""
     }

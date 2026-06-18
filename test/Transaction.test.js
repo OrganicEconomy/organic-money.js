@@ -448,7 +448,7 @@ describe('CreateTransaction', () => {
     
     describe('isValid', () => {
 
-        it('Should return false if money is an empty array.', () => {
+        it('Should return true if money is empty (all money was engaged before CREATE).', () => {
             const tx = new CreateTransaction(makeTransactionObj({
                 type: TXTYPE.CREATE,
                 target: "",
@@ -458,10 +458,10 @@ describe('CreateTransaction', () => {
 
             const result = tx.isValid()
 
-            assert.isFalse(result)
+            assert.isTrue(result)
         })
 
-        it('Should return false if invests is an empty array.', () => {
+        it('Should return true if invests is empty (all invests were engaged before CREATE).', () => {
             const tx = new CreateTransaction(makeTransactionObj({
                 type: TXTYPE.CREATE,
                 target: "",
@@ -471,7 +471,7 @@ describe('CreateTransaction', () => {
 
             const result = tx.isValid()
 
-            assert.isFalse(result)
+            assert.isTrue(result)
         })
 
         it('Should return false if type is NOT TXTYPE.CREATE.', () => {

@@ -1,7 +1,7 @@
 import { encode, decode } from 'msgpack-lite'
 import { sha256 } from 'ethereum-cryptography/sha256.js'
 
-import { buildInvestIndexes, buildMoneyIndexes, dateToInt, intToDate, publicFromPrivate, verifySignature } from "./crypto.js"
+import { buildInvestIndexes, buildMoneyIndexes, dateToInt, intToDate, publicFromPrivate, verifySignature, packUnitIds, unpackUnitIds } from "./crypto.js"
 import { hexToBytes, toHex } from 'ethereum-cryptography/utils.js'
 import { secp256k1 } from 'ethereum-cryptography/secp256k1.js'
 import { Blockchain } from './Blockchain.js'
@@ -67,8 +67,8 @@ export class Transaction {
         this.date = intToDate(txObj.d)
         this.signer = txObj.s
         this.target = txObj.p
-        this.money = txObj.m
-        this.invests = txObj.i
+        this.money = unpackUnitIds(txObj.m)
+        this.invests = unpackUnitIds(txObj.i)
         this.type = txObj.t
         this.signature = txObj.h
     }
@@ -100,8 +100,8 @@ export class Transaction {
     export() {
         return {
             d: dateToInt(this.date),
-            m: this.money,
-            i: this.invests,
+            m: packUnitIds(this.money),
+            i: packUnitIds(this.invests),
             s: this.signer,
             t: this.type,
             p: this.target,
@@ -150,8 +150,8 @@ export class InitTransaction extends Transaction {
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.INIT,
-                m: [],
-                i: [],
+                m: packUnitIds([]),
+                i: packUnitIds([]),
                 d: dateToInt(birthdate),
                 s: publicFromPrivate(objOrSk),
                 p: name,
@@ -183,8 +183,8 @@ export class CreateTransaction extends Transaction {
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.CREATE,
-                m: money,
-                i: invests,
+                m: packUnitIds(money),
+                i: packUnitIds(invests),
                 d: dateToInt(date || new Date()),
                 s: publicFromPrivate(objOrSk),
                 p: "",
@@ -214,8 +214,8 @@ export class PayTransaction extends Transaction {
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.PAY,
-                m: money,
-                i: [],
+                m: packUnitIds(money),
+                i: packUnitIds([]),
                 d: dateToInt(date),
                 s: publicFromPrivate(objOrSk),
                 p: targetPk,
@@ -247,8 +247,8 @@ export class EngageTransaction extends Transaction {
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.ENGAGE,
-                m: money,
-                i: invests,
+                m: packUnitIds(money),
+                i: packUnitIds(invests),
                 d: dateToInt(date),
                 s: publicFromPrivate(objOrSk),
                 p: targetPk,
@@ -308,8 +308,8 @@ export class PaperTransaction extends Transaction {
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.PAPER,
-                m: money,
-                i: [],
+                m: packUnitIds(money),
+                i: packUnitIds([]),
                 d: dateToInt(date),
                 s: publicFromPrivate(objOrSk),
                 p: referentPk,
@@ -343,8 +343,8 @@ export class SetAdminTransaction extends Transaction {
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.SETADMIN,
-                m: [],
-                i: [],
+                m: packUnitIds([]),
+                i: packUnitIds([]),
                 d: dateToInt(date || new Date()),
                 s: publicFromPrivate(objOrSk),
                 p: targetPk,
@@ -397,8 +397,8 @@ export class SetActorTransaction extends Transaction {
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.SETACTOR,
-                m: [],
-                i: [],
+                m: packUnitIds([]),
+                i: packUnitIds([]),
                 d: dateToInt(date || new Date()),
                 s: publicFromPrivate(objOrSk),
                 p: targetPk,
@@ -454,8 +454,8 @@ export class SetPayerTransaction extends Transaction {
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.SETPAYER,
-                m: [],
-                i: [],
+                m: packUnitIds([]),
+                i: packUnitIds([]),
                 d: dateToInt(date || new Date()),
                 s: publicFromPrivate(objOrSk),
                 p: targetPk,
@@ -509,8 +509,8 @@ export class UnsetAdminTransaction extends Transaction {
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.UNSETADMIN,
-                m: [],
-                i: [],
+                m: packUnitIds([]),
+                i: packUnitIds([]),
                 d: dateToInt(date || new Date()),
                 s: publicFromPrivate(objOrSk),
                 p: targetPk,
@@ -561,8 +561,8 @@ export class UnsetActorTransaction extends Transaction {
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.UNSETACTOR,
-                m: [],
-                i: [],
+                m: packUnitIds([]),
+                i: packUnitIds([]),
                 d: dateToInt(date || new Date()),
                 s: publicFromPrivate(objOrSk),
                 p: targetPk,
@@ -613,8 +613,8 @@ export class UnsetPayerTransaction extends Transaction {
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.UNSETPAYER,
-                m: [],
-                i: [],
+                m: packUnitIds([]),
+                i: packUnitIds([]),
                 d: dateToInt(date || new Date()),
                 s: publicFromPrivate(objOrSk),
                 p: targetPk,
@@ -665,8 +665,8 @@ export class PayerOrderTransaction extends Transaction {
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.PAYERORDER,
-                m: [],
-                i: invests,
+                m: packUnitIds([]),
+                i: packUnitIds(invests),
                 d: dateToInt(date || new Date()),
                 s: publicFromPrivate(objOrSk),
                 p: targetPk,
@@ -716,8 +716,8 @@ export class EarnTransaction extends Transaction {
             super({
                 v: Blockchain.VERSION,
                 t: TXTYPE.EARN,
-                m: money,
-                i: [],
+                m: packUnitIds(money),
+                i: packUnitIds([]),
                 d: dateToInt(date || new Date()),
                 s: publicFromPrivate(objOrSk),
                 p: targetPk,

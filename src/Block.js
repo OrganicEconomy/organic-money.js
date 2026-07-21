@@ -4,7 +4,7 @@ import { hexToBytes, toHex } from 'ethereum-cryptography/utils.js'
 import { MerkleTree } from 'merkletreejs'
 import { secp256k1 } from 'ethereum-cryptography/secp256k1.js'
 
-import { buildInvestIndexes, buildMoneyIndexes, dateToInt, infinityDate, intToDate, publicFromPrivate, verifySignature } from "./crypto.js"
+import { buildInvestIndexes, buildMoneyIndexes, dateToInt, infinityDate, intToDate, publicFromPrivate, verifySignature, packUnitIds, unpackUnitIds } from "./crypto.js"
 import { CreateTransaction, InitTransaction, SetAdminTransaction, SetActorTransaction, TransactionMaker, TXTYPE } from './Transaction.js'
 import { UnauthorizedError, InvalidBlockchainError } from './errors.js'
 import { Blockchain } from './Blockchain.js'
@@ -48,8 +48,8 @@ export class Block {
         this.previousHash = blockObj.p
         this.signer = blockObj.s
         this.root = blockObj.r
-        this.money = blockObj.m
-        this.invests = blockObj.i
+        this.money = unpackUnitIds(blockObj.m)
+        this.invests = unpackUnitIds(blockObj.i)
         this.type = blockObj.t
         this.signature = blockObj.h
         this.transactions = blockObj.x.map(tx => TransactionMaker.make(tx))
@@ -140,8 +140,8 @@ export class Block {
             p: this.previousHash,
             s: this.signer,
             r: this.root,
-            m: this.money,
-            i: this.invests,
+            m: packUnitIds(this.money),
+            i: packUnitIds(this.invests),
             t: this.type,
             h: this.signature,
             x: this.transactions.map(tx => tx.export())
@@ -301,8 +301,8 @@ export class BirthBlock extends CitizenBlock {
                 p: REF_HASH,
                 s: publicFromPrivate(objOrSk),
                 r: 0,
-                m: [],
-                i: [],
+                m: packUnitIds([]),
+                i: packUnitIds([]),
                 t: BLOCKTYPE.CITIZENBIRTH,
                 e: 0,
                 h: null,
@@ -343,8 +343,8 @@ export class InitializationBlock extends CitizenBlock {
                 p: previousBlock.signature,
                 s: publicFromPrivate(objOrSk),
                 r: 0,
-                m: previousBlock.money,
-                i: previousBlock.invests,
+                m: packUnitIds(previousBlock.money),
+                i: packUnitIds(previousBlock.invests),
                 t: BLOCKTYPE.CITIZENINIT,
                 e: 0,
                 h: null,
@@ -381,8 +381,8 @@ export class EcoBirthBlock extends Block {
                 p: ECOREF_HASH,
                 s: publicFromPrivate(objOrSk),
                 r: 0,
-                m: [],
-                i: [],
+                m: packUnitIds([]),
+                i: packUnitIds([]),
                 t: BLOCKTYPE.ECOSYSTEMBIRTH,
                 h: null,
                 x: []
@@ -422,7 +422,7 @@ export class EcoInitializationBlock extends Block {
                 p: previousBlock.signature,
                 s: publicFromPrivate(objOrSk),
                 r: 0,
-                m: [], i: [], t: BLOCKTYPE.ECOSYSTEMINIT, h: null, x: []
+                m: packUnitIds([]), i: packUnitIds([]), t: BLOCKTYPE.ECOSYSTEMINIT, h: null, x: []
             })
             const roleTxTypes = new Set([TXTYPE.SETADMIN, TXTYPE.SETACTOR, TXTYPE.SETPAYER])
             for (const tx of previousBlock.transactions) {

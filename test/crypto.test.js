@@ -3,7 +3,8 @@ import { assert } from 'chai';
 import { hexToBytes } from 'ethereum-cryptography/utils.js';
 
 import {
-    randomPrivateKey, aesDecrypt, aesEncrypt, dateToInt, intToDate, investIdToMoneyId
+    randomPrivateKey, aesDecrypt, aesEncrypt, dateToInt, intToDate, investIdToMoneyId,
+    packUnitIds, unpackUnitIds
 } from '../src/crypto.js'
 
 
@@ -104,5 +105,46 @@ describe('investIdToMoneyId', () => {
 
     it('Should preserve the date portion unchanged.', () => {
         assert.equal(investIdToMoneyId(202512319005), 20251231005)
+    })
+})
+
+describe('packUnitIds / unpackUnitIds', () => {
+    it('Should round-trip an empty array as an empty string.', () => {
+        assert.equal(packUnitIds([]), '')
+        assert.deepEqual(unpackUnitIds(''), [])
+    })
+
+    it('Should round-trip a single money id.', () => {
+        const ids = [20260721003]
+        assert.deepEqual(unpackUnitIds(packUnitIds(ids)), ids)
+    })
+
+    it('Should round-trip several ids preserving order.', () => {
+        const ids = [20260721000, 20260721001, 20260722005, 20251225010]
+        assert.deepEqual(unpackUnitIds(packUnitIds(ids)), ids)
+    })
+
+    it('Should preserve duplicate ids (legitimately held by different parties).', () => {
+        const ids = [20260721003, 20260721003, 20260721005]
+        assert.deepEqual(unpackUnitIds(packUnitIds(ids)), ids)
+    })
+
+    it('Should round-trip invest ids (the 9 separator is just part of the number).', () => {
+        const ids = [202607219000, 202607219001]
+        assert.deepEqual(unpackUnitIds(packUnitIds(ids)), ids)
+    })
+
+    it('Should round-trip the theoretical maximum id (infinityDate-based invest id).', () => {
+        const ids = [999912319999]
+        assert.deepEqual(unpackUnitIds(packUnitIds(ids)), ids)
+    })
+
+    it('Should produce a much shorter payload than JSON for many ids.', () => {
+        const ids = []
+        for (let i = 0; i < 200; i++) ids.push(20260721000 + i)
+        const packed = packUnitIds(ids)
+        // measured: ~6.7 bytes/id packed vs 12 bytes/id in a JSON array (with separators)
+        assert.isBelow(packed.length / ids.length, 7.5)
+        assert.deepEqual(unpackUnitIds(packed), ids)
     })
 })

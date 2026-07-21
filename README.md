@@ -743,8 +743,8 @@ Every transaction is serialized with short field names for compactness:
   "t": 3,
   "p": "<target public key — 33-byte compressed hex>",
   "s": "<signer public key — 33-byte compressed hex>",
-  "m": [20240614000, 20240614001],
-  "i": [],
+  "m": "BLZvQnA=",
+  "i": "",
   "h": "<DER-encoded SECP256K1 signature (hex)>"
 }
 ```
@@ -756,8 +756,8 @@ Every transaction is serialized with short field names for compactness:
 | `t` | type | Transaction type (1–14) |
 | `p` | target | Recipient's compressed public key |
 | `s` | signer | Sender's compressed public key |
-| `m` | money | Array of money unit IDs |
-| `i` | invests | Array of invest unit IDs |
+| `m` | money | Packed money unit IDs (see below) |
+| `i` | invests | Packed invest unit IDs (see below) |
 | `h` | signature | DER-encoded SECP256K1 signature of the transaction hash |
 
 ### Block wire format
@@ -768,8 +768,8 @@ Every transaction is serialized with short field names for compactness:
   "d": 20240614,
   "p": "<previous block signature (hex)>",
   "s": "<signer public key (hex)>",
-  "m": [20240614000],
-  "i": [202406149000],
+  "m": "BLZvQnA=",
+  "i": "LyBYu4g=",
   "t": 42,
   "r": "<merkle root of transaction signatures (hex)>",
   "h": "<block signature (hex)>",
@@ -783,8 +783,8 @@ Every transaction is serialized with short field names for compactness:
 | `d` | closedate | Date the block was sealed (`YYYYMMDD`) |
 | `p` | previousHash | Signature of the previous block (chain link) |
 | `s` | signer | Block signer's compressed public key |
-| `m` | money | Available (unspent) money unit IDs at seal time |
-| `i` | invests | Available invest unit IDs at seal time |
+| `m` | money | Packed available (unspent) money unit IDs at seal time |
+| `i` | invests | Packed available invest unit IDs at seal time |
 | `t` | total | Economic experience (cumulative money received) — drives level progression |
 | `r` | merkleroot | Merkle root of all transaction signatures in the block |
 | `h` | signature | DER-encoded SECP256K1 signature of the block |
@@ -798,6 +798,10 @@ Invest ID:  YYYYMMDD9XXX      example: 202511129004
 ```
 
 The `9` separator distinguishes invest IDs from money IDs at a glance. Both IDs embed their creation date, making provenance and validity verifiable without external lookups.
+
+### Packed money/invest arrays (`m`, `i`)
+
+On the wire, `m`/`i` are **not** JSON arrays of numbers — a plain decimal array costs 12 bytes per ID (11-12 digits plus a separator), noticeably more than the ~5 bytes of information each ID actually carries. Instead, each ID is packed into 5 big-endian bytes (40 bits comfortably covers every possible money/invest ID), all IDs are concatenated, and the result is base64-encoded into a single string — an empty array is the empty string `""`. This roughly halves the size of a transaction or block on the wire, which matters most for QR-encoded paper bills. `packUnitIds`/`unpackUnitIds` (`src/crypto.js`) implement this; `Transaction`/`Block` pack on `export()` and unpack in their constructor, so `this.money`/`this.invests` are always plain number arrays in memory — only the serialized JSON form is packed. Order and duplicates are preserved (the same ID can legitimately be held by different parties). Implemented with `btoa`/`atob` rather than `Buffer` so it runs identically in Node and the browser.
 
 ### Special block hashes
 

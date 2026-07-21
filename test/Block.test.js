@@ -4,7 +4,7 @@ import { assert } from 'chai';
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
 
 import { Block, CitizenBlock, BirthBlock, REF_HASH, InitializationBlock, EcoBirthBlock, EcoInitializationBlock, ECOREF_HASH, BlockMaker, BLOCKTYPE } from '../src/Block.js';
-import { buildInvestIndexes, buildMoneyIndexes, dateToInt, infinityDate, intToDate } from '../src/crypto.js';
+import { buildInvestIndexes, buildMoneyIndexes, dateToInt, infinityDate, intToDate, packUnitIds } from '../src/crypto.js';
 import { makeBlockObj, makeBlock, makeTransactions, makeTransaction, referentPk, targetPk, targetSk, mySk, referentSk, myPk } from './testUtils.js';
 import { CreateTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, Transaction, TXTYPE } from '../src/Transaction.js';
 import { signHash } from '../src/crypto.js';
@@ -21,8 +21,8 @@ describe('Block', () => {
                 p: 'previousHash',
                 s: 'signer',
                 r: 'merkleroot',
-                m: [20251226000, 20251226001],
-                i: [202512269000, 202512269001],
+                m: packUnitIds([20251226000, 20251226001]),
+                i: packUnitIds([202512269000, 202512269001]),
                 t: BLOCKTYPE.ECOSYSTEM,
                 h: 'signature',
                 x: []
@@ -49,8 +49,8 @@ describe('Block', () => {
                 p: 'previousHash',
                 s: 'signer',
                 r: 'merkleroot',
-                m: [20251226000, 20251226001],
-                i: [202512269000, 202512269001],
+                m: packUnitIds([20251226000, 20251226001]),
+                i: packUnitIds([202512269000, 202512269001]),
                 t: BLOCKTYPE.ECOSYSTEM,
                 h: 'signature',
                 x: []
@@ -304,8 +304,8 @@ describe('Block', () => {
                 p: 'target',
                 s: 'signer',
                 r: 'merkleroot',
-                m: [20251226000, 20251226001],
-                i: [202512269000, 202512269001],
+                m: packUnitIds([20251226000, 20251226001]),
+                i: packUnitIds([202512269000, 202512269001]),
                 t: BLOCKTYPE.ECOSYSTEM,
                 h: 'signature',
                 x: []

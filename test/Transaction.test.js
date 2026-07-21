@@ -4,7 +4,7 @@ import { assert } from 'chai';
 import { CreateTransaction, EarnTransaction, EngageTransaction, InitTransaction, PaperTransaction, PayerOrderTransaction, PayTransaction, SetActorTransaction, SetAdminTransaction, SetPayerTransaction, UnsetAdminTransaction, UnsetActorTransaction, UnsetPayerTransaction, Transaction, TransactionMaker, TXTYPE } from '../src/Transaction.js';
 import { makeTransactionObj, makeTransaction, mySk, myPk, referentPk, targetPk, targetSk } from './testUtils.js';
 import { bytesToHex } from 'ethereum-cryptography/utils.js';
-import { buildMoneyIndexes, buildInvestIndexes } from '../src/crypto.js';
+import { buildMoneyIndexes, buildInvestIndexes, packUnitIds } from '../src/crypto.js';
 import { Blockchain } from '../src/Blockchain.js';
 
 describe('Transaction', () => {
@@ -164,8 +164,8 @@ describe('Transaction', () => {
                 d: 20251226,
                 p: 'target',
                 s: 'signer',
-                m: [20251226000, 20251226001],
-                i: [202512269000, 202512269001],
+                m: packUnitIds([20251226000, 20251226001]),
+                i: packUnitIds([202512269000, 202512269001]),
                 t: 'type',
                 h: 'signature'
             }
@@ -224,7 +224,8 @@ describe('Transaction', () => {
         })
 
         it('Should return false if money is NOT an array.', () => {
-            const tx = new Transaction(makeTransactionObj({ type: TXTYPE.INIT, money: 12 }))
+            const tx = new Transaction(makeTransactionObj({ type: TXTYPE.INIT }))
+            tx.money = 12
 
             const result = tx.isValid()
 
@@ -232,7 +233,8 @@ describe('Transaction', () => {
         })
 
         it('Should return false if invests is NOT an array.', () => {
-            const tx = new Transaction(makeTransactionObj({ type: TXTYPE.INIT, invests: 12 }))
+            const tx = new Transaction(makeTransactionObj({ type: TXTYPE.INIT }))
+            tx.invests = 12
 
             const result = tx.isValid()
 

@@ -1,5 +1,5 @@
 import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from './errors.js'
-import { intToDate, dateToInt, infinityDate, publicFromPrivate } from './crypto.js'
+import { intToDate, dateToInt, infinityDate, publicFromPrivate, packUnitIds } from './crypto.js'
 
 import { TXTYPE } from './Transaction.js'
 import { Block, BlockMaker, BLOCKTYPE } from './Block.js'
@@ -290,8 +290,8 @@ export class Blockchain {
 			v: Blockchain.VERSION,
 			d: infinityDate,
 			p: this.lastblock.signature,
-			m: this.lastblock.money,
-			i: this.lastblock.invests,
+			m: packUnitIds(this.lastblock.money),
+			i: packUnitIds(this.lastblock.invests),
 			r: 0,
 			s: null,
 			h: null,

@@ -1,7 +1,7 @@
 import { Blockchain } from "../src/Blockchain.js"
 import { CitizenBlock, BLOCKTYPE } from "../src/Block.js";
 import { Transaction, TXTYPE, TransactionMaker } from "../src/Transaction.js"
-import { buildInvestIndexes, buildMoneyIndexes } from "../src/crypto.js"
+import { buildInvestIndexes, buildMoneyIndexes, packUnitIds } from "../src/crypto.js"
 import { dateToInt } from '../src/crypto.js';
 
 export const privateKey1 = 'ed945716dddb7af2c9774939e9946f1fee31f5ec0a3c6ec96059f119c396912f'
@@ -39,8 +39,8 @@ export function makeTransaction(options = {}) {
         d: dateToInt(date),
         p: "target" in options ? options.target : (isCreate ? "" : publicKey1),
         s: "signer" in options ? options.signer : publicKey1,
-        m: "money" in options ? options.money : (isCreate ? buildMoneyIndexes(date, 1) : []),
-        i: "invests" in options ? options.invests : (isCreate ? buildInvestIndexes(date, 1) : []),
+        m: packUnitIds("money" in options ? options.money : (isCreate ? buildMoneyIndexes(date, 1) : [])),
+        i: packUnitIds("invests" in options ? options.invests : (isCreate ? buildInvestIndexes(date, 1) : [])),
         t: type,
         h: "signature" in options ? options.signature : 'notsetyet',
         ...((needsQ || "q" in options) && { q: "q" in options ? options.q : 1 }),
@@ -83,8 +83,8 @@ export function makeBlock(options = {}) {
         p: "previousHash" in options ? options.previousHash : "",
         s: "signer" in options ? options.signer : publicKey1,
         r: "root" in options ? options.root : 'randomMerkleroot',
-        m: "money" in options ? options.money : [],
-        i: "invests" in options ? options.invests : [],
+        m: packUnitIds("money" in options ? options.money : []),
+        i: packUnitIds("invests" in options ? options.invests : []),
         t: "type" in options ? options.type : BLOCKTYPE.CITIZEN,
         e: "experience" in options ? options.experience : 0,
         h: "signature" in options ? options.signature : "",

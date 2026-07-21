@@ -79,6 +79,41 @@ export function buildMoneyIndexes(date, level) {
     return result
 }
 
+const UNIT_ID_BYTE_WIDTH = 5 // 40 bits: covers ids up to ~1.1e12, well above the largest possible invest id
+
+/**
+ * Pack an array of unit ids (money or invest, both YYYYMMDD-prefixed integers)
+ * into a compact wire representation: each id as UNIT_ID_BYTE_WIDTH big-endian
+ * bytes, concatenated, then base64-encoded. Order and duplicates are preserved
+ * (the same id can legitimately be held by different parties, see
+ * hasEnoughOccurrences). Uses btoa/atob rather than Buffer so this works
+ * identically in the browser (the webapp) and in Node.
+ */
+export function packUnitIds(ids) {
+    if (ids.length === 0) return ''
+    let binary = ''
+    for (const id of ids) {
+        for (let byte = UNIT_ID_BYTE_WIDTH - 1; byte >= 0; byte--) {
+            binary += String.fromCharCode(Math.floor(id / 256 ** byte) % 256)
+        }
+    }
+    return btoa(binary)
+}
+
+export function unpackUnitIds(packed) {
+    if (packed === '') return []
+    const binary = atob(packed)
+    const ids = []
+    for (let offset = 0; offset < binary.length; offset += UNIT_ID_BYTE_WIDTH) {
+        let id = 0
+        for (let byte = 0; byte < UNIT_ID_BYTE_WIDTH; byte++) {
+            id = id * 256 + binary.charCodeAt(offset + byte)
+        }
+        ids.push(id)
+    }
+    return ids
+}
+
 /**
  * Money and invest ids are date+index based, with no citizen-specific component,
  * so the same id can legitimately appear more than once (held by different parties).

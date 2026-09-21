@@ -372,7 +372,7 @@ export class CitizenBlockchain extends Blockchain {
 		}
 	}
 
-	#mapIdsByDay(ids) {
+	#groupIdsByDay(ids) {
 		const byDay = new Map()
 		for (const id of ids) {
 			const day = unitIdToDateInt(id)
@@ -391,7 +391,7 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	#assertMintedIdsAreValid(ids, level, engagedSoFar, buildFn, label) {
-		const idsGroupedByDay = this.#mapIdsByDay(ids)
+		const idsGroupedByDay = this.#groupIdsByDay(ids)
 		for (const [day, actualIds] of idsGroupedByDay) {
 			const expected = buildFn(intToDate(day), level).filter(id => !engagedSoFar.has(id))
 			if (!this.#doMintedIdsMatchExpected(actualIds, expected))

@@ -383,8 +383,8 @@ export class CitizenBlockchain extends Blockchain {
 		return byDay
 	}
 
-	#doMintedIdsMatchExpected(actualIds, expected) {
-		const actual = [...actualIds].sort((a, b) => a - b)
+	#doMintedIdsMatchExpected(mintedIds, expected) {
+		const actual = [...mintedIds].sort((a, b) => a - b)
 		const sortedExpected = [...expected].sort((a, b) => a - b)
 		return actual.length === sortedExpected.length
 			&& actual.every((id, idx) => id === sortedExpected[idx])

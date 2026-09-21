@@ -8,6 +8,17 @@ import {
 	SetPayerTransaction, UnsetPayerTransaction, TXTYPE
 } from './Transaction.js'
 
+function mapIdsByDay(ids) {
+	const byDay = new Map()
+	for (const id of ids) {
+		const day = unitIdToDateInt(id)
+		const idsForDay = byDay.get(day) || []
+		idsForDay.push(id)
+		byDay.set(day, idsForDay)
+	}
+	return byDay
+}
+
 export class CitizenBlockchain extends Blockchain {
 
 	get experience() {
@@ -373,14 +384,8 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	#assertMintedIds(ids, level, engagedSoFar, buildFn, label) {
-		const byDay = new Map()
-		for (const id of ids) {
-			const day = unitIdToDateInt(id)
-			const idsForDay = byDay.get(day) || []
-			idsForDay.push(id)
-			byDay.set(day, idsForDay)
-		}
-		for (const [day, actualIds] of byDay) {
+		const idsGroupedByDay = mapIdsByDay(ids)
+		for (const [day, actualIds] of idsGroupedByDay) {
 			const expected = buildFn(intToDate(day), level).filter(id => !engagedSoFar.has(id))
 			const actual = [...actualIds].sort((a, b) => a - b)
 			const sortedExpected = [...expected].sort((a, b) => a - b)

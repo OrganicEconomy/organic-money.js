@@ -376,8 +376,9 @@ export class CitizenBlockchain extends Blockchain {
 		const byDay = new Map()
 		for (const id of ids) {
 			const day = unitIdToDateInt(id)
-			if (!byDay.has(day)) byDay.set(day, [])
-			byDay.get(day).push(id)
+			const idsForDay = byDay.get(day) || []
+			idsForDay.push(id)
+			byDay.set(day, idsForDay)
 		}
 		for (const [day, actualIds] of byDay) {
 			const expected = buildFn(intToDate(day), level).filter(id => !engagedSoFar.has(id))

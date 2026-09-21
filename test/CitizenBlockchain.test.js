@@ -6,7 +6,7 @@ import { Blockchain } from '../src/Blockchain.js';
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js';
 import { mySk, myPk, targetSk, targetPk, makeBlock, makeBlockObj, makeTransaction, referentSk, referentPk } from './testUtils.js'
 import { dateToInt, intToDate, randomPrivateKey, buildInvestIndexes, buildMoneyIndexes } from '../src/crypto.js'
-import { TXTYPE, PayerOrderTransaction, EarnTransaction, PayTransaction, CreateTransaction } from '../src/Transaction.js'
+import { TXTYPE, PayerOrderTransaction, EarnTransaction, PayTransaction, CreateTransaction, EngageTransaction } from '../src/Transaction.js'
 
 
 describe('CitizenBlockchain', () => {
@@ -1326,6 +1326,44 @@ describe('CitizenBlockchain', () => {
 			assert.isFalse(bc.isValid())
 		})
 
+		it('Should return true for a CREATE that mints fewer than level invest units for a day due to partial engagement on that day.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+			bc.receivePay(makeTransaction({
+				target: myPk, type: TXTYPE.PAY, signer: referentPk, sk: referentSk,
+				moneycount: 1, date: new Date('2025-01-02')
+			})) // experience=1 -> level=2
+			bc.engageInvests(mySk, targetPk, 1, 1, new Date('2025-01-03')) // 1 of the 2 invest slots for that day
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03')) // real mint: only 1 invest that day (correct exclusion)
+
+			assert.isTrue(bc.isValid())
+		})
+
+		it('Should return true for a CREATE that omits a day entirely because it was fully engaged, via a real ENGAGE transaction.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-02')) // establishes a lastCreationTx to create a 2-day range below
+			bc.receivePay(makeTransaction({
+				target: myPk, type: TXTYPE.PAY, signer: referentPk, sk: referentSk,
+				moneycount: 1, date: new Date('2025-01-02')
+			})) // experience=1 -> level=2
+			bc.engageInvests(mySk, targetPk, 2, 1, new Date('2025-01-03')) // both invest slots for 01-03
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-04')) // covers 01-03 (fully engaged, excluded) + 01-04 (untouched)
+
+			assert.isTrue(bc.isValid())
+		})
+
+		it('Should return false if a CREATE re-mints an invest id that was already engaged, even with an otherwise correct total.', () => {
+			const D1 = new Date('2025-01-01')
+			const engageTx = new EngageTransaction(mySk, targetPk, [...buildInvestIndexes(D1, 1)], [], D1)
+			const maliciousCreate = new CreateTransaction(mySk, [], [...buildInvestIndexes(D1, 1)], D1)
+			const oldest = makeBlock({ date: D1, experience: 0, transactions: [], signed: true })
+			const newest = makeBlock({ date: D1, previousHash: oldest.signature, experience: 0, transactions: [maliciousCreate, engageTx], signed: true })
+			const bc = new CitizenBlockchain([newest.export(), oldest.export()])
+
+			assert.isFalse(bc.isValid())
+		})
+
 		it('Should return false if two CREATE transactions across the chain reuse the same date, producing overlapping money ids.', () => {
 			const create1 = makeTransaction({ type: TXTYPE.CREATE, date: new Date('2025-01-01'), moneycount: 1, investscount: 1, signer: myPk, sk: mySk })
 			const oldest = makeBlock({ date: new Date('2025-01-01'), experience: 0, transactions: [create1], signed: true })
@@ -1469,6 +1507,59 @@ describe('CitizenBlockchain', () => {
 			const bc = new CitizenBlockchain([newest.export(), oldest.export()])
 
 			assert.doesNotThrow(() => bc.assertIsValid())
+		})
+
+		it('Should not throw for a CREATE that mints fewer than level invest units for a day due to partial engagement on that day.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+			bc.receivePay(makeTransaction({
+				target: myPk, type: TXTYPE.PAY, signer: referentPk, sk: referentSk,
+				moneycount: 1, date: new Date('2025-01-02')
+			})) // experience=1 -> level=2
+			bc.engageInvests(mySk, targetPk, 1, 1, new Date('2025-01-03')) // 1 of the 2 invest slots for that day
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03')) // real mint: only 1 invest that day (correct exclusion)
+
+			assert.doesNotThrow(() => bc.assertIsValid())
+		})
+
+		it('Should not throw for a CREATE that mints fewer than level money units for a day due to partial engagement on that day.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+			bc.receivePay(makeTransaction({
+				target: myPk, type: TXTYPE.PAY, signer: referentPk, sk: referentSk,
+				moneycount: 1, date: new Date('2025-01-02')
+			})) // experience=1 -> level=2
+			bc.engageMoney(mySk, targetPk, 1, 1, new Date('2025-01-03')) // 1 of the 2 money slots for that day
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03')) // real mint: only 1 money unit that day (correct exclusion)
+
+			assert.doesNotThrow(() => bc.assertIsValid())
+		})
+
+		it('Should not throw for a CREATE that omits a day entirely because it was fully engaged, via a real ENGAGE transaction.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-02')) // establishes a lastCreationTx to create a 2-day range below
+			bc.receivePay(makeTransaction({
+				target: myPk, type: TXTYPE.PAY, signer: referentPk, sk: referentSk,
+				moneycount: 1, date: new Date('2025-01-02')
+			})) // experience=1 -> level=2
+			bc.engageInvests(mySk, targetPk, 2, 1, new Date('2025-01-03')) // both invest slots for 01-03
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-04')) // covers 01-03 (fully engaged, excluded) + 01-04 (untouched)
+
+			assert.doesNotThrow(() => bc.assertIsValid())
+		})
+
+		it('Should throw if a CREATE re-mints an invest id that was already engaged, even with an otherwise correct total.', () => {
+			const D1 = new Date('2025-01-01')
+			// level=1, day D1 has 1 slot (index 0), already engaged via a real ENGAGE.
+			// A malicious CREATE re-mints that same engaged id instead of it being excluded.
+			const engageTx = new EngageTransaction(mySk, targetPk, [...buildInvestIndexes(D1, 1)], [], D1)
+			const maliciousCreate = new CreateTransaction(mySk, [], [...buildInvestIndexes(D1, 1)], D1)
+			const oldest = makeBlock({ date: D1, experience: 0, transactions: [], signed: true })
+			const newest = makeBlock({ date: D1, previousHash: oldest.signature, experience: 0, transactions: [maliciousCreate, engageTx], signed: true })
+			const bc = new CitizenBlockchain([newest.export(), oldest.export()])
+
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /level/i)
 		})
 
 		it('Should throw if a CREATE has the right total invest count but all invests concentrated on fewer days than the money (wrong day distribution).', () => {

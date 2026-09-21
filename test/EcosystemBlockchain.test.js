@@ -267,13 +267,15 @@ describe('EcosystemBlockchain', () => {
             assert.throws(() => ecoUnsetActor(bc,adminSk, adminPk, DATE2))
         })
 
-        it('unsetActor should throw if actor is still payer.', () => {
+        it('unsetActor should not throw when the actor is still payer (the two roles are independent).', () => {
             const bc = makeStartedEco()
 
             ecoSetActor(bc,adminSk, referentPk, 2, DATE2)
             ecoSetPayer(bc,adminSk, referentPk, -1, DATE2)
 
-            assert.throws(() => ecoUnsetActor(bc,adminSk, referentPk, DATE2))
+            assert.doesNotThrow(() => ecoUnsetActor(bc,adminSk, referentPk, DATE2))
+            assert.isFalse(bc.isActor(referentPk))
+            assert.isTrue(bc.isPayer(referentPk))
         })
 
         it('unsetActor should throw if it would leave no actor with ratio > 0.', () => {

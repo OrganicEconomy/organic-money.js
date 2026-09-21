@@ -355,8 +355,8 @@ export class CitizenBlockchain extends Blockchain {
 			for (const tx of chronological) {
 				if (tx.type === TXTYPE.CREATE) {
 					const level = Math.floor(Math.cbrt(runningExperience)) + 1
-					this.#assertMintedIds(tx.money, level, engagedMoneySoFar, buildMoneyIndexes, 'money')
-					this.#assertMintedIds(tx.invests, level, engagedInvestsSoFar, buildInvestIndexes, 'invests')
+					this.#assertMintedIdsAreValid(tx.money, level, engagedMoneySoFar, buildMoneyIndexes, 'money')
+					this.#assertMintedIdsAreValid(tx.invests, level, engagedInvestsSoFar, buildInvestIndexes, 'invests')
 				}
 				if (tx.type === TXTYPE.ENGAGE) {
 					for (const id of tx.getEngagedMoney()) engagedMoneySoFar.add(id)
@@ -383,15 +383,18 @@ export class CitizenBlockchain extends Blockchain {
 		return byDay
 	}
 
-	#assertMintedIds(ids, level, engagedSoFar, buildFn, label) {
+	#doMintedIdsMatchExpected(actualIds, expected) {
+		const actual = [...actualIds].sort((a, b) => a - b)
+		const sortedExpected = [...expected].sort((a, b) => a - b)
+		return actual.length === sortedExpected.length
+			&& actual.every((id, idx) => id === sortedExpected[idx])
+	}
+
+	#assertMintedIdsAreValid(ids, level, engagedSoFar, buildFn, label) {
 		const idsGroupedByDay = this.#mapIdsByDay(ids)
 		for (const [day, actualIds] of idsGroupedByDay) {
 			const expected = buildFn(intToDate(day), level).filter(id => !engagedSoFar.has(id))
-			const actual = [...actualIds].sort((a, b) => a - b)
-			const sortedExpected = [...expected].sort((a, b) => a - b)
-			const matches = actual.length === sortedExpected.length
-				&& actual.every((id, idx) => id === sortedExpected[idx])
-			if (!matches)
+			if (!this.#doMintedIdsMatchExpected(actualIds, expected))
 				throw new InvalidBlockchainError(
 					`CREATE transaction mints the wrong ${label} ids for day ${day} given the level implied by accumulated experience and currently engaged ids.`
 				)

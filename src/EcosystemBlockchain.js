@@ -246,7 +246,6 @@ export class EcosystemBlockchain extends Blockchain {
         this.#assertReceivable(tx, TXTYPE.UNSETACTOR)
         if (!this.isActor(tx.target)) throw new InvalidTransactionError('Target is not an actor.')
         if (this.isAdmin(tx.target)) throw new InvalidTransactionError('Cannot remove actor who is still admin.')
-        if (this.isPayer(tx.target)) throw new InvalidTransactionError('Cannot remove actor who is still payer.')
         const actorRatio = this.getActors().get(tx.target)
         if (actorRatio > 0) {
             const otherWithRatio = [...this.getActors().entries()].some(([pk, r]) => pk !== tx.target && r > 0)

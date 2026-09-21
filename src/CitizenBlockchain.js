@@ -1,6 +1,6 @@
 import { Blockchain } from './Blockchain.js'
 import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from './errors.js'
-import { randomPrivateKey, dateToInt, buildInvestIndexes, buildMoneyIndexes, unitIdToDateInt } from './crypto.js'
+import { randomPrivateKey, dateToInt, intToDate, buildInvestIndexes, buildMoneyIndexes, unitIdToDateInt } from './crypto.js'
 import { CitizenBlock, BirthBlock, InitializationBlock, BLOCKTYPE } from './Block.js'
 import {
 	CreateTransaction, EngageTransaction, PaperTransaction, PayTransaction, PayerOrderTransaction,
@@ -349,14 +349,18 @@ export class CitizenBlockchain extends Blockchain {
 			const olderBlock = blocksToCheck[i + 1]
 
 			let runningExperience = olderBlock.experience
+			const engagedMoneySoFar = new Set()
+			const engagedInvestsSoFar = new Set()
 			const chronological = block.transactions.slice().reverse()
 			for (const tx of chronological) {
 				if (tx.type === TXTYPE.CREATE) {
 					const level = Math.floor(Math.cbrt(runningExperience)) + 1
-					const moneyDays = new Set(tx.money.map(id => unitIdToDateInt(id)))
-					const investDays = new Set(tx.invests.map(id => unitIdToDateInt(id)))
-					if (tx.money.length !== level * moneyDays.size || tx.invests.length !== level * investDays.size)
-						throw new InvalidBlockchainError(`CREATE transaction at block index ${i} mints the wrong amount of money/invests for the level implied by accumulated experience.`)
+					this.#assertMintedIds(tx.money, level, engagedMoneySoFar, buildMoneyIndexes, 'money')
+					this.#assertMintedIds(tx.invests, level, engagedInvestsSoFar, buildInvestIndexes, 'invests')
+				}
+				if (tx.type === TXTYPE.ENGAGE) {
+					for (const id of tx.getEngagedMoney()) engagedMoneySoFar.add(id)
+					for (const id of tx.getEngagedInvests()) engagedInvestsSoFar.add(id)
 				}
 				if (tx.type === TXTYPE.PAY && tx.target === ownerKey) runningExperience += tx.money.length
 				if (tx.type === TXTYPE.EARN && tx.target === ownerKey) runningExperience += tx.money.length
@@ -365,6 +369,32 @@ export class CitizenBlockchain extends Blockchain {
 
 			if (runningExperience !== block.experience)
 				throw new InvalidBlockchainError(`Block at index ${i} experience does not match the experience replayed from its transactions.`)
+		}
+	}
+
+	/**
+	 * Mirrors #makeFilteredIndexes's exclusion at mint time: for each day
+	 * present in `ids`, the expected set is the full level-sized candidate
+	 * set for that day minus whatever was already engaged (chronologically
+	 * earlier in the same block) at the point this CREATE ran.
+	 */
+	#assertMintedIds(ids, level, engagedSoFar, buildFn, label) {
+		const byDay = new Map()
+		for (const id of ids) {
+			const day = unitIdToDateInt(id)
+			if (!byDay.has(day)) byDay.set(day, [])
+			byDay.get(day).push(id)
+		}
+		for (const [day, actualIds] of byDay) {
+			const expected = buildFn(intToDate(day), level).filter(id => !engagedSoFar.has(id))
+			const actual = [...actualIds].sort((a, b) => a - b)
+			const sortedExpected = [...expected].sort((a, b) => a - b)
+			const matches = actual.length === sortedExpected.length
+				&& actual.every((id, idx) => id === sortedExpected[idx])
+			if (!matches)
+				throw new InvalidBlockchainError(
+					`CREATE transaction mints the wrong ${label} ids for day ${day} given the level implied by accumulated experience and currently engaged ids.`
+				)
 		}
 	}
 

@@ -372,12 +372,6 @@ export class CitizenBlockchain extends Blockchain {
 		}
 	}
 
-	/**
-	 * Mirrors #makeFilteredIndexes's exclusion at mint time: for each day
-	 * present in `ids`, the expected set is the full level-sized candidate
-	 * set for that day minus whatever was already engaged (chronologically
-	 * earlier in the same block) at the point this CREATE ran.
-	 */
 	#assertMintedIds(ids, level, engagedSoFar, buildFn, label) {
 		const byDay = new Map()
 		for (const id of ids) {

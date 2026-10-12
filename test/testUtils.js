@@ -101,3 +101,13 @@ export function makeBlock(options = {}) {
     }
     return block
 }
+export function inParisTimezone(fn) {
+    const previousTimezone = process.env.TZ
+    process.env.TZ = 'Europe/Paris'
+    try {
+        return fn()
+    } finally {
+        if (previousTimezone === undefined) delete process.env.TZ
+        else process.env.TZ = previousTimezone
+    }
+}

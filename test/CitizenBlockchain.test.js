@@ -4,7 +4,7 @@ import { assert } from 'chai';
 import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from '../src/errors.js';
 import { Blockchain } from '../src/Blockchain.js';
 import { CitizenBlockchain } from '../src/CitizenBlockchain.js';
-import { mySk, myPk, targetSk, targetPk, makeBlock, makeBlockObj, makeTransaction, referentSk, referentPk } from './testUtils.js'
+import { mySk, myPk, targetSk, targetPk, makeBlock, makeBlockObj, makeTransaction, referentSk, referentPk, inParisTimezone } from './testUtils.js'
 import { dateToInt, intToDate, randomPrivateKey, buildInvestIndexes, buildMoneyIndexes } from '../src/crypto.js'
 import { TXTYPE, PayerOrderTransaction, EarnTransaction, PayTransaction, CreateTransaction, EngageTransaction } from '../src/Transaction.js'
 
@@ -124,6 +124,39 @@ describe('CitizenBlockchain', () => {
 			}
 
 			assert.deepEqual(tx, expected)
+		})
+
+		it('Should not recreate the previous day money the day after the spring DST change.', () => {
+			inParisTimezone(() => {
+				const bc = new CitizenBlockchain()
+				bc.startBlockchain('Gus', new Date('2026-03-29'), referentSk, mySk, new Date('2026-03-29'))
+
+				const tx = bc.createMoneyAndInvests(mySk, new Date('2026-03-30T12:00:00Z'))
+
+				assert.deepEqual(tx.money, [20260330000])
+			})
+		})
+
+		it('Should create money just after midnight UTC the day after the autumn DST change.', () => {
+			inParisTimezone(() => {
+				const bc = new CitizenBlockchain()
+				bc.startBlockchain('Gus', new Date('2025-10-26'), referentSk, mySk, new Date('2025-10-26'))
+
+				const tx = bc.createMoneyAndInvests(mySk, new Date('2025-10-27T00:30:00Z'))
+
+				assert.deepEqual(tx.money, [20251027000])
+			})
+		})
+
+		it('Should create exactly one day of money per missed day across the spring DST change.', () => {
+			inParisTimezone(() => {
+				const bc = new CitizenBlockchain()
+				bc.startBlockchain('Gus', new Date('2026-03-27'), referentSk, mySk, new Date('2026-03-27'))
+
+				const tx = bc.createMoneyAndInvests(mySk, new Date('2026-03-31T12:00:00Z'))
+
+				assert.deepEqual(tx.money, [20260328000, 20260329000, 20260330000, 20260331000])
+			})
 		})
 
 		it('Should create 1+Total^(1/3) Money.', () => {
@@ -407,6 +440,17 @@ describe('CitizenBlockchain', () => {
 			const fn = () => { bc.engageMoney(mySk, targetPk, dailyAmount, 12) }
 
 			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
+		})
+
+		it('Should engage one distinct day per day across the spring DST change.', () => {
+			inParisTimezone(() => {
+				const bc = new CitizenBlockchain()
+				bc.startBlockchain('Gus', new Date('2026-03-28'), referentSk, mySk, new Date('2026-03-28'))
+
+				const tx = bc.engageMoney(mySk, targetPk, 1, 3, new Date('2026-03-28'))
+
+				assert.deepEqual(tx.money, [20260328000, 20260329000, 20260330000])
+			})
 		})
 
 		it('Should return a transaction with correct money engaged.', () => {

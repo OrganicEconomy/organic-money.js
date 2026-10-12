@@ -41,6 +41,10 @@ export function intToDate(dateint) {
     return new Date(datestr.slice(0, 4) + '-' + datestr.slice(4, 6) + '-' + datestr.slice(6, 8))
 }
 
+export function addOneDay(date) {
+    date.setUTCDate(date.getUTCDate() + 1)
+}
+
 export function intToIndex(dateint) {
     const datestr = '' + dateint
     return +datestr.slice(-3)

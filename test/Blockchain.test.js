@@ -4,7 +4,7 @@ import { assert } from 'chai';
 
 import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from '../src/errors.js'
 import { Blockchain } from '../src/Blockchain.js';
-import { mySk, myPk, targetSk, targetPk, referentPk, makeBlockObj, makeBlock, makeTransaction } from './testUtils.js'
+import { mySk, myPk, targetSk, targetPk, referentPk, makeBlockObj, makeBlock, makeTransaction, inParisTimezone } from './testUtils.js'
 import { TXTYPE } from '../src/Transaction.js';
 import { intToDate, dateToInt } from '../src/crypto.js';
 import { BirthBlock, InitializationBlock, REF_HASH, BLOCKTYPE } from '../src/Block.js';
@@ -744,6 +744,22 @@ describe('Blockchain', () => {
 
 			assert.equal(bc.blocks.length, 3)
 			assert.equal(bc.lastblock.transactions.length, 0)
+		})
+
+		it('Should NOT report an engagement finished on the closing day of the spring DST change.', () => {
+			inParisTimezone(() => {
+				const bc = new Blockchain([makeBlockObj({ signed: true, date: new Date("2026-03-28") })])
+				bc._addTransaction(makeTransaction({
+					type: TXTYPE.ENGAGE,
+					money: [20260328000, 20260329000],
+					date: new Date("2026-03-28")
+				}))
+				bc.closeLastBlock(mySk, new Date("2026-03-29"))
+
+				bc.newBlock()
+
+				assert.equal(bc.lastblock.transactions.length, 0)
+			})
 		})
 	})
 

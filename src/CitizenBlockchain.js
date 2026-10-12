@@ -1,6 +1,6 @@
 import { Blockchain } from './Blockchain.js'
 import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from './errors.js'
-import { randomPrivateKey, dateToInt, intToDate, buildInvestIndexes, buildMoneyIndexes, unitIdToDateInt } from './crypto.js'
+import { randomPrivateKey, dateToInt, intToDate, buildInvestIndexes, buildMoneyIndexes, unitIdToDateInt, addOneDay } from './crypto.js'
 import { CitizenBlock, BirthBlock, InitializationBlock, BLOCKTYPE } from './Block.js'
 import {
 	CreateTransaction, EngageTransaction, PaperTransaction, PayTransaction, PayerOrderTransaction,
@@ -28,7 +28,7 @@ export class CitizenBlockchain extends Blockchain {
 		const current = new Date(fromdate)
 		while (current <= toDate) {
 			result = result.concat(buildFn(current, level))
-			current.setDate(current.getDate() + 1)
+			addOneDay(current)
 		}
 		return result.filter(x => !engaged.includes(x))
 	}
@@ -52,7 +52,7 @@ export class CitizenBlockchain extends Blockchain {
 		const lastCreationTx = this.getLastCreationTransaction();
 		if (lastCreationTx) {
 			startdate = new Date(lastCreationTx.date);
-			startdate.setDate(startdate.getDate() + 1);
+			addOneDay(startdate);
 		}
 		if (startdate > date) {
 			return null;
@@ -106,7 +106,7 @@ export class CitizenBlockchain extends Blockchain {
 				throw new InvalidTransactionError('Unsufficient funds.')
 			}
 			indexes = indexes.concat(filtered.slice(0, dailyAmount))
-			dateIndex.setDate(dateIndex.getDate() + 1)
+			addOneDay(dateIndex)
 		}
 		return indexes
 	}

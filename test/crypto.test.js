@@ -4,7 +4,7 @@ import { hexToBytes } from 'ethereum-cryptography/utils.js';
 
 import {
     randomPrivateKey, aesDecrypt, aesEncrypt, dateToInt, intToDate, investIdToMoneyId,
-    packUnitIds, unpackUnitIds
+    packUnitIds, unpackUnitIds, isExpiredOn
 } from '../src/crypto.js'
 
 
@@ -146,5 +146,15 @@ describe('packUnitIds / unpackUnitIds', () => {
         // measured: ~6.7 bytes/id packed vs 12 bytes/id in a JSON array (with separators)
         assert.isBelow(packed.length / ids.length, 7.5)
         assert.deepEqual(unpackUnitIds(packed), ids)
+    })
+})
+
+describe('isExpiredOn', () => {
+    it('Should consider money still valid on its 30th day (J+29).', () => {
+        assert.isFalse(isExpiredOn(20250101000, new Date('2025-01-30T12:00:00Z')))
+    })
+
+    it('Should consider money expired from its 31st day (J+30).', () => {
+        assert.isTrue(isExpiredOn(20250101000, new Date('2025-01-31T00:30:00Z')))
     })
 })

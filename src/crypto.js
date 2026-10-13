@@ -70,6 +70,16 @@ export function unitIdToDateInt(unitId) {
     return +(('' + unitId).slice(0, 8))
 }
 
+export const MONEY_LIFETIME_DAYS = 30
+
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
+
+export function isExpiredOn(unitId, date) {
+    const unitDay = intToDate(unitIdToDateInt(unitId))
+    const day = intToDate(dateToInt(date))
+    return (day - unitDay) / MILLISECONDS_PER_DAY >= MONEY_LIFETIME_DAYS
+}
+
 export function investIdToMoneyId(investId) {
     const s = '' + investId
     return +(s.slice(0, 8) + s.slice(9))

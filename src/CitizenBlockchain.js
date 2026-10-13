@@ -1,6 +1,6 @@
 import { Blockchain } from './Blockchain.js'
 import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from './errors.js'
-import { randomPrivateKey, dateToInt, intToDate, buildInvestIndexes, buildMoneyIndexes, unitIdToDateInt, addOneDayTo } from './crypto.js'
+import { randomPrivateKey, dateToInt, intToDate, buildInvestIndexes, buildMoneyIndexes, unitIdToDateInt, addOneDayTo, isExpiredOn, MONEY_LIFETIME_DAYS } from './crypto.js'
 import { CitizenBlock, BirthBlock, InitializationBlock, BLOCKTYPE } from './Block.js'
 import {
 	CreateTransaction, EngageTransaction, PaperTransaction, PayTransaction, PayerOrderTransaction,
@@ -34,36 +34,86 @@ export class CitizenBlockchain extends Blockchain {
 	}
 
 	/**
-	 * Add and return the transaction that creates Money for the Blockchain.
-	 * If date is not given, uses today's date.
-	 * Creates money from last date it was created until given date or today.
-	 * if Money has already been created at the given date, create nothing and return null.
+	 * Create the money of every day since the last creation, and the invests
+	 * of the given day only (default: today). Return the added transactions:
+	 *   - a CREATE of the missed days already expired, if any,
+	 *   - a self PAY cashing every expired money of the wallet, if any,
+	 *   - a CREATE of the still valid days and of the day's invests.
+	 * Return [] if money was already created on the given day.
 	 * Throw an error if date is in the futur as one cannot create futur money.
 	 */
 	createMoneyAndInvests(privateKey, date = new Date()) {
 		this._assertOwner(privateKey)
-		const myPublicKey = this.getMyPublicKey()
-		let startdate = new Date(date)
-
-		const today = new Date();
-		if (date > today) {
+		if (date > new Date()) {
 			throw new InvalidTransactionError('Cannot create futur money, live the moment.')
 		}
-		const lastCreationTx = this.getLastCreationTransaction();
-		if (lastCreationTx) {
-			startdate = new Date(lastCreationTx.date);
-			addOneDayTo(startdate);
+		const firstMissedDay = this.#firstMissedDay(date)
+		if (firstMissedDay > date) {
+			return []
 		}
-		if (startdate > date) {
-			return null;
-		}
-		const level = this.getLevel()
-		const money = this.makeFilteredMoneyIndexes(level, startdate, date)
-		const invests = this.makeFilteredInvestsIndexes(level, startdate, date)
+		return [
+			...this.#createAlreadyExpiredDays(privateKey, firstMissedDay, date),
+			...this.#cashExpiredMoney(privateKey, date),
+			this.#createValidDaysAndTodayInvests(privateKey, firstMissedDay, date),
+		]
+	}
 
+	#firstMissedDay(date) {
+		const lastCreationTx = this.getLastCreationTransaction()
+		if (!lastCreationTx) {
+			return new Date(date)
+		}
+		const day = new Date(lastCreationTx.date)
+		addOneDayTo(day)
+		return day
+	}
+
+	#firstValidDayOn(date) {
+		const day = new Date(date)
+		day.setUTCDate(day.getUTCDate() - MONEY_LIFETIME_DAYS + 1)
+		return day
+	}
+
+	#lastExpiredDayOn(date) {
+		const day = this.#firstValidDayOn(date)
+		day.setUTCDate(day.getUTCDate() - 1)
+		return day
+	}
+
+	#createAlreadyExpiredDays(privateKey, firstMissedDay, date) {
+		const lastExpiredDay = this.#lastExpiredDayOn(date)
+		if (firstMissedDay > lastExpiredDay) {
+			return []
+		}
+		return [this.#createMoney(privateKey, firstMissedDay, lastExpiredDay, [], date)]
+	}
+
+	#cashExpiredMoney(privateKey, date) {
+		const expiredMoney = this.getAvailableMoney().filter(id => isExpiredOn(id, date))
+		if (expiredMoney.length === 0) {
+			return []
+		}
+		return [this.#payMoney(privateKey, this.getMyPublicKey(), expiredMoney, date)]
+	}
+
+	#createValidDaysAndTodayInvests(privateKey, firstMissedDay, date) {
+		const firstValidDay = this.#firstValidDayOn(date)
+		const fromDay = firstMissedDay > firstValidDay ? firstMissedDay : firstValidDay
+		const todayInvests = this.makeFilteredInvestsIndexes(this.getLevel(), date, date)
+		const transaction = this.#createMoney(privateKey, fromDay, date, todayInvests, date)
+		this.#dropInvestsNotCreatedOn(date)
+		return transaction
+	}
+
+	#dropInvestsNotCreatedOn(date) {
+		this.lastblock.invests = this.lastblock.invests.filter(id => unitIdToDateInt(id) === dateToInt(date))
+	}
+
+	#createMoney(privateKey, fromDay, toDay, invests, date) {
+		const money = this.makeFilteredMoneyIndexes(this.getLevel(), fromDay, toDay)
 		const transaction = new CreateTransaction(privateKey, money, invests, date)
-		this._addTransaction(transaction);
-		return transaction;
+		this._addTransaction(transaction)
+		return transaction
 	}
 
 	/**
@@ -204,10 +254,19 @@ export class CitizenBlockchain extends Blockchain {
 
 	pay(mySk, targetPk, amount, d = new Date()) {
 		this._assertOwner(mySk)
-		const money = this.getAvailableMoney(amount)
+		const money = this.#takeMoneyValidOn(d, amount)
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
+		return this.#payMoney(mySk, targetPk, money, d)
+	}
+
+	#takeMoneyValidOn(date, amount) {
+		const validMoney = this.getAvailableMoney().filter(id => !isExpiredOn(id, date))
+		return amount > validMoney.length ? [] : validMoney.slice(0, amount)
+	}
+
+	#payMoney(mySk, targetPk, money, d) {
 		const transaction = new PayTransaction(mySk, targetPk, d, money)
 		this._addTransaction(transaction)
 		this.removeMoney(money)
@@ -228,7 +287,7 @@ export class CitizenBlockchain extends Blockchain {
 	 */
 	generatePaper(myPrivateKey, amount, referentPublicKey, date = new Date()) {
 		this._assertOwner(myPrivateKey)
-		const money = this.getAvailableMoney(amount);
+		const money = this.#takeMoneyValidOn(date, amount);
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}

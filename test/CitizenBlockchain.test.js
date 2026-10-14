@@ -1514,6 +1514,70 @@ describe('CitizenBlockchain', () => {
 			return makeTransaction({ type: TXTYPE.CREATE, date, moneycount: 1, investscount: 1, signer: myPk, sk: mySk })
 		}
 
+		function startedCitizen() {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+			return bc
+		}
+
+		function reloaded(bc) {
+			return new CitizenBlockchain(bc.export())
+		}
+
+		it('Should not throw for a citizen creating money every day for 50 days without spending it.', () => {
+			const bc = startedCitizen()
+			for (let day = new Date('2025-01-03'); day <= new Date('2025-02-21'); day.setUTCDate(day.getUTCDate() + 1)) {
+				bc.createMoneyAndInvests(mySk, new Date(day))
+				if (dateToInt(day) === 20250125) bc.closeLastBlock(mySk, new Date(day))
+			}
+
+			assert.doesNotThrow(() => reloaded(bc).assertIsValid())
+		})
+
+		it('Should throw if a CREATE mints invests of another day than its own.', () => {
+			const bc = startedCitizen()
+			bc._addTransaction(new CreateTransaction(mySk, [20250103000, 20250104000], [202501039000], new Date('2025-01-04')))
+
+			assert.throws(() => reloaded(bc).assertIsValid(), InvalidBlockchainError, /invests of another day/)
+		})
+
+		it('Should throw if a CREATE mints money dated after itself.', () => {
+			const bc = startedCitizen()
+			bc._addTransaction(new CreateTransaction(mySk, [20250103000, 20250104000], [202501039000], new Date('2025-01-03')))
+
+			assert.throws(() => reloaded(bc).assertIsValid(), InvalidBlockchainError, /money dated after/)
+		})
+
+		it('Should throw if a PAY to someone else spends expired money.', () => {
+			const bc = startedCitizen()
+			bc._addTransaction(new PayTransaction(mySk, targetPk, new Date('2025-02-01'), [20250102000]))
+
+			assert.throws(() => reloaded(bc).assertIsValid(), InvalidBlockchainError, /expired money/)
+		})
+
+		it('Should throw if a PAY spends money that is not in the wallet.', () => {
+			const bc = startedCitizen()
+			bc._addTransaction(new PayTransaction(mySk, targetPk, new Date('2025-01-05'), [20250105000]))
+
+			assert.throws(() => reloaded(bc).assertIsValid(), InvalidBlockchainError, /not in the wallet/)
+		})
+
+		it('Should throw if a CREATE of valid money happens before the expired money of the wallet is cashed.', () => {
+			const bc = startedCitizen()
+			bc._addTransaction(new CreateTransaction(mySk, [20250205000], [202502059000], new Date('2025-02-05')))
+
+			assert.throws(() => reloaded(bc).assertIsValid(), InvalidBlockchainError, /expired money is cashed/)
+		})
+
+		it('Should throw if a self PAY cashes money that is not in the wallet, which would forge experience.', () => {
+			const bc = startedCitizen()
+			bc.pay(mySk, myPk, 1, new Date('2025-01-05'))
+			bc._addTransaction(new PayTransaction(mySk, myPk, new Date('2025-01-05'), [20250105000]))
+			bc.lastblock.experience += 1
+
+			assert.throws(() => reloaded(bc).assertIsValid(), InvalidBlockchainError, /not in the wallet/)
+		})
+
 		it('Should not throw for a chain where CREATE quantity matches the level implied by experience.', () => {
 			const older = makeBlock({ date: new Date('2025-01-01'), experience: 0, transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
 			const createTx = makeTransaction({ type: TXTYPE.CREATE, date: new Date('2025-01-02'), moneycount: 1, investscount: 1, signer: myPk, sk: mySk })
@@ -1586,7 +1650,7 @@ describe('CitizenBlockchain', () => {
 		})
 
 		it('Should throw a specific message if experience increases for a paper I signed myself (generated, not cashed).', () => {
-			const older = makeBlock({ date: new Date('2025-01-01'), experience: 10, transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
+			const older = makeBlock({ date: new Date('2025-01-01'), experience: 10, money: [20250102000, 20250102001, 20250102002], transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
 			const paperTx = makeTransaction({ type: TXTYPE.PAPER, date: new Date('2025-01-02'), moneycount: 3, target: referentPk, signer: myPk, sk: mySk })
 			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 13, transactions: [paperTx], signed: true, signer: referentSk })
 			const bc = new CitizenBlockchain([newer.export(), older.export()])
@@ -1602,17 +1666,15 @@ describe('CitizenBlockchain', () => {
 			assert.throws(() => bc.assertIsValid(0, banList), InvalidBlockchainError, /banned/i)
 		})
 
-		it('Should not throw for a CREATE where money and invests span different days due to heterogeneous engagement (some days partially or fully engaged).', () => {
-			// level=1 over 3 days.
-			// day2 invests are fully engaged → no invests from day2 in the CREATE.
-			// day3 money is fully engaged    → no money from day3 in the CREATE.
-			// Valid CREATE: money=[day1_m, day2_m], invests=[day1_i, day3_i]
+		it('Should not throw for a CREATE whose money skips a fully engaged day while its invests are those of its own day.', () => {
+			// level=1 over 3 days, day3 money is fully engaged → no money from day3 in the CREATE.
+			// Valid CREATE: money=[day1_m, day2_m], invests=[day3_i]
 			const D1 = new Date('2025-01-01')
 			const D2 = new Date('2025-01-02')
 			const D3 = new Date('2025-01-03')
 			const heterogeneousCreate = new CreateTransaction(mySk,
 				[...buildMoneyIndexes(D1, 1), ...buildMoneyIndexes(D2, 1)],
-				[...buildInvestIndexes(D1, 1), ...buildInvestIndexes(D3, 1)],
+				[...buildInvestIndexes(D3, 1)],
 				D3
 			)
 			const oldest = makeBlock({ date: D1, experience: 0, transactions: [], signed: true })
@@ -1622,13 +1684,13 @@ describe('CitizenBlockchain', () => {
 			assert.doesNotThrow(() => bc.assertIsValid())
 		})
 
-		it('Should not throw for a CREATE where money.length !== invests.length due to full-day engagement on one side.', () => {
-			// level=1. day2 invests are all engaged → 2 money items (day1+day2) but only 1 invest (day1).
+		it('Should not throw for a CREATE without invests because its day invests are all engaged.', () => {
+			// level=1. day2 invests are all engaged → 2 money items (day1+day2) and no invest.
 			const D1 = new Date('2025-01-01')
 			const D2 = new Date('2025-01-02')
 			const asymmetricCreate = new CreateTransaction(mySk,
 				[...buildMoneyIndexes(D1, 1), ...buildMoneyIndexes(D2, 1)],
-				[...buildInvestIndexes(D1, 1)],
+				[],
 				D2
 			)
 			const oldest = makeBlock({ date: D1, experience: 0, transactions: [], signed: true })
@@ -1705,7 +1767,7 @@ describe('CitizenBlockchain', () => {
 			const newest = makeBlock({ date: D2, previousHash: oldest.signature, experience: 0, transactions: [maliciousCreate], signed: true })
 			const bc = new CitizenBlockchain([newest.export(), oldest.export()])
 
-			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /level/i)
+			assert.throws(() => bc.assertIsValid(), InvalidBlockchainError, /invests of another day/)
 		})
 
 		it('Should throw a specific message if two CREATE transactions across the chain reuse the same date, producing overlapping money ids.', () => {

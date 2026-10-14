@@ -85,7 +85,7 @@ export class CitizenBlockchain extends Blockchain {
 		if (firstMissedDay > lastExpiredDay) {
 			return []
 		}
-		return [this.#createMoney(privateKey, firstMissedDay, lastExpiredDay, [], date)]
+		return [this.#addCreateTransaction(privateKey, firstMissedDay, lastExpiredDay, [], date)]
 	}
 
 	#cashExpiredMoney(privateKey, date) {
@@ -98,9 +98,9 @@ export class CitizenBlockchain extends Blockchain {
 
 	#createValidDaysAndTodayInvests(privateKey, firstMissedDay, date) {
 		const firstValidDay = this.#firstValidDayOn(date)
-		const fromDay = firstMissedDay > firstValidDay ? firstMissedDay : firstValidDay
+		const fromDay = new Date(Math.max(firstMissedDay, firstValidDay))
 		const todayInvests = this.makeFilteredInvestsIndexes(this.getLevel(), date, date)
-		const transaction = this.#createMoney(privateKey, fromDay, date, todayInvests, date)
+		const transaction = this.#addCreateTransaction(privateKey, fromDay, date, todayInvests, date)
 		this.#dropInvestsNotCreatedOn(date)
 		return transaction
 	}
@@ -109,7 +109,7 @@ export class CitizenBlockchain extends Blockchain {
 		this.lastblock.invests = this.lastblock.invests.filter(id => unitIdToDateInt(id) === dateToInt(date))
 	}
 
-	#createMoney(privateKey, fromDay, toDay, invests, date) {
+	#addCreateTransaction(privateKey, fromDay, toDay, invests, date) {
 		const money = this.makeFilteredMoneyIndexes(this.getLevel(), fromDay, toDay)
 		const transaction = new CreateTransaction(privateKey, money, invests, date)
 		this._addTransaction(transaction)
@@ -254,14 +254,14 @@ export class CitizenBlockchain extends Blockchain {
 
 	pay(mySk, targetPk, amount, d = new Date()) {
 		this._assertOwner(mySk)
-		const money = this.#takeMoneyValidOn(d, amount)
+		const money = this.#getMoneyValidOn(d, amount)
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
 		return this.#payMoney(mySk, targetPk, money, d)
 	}
 
-	#takeMoneyValidOn(date, amount) {
+	#getMoneyValidOn(date, amount) {
 		const validMoney = this.getAvailableMoney().filter(id => !isExpiredOn(id, date))
 		return amount > validMoney.length ? [] : validMoney.slice(0, amount)
 	}
@@ -287,7 +287,7 @@ export class CitizenBlockchain extends Blockchain {
 	 */
 	generatePaper(myPrivateKey, amount, referentPublicKey, date = new Date()) {
 		this._assertOwner(myPrivateKey)
-		const money = this.#takeMoneyValidOn(date, amount);
+		const money = this.#getMoneyValidOn(date, amount);
 		if (money.length === 0) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}

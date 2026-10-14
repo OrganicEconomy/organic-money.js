@@ -9,6 +9,14 @@ import { dateToInt, intToDate, randomPrivateKey, buildInvestIndexes, buildMoneyI
 import { TXTYPE, PayerOrderTransaction, EarnTransaction, PayTransaction, CreateTransaction, EngageTransaction } from '../src/Transaction.js'
 
 
+function buildDaysMoney(from, to, level) {
+	const money = []
+	for (const day = new Date(from); day <= new Date(to); day.setUTCDate(day.getUTCDate() + 1)) {
+		money.push(...buildMoneyIndexes(day, level))
+	}
+	return money
+}
+
 describe('CitizenBlockchain', () => {
 	function level3CitizenBlockchain() {
 		const bc = new CitizenBlockchain()
@@ -104,12 +112,14 @@ describe('CitizenBlockchain', () => {
 			assert.throws(() => { bc.createMoneyAndInvests(mySk, tomorrow) }, InvalidTransactionError)
 		})
 
-		it('Should return transaction in OK case.', () => {
+		it('Should return the list of added transactions.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
 
-			const tx = bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
+			const transactions = bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
 
+			assert.lengthOf(transactions, 1)
+			const [tx] = transactions
 			assert.isTrue(tx.isValid())
 			
 			delete tx.signature
@@ -131,7 +141,7 @@ describe('CitizenBlockchain', () => {
 				const bc = new CitizenBlockchain()
 				bc.startBlockchain('Gus', new Date('2026-03-29'), referentSk, mySk, new Date('2026-03-29'))
 
-				const tx = bc.createMoneyAndInvests(mySk, new Date('2026-03-30T12:00:00Z'))
+				const [tx] = bc.createMoneyAndInvests(mySk, new Date('2026-03-30T12:00:00Z'))
 
 				assert.deepEqual(tx.money, [20260330000])
 			})
@@ -142,7 +152,7 @@ describe('CitizenBlockchain', () => {
 				const bc = new CitizenBlockchain()
 				bc.startBlockchain('Gus', new Date('2025-10-26'), referentSk, mySk, new Date('2025-10-26'))
 
-				const tx = bc.createMoneyAndInvests(mySk, new Date('2025-10-27T00:30:00Z'))
+				const [tx] = bc.createMoneyAndInvests(mySk, new Date('2025-10-27T00:30:00Z'))
 
 				assert.deepEqual(tx.money, [20251027000])
 			})
@@ -153,10 +163,69 @@ describe('CitizenBlockchain', () => {
 				const bc = new CitizenBlockchain()
 				bc.startBlockchain('Gus', new Date('2026-03-27'), referentSk, mySk, new Date('2026-03-27'))
 
-				const tx = bc.createMoneyAndInvests(mySk, new Date('2026-03-31T12:00:00Z'))
+				const [tx] = bc.createMoneyAndInvests(mySk, new Date('2026-03-31T12:00:00Z'))
 
 				assert.deepEqual(tx.money, [20260328000, 20260329000, 20260330000, 20260331000])
 			})
+		})
+
+		it('Should create the invests of the given day only when catching up missed days.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+
+			const [tx] = bc.createMoneyAndInvests(mySk, new Date('2025-01-05'))
+
+			assert.deepEqual(tx.money, [20250103000, 20250104000, 20250105000])
+			assert.deepEqual(tx.invests, [202501059000])
+		})
+
+		it('Should create then cash the already expired missed days before creating the valid ones.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+
+			const [expiredCreation, cashing, validCreation] = bc.createMoneyAndInvests(mySk, new Date('2025-02-11'))
+
+			assert.equal(expiredCreation.type, TXTYPE.CREATE)
+			assert.deepEqual(expiredCreation.money, buildDaysMoney('2025-01-03', '2025-01-12', 1))
+			assert.deepEqual(expiredCreation.invests, [])
+			assert.equal(cashing.type, TXTYPE.PAY)
+			assert.equal(cashing.target, myPk)
+			assert.deepEqual(cashing.money, [20250102000, ...expiredCreation.money])
+			assert.equal(validCreation.type, TXTYPE.CREATE)
+			assert.deepEqual(validCreation.money, buildDaysMoney('2025-01-13', '2025-02-11', 3))
+			assert.deepEqual(validCreation.invests, buildInvestIndexes(new Date('2025-02-11'), 3))
+		})
+
+		it('Should cash the wallet money reaching 30 days before creating new money.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
+
+			const [cashing, creation] = bc.createMoneyAndInvests(mySk, new Date('2025-02-02'))
+
+			assert.equal(cashing.target, myPk)
+			assert.deepEqual(cashing.money, [20250102000, 20250103000])
+			assert.deepEqual(creation.money, buildDaysMoney('2025-01-04', '2025-02-02', 2))
+		})
+
+		it('Should keep only the invests of the given day in the wallet.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
+
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-04'))
+
+			assert.deepEqual(bc.invests, [202501049000])
+		})
+
+		it('Should produce a valid chain when catching up expired days.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+			bc.createMoneyAndInvests(mySk, new Date('2025-02-11'))
+			bc.closeLastBlock(mySk, new Date('2025-02-11'))
+			bc.createMoneyAndInvests(mySk, new Date('2025-02-12'))
+
+			assert.doesNotThrow(() => new CitizenBlockchain(bc.export()).assertIsValid())
 		})
 
 		it('Should create 1+Total^(1/3) Money.', () => {
@@ -188,14 +257,14 @@ describe('CitizenBlockchain', () => {
 			assert.deepEqual(tx, expected)
 		})
 
-		it('Should return null if given date was already done.', () => {
+		it('Should return an empty list if given date was already done.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-01'))
 			bc.createMoneyAndInvests(mySk, new Date('2025-01-01'))
 
 			const result = bc.createMoneyAndInvests(mySk, new Date('2025-01-01'))
 
-			assert.isNull(result)
+			assert.deepEqual(result, [])
 		})
 
 		it('Should increase money of the block.', () => {
@@ -218,7 +287,7 @@ describe('CitizenBlockchain', () => {
 			assert.deepEqual(bc.money, expected)
 		})
 
-		it('Should increase invests of the block.', () => {
+		it("Should put today's invests in the block.", () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
 			bc.receivePay(makeTransaction({
@@ -231,9 +300,7 @@ describe('CitizenBlockchain', () => {
 			}))
 
 			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
-			const expected = [
-				202501029000, 202501039000, 202501039001, 202501039002, 202501039003,
-			]
+			const expected = [202501039000, 202501039001, 202501039002, 202501039003]
 
 			assert.deepEqual(bc.invests, expected)
 		})
@@ -271,7 +338,7 @@ describe('CitizenBlockchain', () => {
 				invests: [202501039000]
 			}))
 
-			const tx = bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
+			const [tx] = bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
 
 			delete tx.signature
 
@@ -565,6 +632,15 @@ describe('CitizenBlockchain', () => {
 	})
 
 	describe('generatePaper', () => {
+		it('Should not put money expired at the paper date in the paper.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+
+			const fn = () => { bc.generatePaper(mySk, 1, referentPk, new Date('2025-02-01')) }
+
+			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
+		})
+
 		it('Should throw error if private key does not belong to the blockchain owner.', () => {
 			const bc = new CitizenBlockchain()
 			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk)
@@ -983,6 +1059,15 @@ describe('CitizenBlockchain', () => {
 	})	
 
 	describe('pay', () => {
+		it('Should not spend money expired at the payment date.', () => {
+			const bc = new CitizenBlockchain()
+			bc.startBlockchain('Gus', new Date('2025-01-02'), referentSk, mySk, new Date('2025-01-02'))
+
+			const fn = () => { bc.pay(mySk, targetPk, 1, new Date('2025-02-01')) }
+
+			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
+		})
+
 		it('Should make valid transaction.', () => {
 			const bc = new CitizenBlockchain([
 				makeBlockObj({

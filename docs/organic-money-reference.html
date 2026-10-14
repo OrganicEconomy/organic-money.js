@@ -252,6 +252,10 @@ Le séparateur <code>9</code> dans les identifiants invest permet de distinguer 
 </p>
 
 <p>
+<strong>Durée de vie (citoyens) :</strong> une money est utilisable de sa date J jusqu'à J+29 inclus (<span class="fn">isExpiredOn(id, date)</span>, <code>MONEY_LIFETIME_DAYS = 30</code>). Au-delà, elle est <em>périmée</em> : elle ne peut plus être dépensée et est encaissée, c'est-à-dire payée à soi-même, à la création suivante, ce qui rapporte de l'expérience. Un invest n'existe dans le wallet que le jour de sa date : s'il n'est pas engagé ce jour-là, il est perdu. Les engagements d'invests sur plusieurs jours à venir restent possibles. Toutes ces durées se mesurent sur la date des transactions, jamais sur l'horloge réelle.
+</p>
+
+<p>
 <strong>Conversion invest → money :</strong> lorsqu'un écosystème exécute un ordre de paiement, les invests sont convertis en money 1 pour 1. L'identifiant est transformé en retirant le séparateur <code>9</code> : <code>202506149003</code> devient <code>20250614003</code>. Cette conversion est effectuée par la fonction <span class="fn">investIdToMoneyId(id)</span>.
 </p>
 
@@ -453,7 +457,7 @@ Un compte citoyen passe par trois états : <strong>vide</strong> → <strong>en 
   <tr><th>Fonction</th><th>Rôle</th></tr>
   <tr>
     <td><span class="fn">createMoneyAndInvests(privateKey, date)</span></td>
-    <td>Génère les money et invests pour tous les jours depuis la dernière création jusqu'à <code>date</code>. Ajoute une transaction <span class="tx-type">CREATE</span>. Interdit si <code>date</code> est dans le futur. Ne fait rien si la création a déjà été faite à cette date.</td>
+    <td>Génère les money de tous les jours depuis la dernière création jusqu'à <code>date</code>, et les invests du jour <code>date</code> seulement. Encaisse d'abord la money périmée (voir 6.3). Retourne la liste des transactions ajoutées, vide si la création a déjà été faite à cette date. Interdit si <code>date</code> est dans le futur.</td>
   </tr>
 </table>
 
@@ -697,16 +701,16 @@ Les parcours suivants décrivent les appels exacts, dans l'ordre, pour chaque fl
 
 <div class="flow-box">
   <div class="step"><span class="actor">Alice</span><span class="arrow">▶</span> <span class="fn">bc.createMoneyAndInvests(aliceSk, date)</span></div>
-  <div class="step" style="margin-left:2rem; color:#666;">→ Détermine la période à créer (depuis la dernière <span class="tx-type">CREATE</span> jusqu'à <code>date</code>).</div>
-  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">getLevel()</span>] Calcule le niveau courant pour déterminer le nombre d'unités/jour.</div>
-  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">makeFilteredMoneyIndexes</span>] Génère les IDs money non encore engagés.</div>
-  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">makeFilteredInvestsIndexes</span>] Génère les IDs invests non encore engagés.</div>
-  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Ajoute la <span class="tx-type">CREATE</span> au bloc courant.</div>
-  <div class="step" style="margin-left:2rem; color:#666;">→ Retourne la transaction, ou <code>null</code> si déjà créée pour cette date.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Détermine les jours manqués (depuis la dernière <span class="tx-type">CREATE</span> jusqu'à <code>date</code>).</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Si certains de ces jours sont déjà périmés : une <span class="tx-type">CREATE</span> de leur money, sans invests.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Si le wallet contient de la money périmée (y compris celle tout juste créée) : une <span class="tx-type">PAY</span> à soi-même qui l'encaisse et rapporte de l'expérience.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Une <span class="tx-type">CREATE</span> de la money des jours encore valides et des invests du jour, au niveau recalculé après l'encaissement. Les IDs déjà engagés sont exclus.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Le wallet ne garde que les invests du jour.</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ Retourne la liste des transactions ajoutées, vide si déjà créée pour cette date.</div>
 </div>
 
 <div class="note">
-<strong>Cas particulier :</strong> les jours manqués sont automatiquement rattrapés. Si Alice crée son argent le 14 juin après avoir manqué les 12 et 13, la transaction couvre les trois jours d'un coup.
+<strong>Cas particulier :</strong> les jours manqués sont automatiquement rattrapés. Si Alice crée son argent le 14 juin après avoir manqué les 12 et 13, la <span class="tx-type">CREATE</span> couvre la money des trois jours, et les invests du 14 seulement. Si elle revient après 40 jours d'absence, les 10 premiers jours sont déjà périmés : ils sont créés puis encaissés avant la création des 30 jours encore valides.
 </div>
 
 <!-- 6.4 -->
@@ -1038,6 +1042,14 @@ Chaque transaction est sérialisée avec des noms de champs courts pour la compa
   <li>Une transaction ne peut pas être datée <em>avant</em> la date de fermeture du dernier bloc signé (<span class="fn">lastClosedBlock.closedate</span>). Toute tentative lève une <code>InvalidTransactionError</code>.</li>
   <li>La création de money (<span class="fn">createMoneyAndInvests</span>) est interdite pour une date future.</li>
   <li>Un invest ou une money est considéré mature quand <span class="fn">unitIdToDateInt(id) ≤ dateToInt(date)</span>.</li>
+</ul>
+
+<h3>Règles de création et de dépense (citoyens)</h3>
+<ul>
+  <li>Une <span class="tx-type">CREATE</span> ne contient que les invests de son propre jour, et aucune money datée après elle.</li>
+  <li>Le titulaire ne dépense (<span class="tx-type">PAY</span>, <span class="tx-type">PAPER</span>) que de la money présente dans son wallet, rejoué depuis la money du bloc précédent.</li>
+  <li>La money périmée ne peut être payée qu'à soi-même (encaissement).</li>
+  <li>Une <span class="tx-type">CREATE</span> de money encore valide ou d'invests exige que toute la money périmée du wallet ait été encaissée avant.</li>
 </ul>
 
 <h3>Règles sur les doublons</h3>

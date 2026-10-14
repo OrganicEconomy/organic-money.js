@@ -368,6 +368,10 @@ export class CitizenBlockchain extends Blockchain {
 	 *   - the block's stored experience matches the running total after replay
 	 *     (i.e. the experience carried forward from the previous block, plus
 	 *     whatever PAY/EARN/PAPER targeting this citizen added)
+	 *   - a CREATE mints the invests of its own day only, and no money dated after it
+	 *   - the owner only spends money of the wallet (replayed from the previous
+	 *     block's money), and never expired money except to cash it to themself
+	 *   - expired money is cashed before a CREATE of still valid money or invests
 	 * The oldest block in the checked range has no predecessor to replay from, so
 	 * it's skipped — its own genesis invariants are covered by Block.isValid().
 	 */
@@ -408,11 +412,17 @@ export class CitizenBlockchain extends Blockchain {
 			const olderBlock = blocksToCheck[i + 1]
 
 			let runningExperience = olderBlock.experience
+			const wallet = [...olderBlock.money]
 			const engagedMoneySoFar = new Set()
 			const engagedInvestsSoFar = new Set()
 			const chronological = block.transactions.slice().reverse()
 			for (const tx of chronological) {
+				if (this.#isSpendingByOwner(tx, ownerKey)) {
+					this.#assertSpendingIsAllowed(wallet, tx, ownerKey)
+				}
 				if (tx.type === TXTYPE.CREATE) {
+					this.#assertCreationIsAllowed(wallet, tx)
+					wallet.push(...tx.money)
 					const level = Math.floor(Math.cbrt(runningExperience)) + 1
 					this.#assertMintedIdsAreValid(tx.money, level, engagedMoneySoFar, buildMoneyIndexes, 'money')
 					this.#assertMintedIdsAreValid(tx.invests, level, engagedInvestsSoFar, buildInvestIndexes, 'invests')
@@ -429,6 +439,53 @@ export class CitizenBlockchain extends Blockchain {
 			if (runningExperience !== block.experience)
 				throw new InvalidBlockchainError(`Block at index ${i} experience does not match the experience replayed from its transactions.`)
 		}
+	}
+
+	#assertCreationIsAllowed(wallet, createTx) {
+		this.#assertInvestsAreOfTheDay(createTx)
+		this.#assertNoMoneyDatedAfter(createTx)
+		this.#assertExpiredMoneyIsCashedBeforeCreatingValidUnits(wallet, createTx)
+	}
+
+	#assertSpendingIsAllowed(wallet, tx, ownerKey) {
+		this.#spendFromWallet(wallet, tx)
+		if (tx.target !== ownerKey) {
+			this.#assertSpendsNoExpiredMoney(tx)
+		}
+	}
+
+	#assertInvestsAreOfTheDay(createTx) {
+		if (createTx.invests.some(id => unitIdToDateInt(id) !== dateToInt(createTx.date)))
+			throw new InvalidBlockchainError(`CREATE transaction of ${dateToInt(createTx.date)} mints invests of another day.`)
+	}
+
+	#assertNoMoneyDatedAfter(createTx) {
+		if (createTx.money.some(id => unitIdToDateInt(id) > dateToInt(createTx.date)))
+			throw new InvalidBlockchainError(`CREATE transaction of ${dateToInt(createTx.date)} mints money dated after itself.`)
+	}
+
+	#assertExpiredMoneyIsCashedBeforeCreatingValidUnits(wallet, createTx) {
+		const createsValidUnits = createTx.invests.length > 0 || createTx.money.some(id => !isExpiredOn(id, createTx.date))
+		if (createsValidUnits && wallet.some(id => isExpiredOn(id, createTx.date)))
+			throw new InvalidBlockchainError(`CREATE transaction of ${dateToInt(createTx.date)} creates valid units before the expired money is cashed.`)
+	}
+
+	#isSpendingByOwner(tx, ownerKey) {
+		return tx.signer === ownerKey && (tx.type === TXTYPE.PAY || tx.type === TXTYPE.PAPER)
+	}
+
+	#spendFromWallet(wallet, tx) {
+		for (const id of tx.money) {
+			const index = wallet.indexOf(id)
+			if (index === -1)
+				throw new InvalidBlockchainError(`Transaction of ${dateToInt(tx.date)} spends money ${id} that is not in the wallet.`)
+			wallet.splice(index, 1)
+		}
+	}
+
+	#assertSpendsNoExpiredMoney(tx) {
+		if (tx.money.some(id => isExpiredOn(id, tx.date)))
+			throw new InvalidBlockchainError(`Transaction of ${dateToInt(tx.date)} spends expired money.`)
 	}
 
 	#groupIdsByDay(ids) {

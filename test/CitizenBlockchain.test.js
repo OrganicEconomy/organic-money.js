@@ -1378,7 +1378,7 @@ describe('CitizenBlockchain', () => {
 		it('Should return true for a chain where CREATE quantity matches the level implied by experience.', () => {
 			const older = makeBlock({ date: new Date('2025-01-01'), experience: 0, transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
 			const createTx = makeTransaction({ type: TXTYPE.CREATE, date: new Date('2025-01-02'), moneycount: 1, investscount: 1, signer: myPk, sk: mySk })
-			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 0, transactions: [createTx], signed: true })
+			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 0, money: createTx.money, transactions: [createTx], signed: true })
 			const bc = new CitizenBlockchain([newer.export(), older.export()])
 
 			assert.isTrue(bc.isValid())
@@ -1501,7 +1501,7 @@ describe('CitizenBlockchain', () => {
 			const middle = makeBlock({ date: new Date('2025-01-02'), previousHash: oldest.signature, experience: 8, transactions: [payTx], signed: true })
 
 			const create2 = makeTransaction({ type: TXTYPE.CREATE, date: new Date('2025-01-01'), moneycount: 3, investscount: 3, signer: myPk, sk: mySk })
-			const newest = makeBlock({ date: new Date('2025-01-03'), previousHash: middle.signature, experience: 8, transactions: [create2], signed: true })
+			const newest = makeBlock({ date: new Date('2025-01-03'), previousHash: middle.signature, experience: 8, money: create2.money, transactions: [create2], signed: true })
 
 			const bc = new CitizenBlockchain([newest.export(), middle.export(), oldest.export()])
 
@@ -1578,10 +1578,18 @@ describe('CitizenBlockchain', () => {
 			assert.throws(() => reloaded(bc).assertIsValid(), InvalidBlockchainError, /not in the wallet/)
 		})
 
+		it("Should throw if a block's money holds ids that no transaction brought into the wallet.", () => {
+			const bc = startedCitizen()
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
+			bc.lastblock.money.push(20250103001)
+
+			assert.throws(() => reloaded(bc).assertIsValid(), InvalidBlockchainError, /money does not match/)
+		})
+
 		it('Should not throw for a chain where CREATE quantity matches the level implied by experience.', () => {
 			const older = makeBlock({ date: new Date('2025-01-01'), experience: 0, transactions: [makeOwnerCreateTx(new Date('2025-01-01'))], signed: true })
 			const createTx = makeTransaction({ type: TXTYPE.CREATE, date: new Date('2025-01-02'), moneycount: 1, investscount: 1, signer: myPk, sk: mySk })
-			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 0, transactions: [createTx], signed: true })
+			const newer = makeBlock({ date: new Date('2025-01-02'), previousHash: older.signature, experience: 0, money: createTx.money, transactions: [createTx], signed: true })
 			const bc = new CitizenBlockchain([newer.export(), older.export()])
 
 			assert.doesNotThrow(() => bc.assertIsValid())
@@ -1678,7 +1686,7 @@ describe('CitizenBlockchain', () => {
 				D3
 			)
 			const oldest = makeBlock({ date: D1, experience: 0, transactions: [], signed: true })
-			const newest = makeBlock({ date: D3, previousHash: oldest.signature, experience: 0, transactions: [heterogeneousCreate], signed: true })
+			const newest = makeBlock({ date: D3, previousHash: oldest.signature, experience: 0, money: heterogeneousCreate.money, transactions: [heterogeneousCreate], signed: true })
 			const bc = new CitizenBlockchain([newest.export(), oldest.export()])
 
 			assert.doesNotThrow(() => bc.assertIsValid())
@@ -1694,7 +1702,7 @@ describe('CitizenBlockchain', () => {
 				D2
 			)
 			const oldest = makeBlock({ date: D1, experience: 0, transactions: [], signed: true })
-			const newest = makeBlock({ date: D2, previousHash: oldest.signature, experience: 0, transactions: [asymmetricCreate], signed: true })
+			const newest = makeBlock({ date: D2, previousHash: oldest.signature, experience: 0, money: asymmetricCreate.money, transactions: [asymmetricCreate], signed: true })
 			const bc = new CitizenBlockchain([newest.export(), oldest.export()])
 
 			assert.doesNotThrow(() => bc.assertIsValid())
@@ -1778,7 +1786,7 @@ describe('CitizenBlockchain', () => {
 			const middle = makeBlock({ date: new Date('2025-01-02'), previousHash: oldest.signature, experience: 8, transactions: [payTx], signed: true })
 
 			const create2 = makeTransaction({ type: TXTYPE.CREATE, date: new Date('2025-01-01'), moneycount: 3, investscount: 3, signer: myPk, sk: mySk })
-			const newest = makeBlock({ date: new Date('2025-01-03'), previousHash: middle.signature, experience: 8, transactions: [create2], signed: true })
+			const newest = makeBlock({ date: new Date('2025-01-03'), previousHash: middle.signature, experience: 8, money: create2.money, transactions: [create2], signed: true })
 
 			const bc = new CitizenBlockchain([newest.export(), middle.export(), oldest.export()])
 

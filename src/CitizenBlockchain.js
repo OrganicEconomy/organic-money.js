@@ -371,6 +371,7 @@ export class CitizenBlockchain extends Blockchain {
 	 *   - a CREATE mints the invests of its own day only, and no money dated after it
 	 *   - the owner only spends money of the wallet (replayed from the previous
 	 *     block's money), and never expired money except to cash it to themself
+	 *   - the block's stored money matches the wallet after replay
 	 *   - expired money is cashed before a CREATE of still valid money or invests
 	 * The oldest block in the checked range has no predecessor to replay from, so
 	 * it's skipped — its own genesis invariants are covered by Block.isValid().
@@ -438,6 +439,8 @@ export class CitizenBlockchain extends Blockchain {
 
 			if (runningExperience !== block.experience)
 				throw new InvalidBlockchainError(`Block at index ${i} experience does not match the experience replayed from its transactions.`)
+			if (!this.#haveSameIds(wallet, block.money))
+				throw new InvalidBlockchainError(`Block at index ${i} money does not match the wallet replayed from its transactions.`)
 		}
 	}
 
@@ -499,18 +502,18 @@ export class CitizenBlockchain extends Blockchain {
 		return byDay
 	}
 
-	#doMintedIdsMatchExpected(mintedIds, expected) {
-		const actual = [...mintedIds].sort((a, b) => a - b)
-		const sortedExpected = [...expected].sort((a, b) => a - b)
-		return actual.length === sortedExpected.length
-			&& actual.every((id, idx) => id === sortedExpected[idx])
+	#haveSameIds(ids, otherIds) {
+		const sorted = [...ids].sort((a, b) => a - b)
+		const otherSorted = [...otherIds].sort((a, b) => a - b)
+		return sorted.length === otherSorted.length
+			&& sorted.every((id, idx) => id === otherSorted[idx])
 	}
 
 	#assertMintedIdsAreValid(ids, level, engagedSoFar, buildFn, label) {
 		const idsGroupedByDay = this.#groupIdsByDay(ids)
 		for (const [day, actualIds] of idsGroupedByDay) {
 			const expected = buildFn(intToDate(day), level).filter(id => !engagedSoFar.has(id))
-			if (!this.#doMintedIdsMatchExpected(actualIds, expected))
+			if (!this.#haveSameIds(actualIds, expected))
 				throw new InvalidBlockchainError(
 					`CREATE transaction mints the wrong ${label} ids for day ${day} given the level implied by accumulated experience and currently engaged ids.`
 				)

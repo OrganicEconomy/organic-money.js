@@ -187,7 +187,7 @@ export class EcosystemBlockchain extends Blockchain {
                 newBlock.transactions.push(tx)
                 copiedActors.add(tx.target)
             }
-            if (tx.type === TXTYPE.SETPAYER && activePayers.has(tx.target) && activePayers.get(tx.target) !== 0 && !copiedPayers.has(tx.target)) {
+            if (tx.type === TXTYPE.SETPAYER && activePayers.has(tx.target) && !copiedPayers.has(tx.target)) {
                 newBlock.transactions.push(tx)
                 copiedPayers.add(tx.target)
             }

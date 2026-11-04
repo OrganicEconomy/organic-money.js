@@ -464,14 +464,18 @@ describe('EcosystemBlockchain', () => {
             assert.equal(bc.getPayers().get(referentPk), 100)
         })
 
-        it('Should not carry forward payers with cap=0 (exhausted).', () => {
+        it('Should keep a payer whose cap was exhausted, with a cap of 0.', () => {
             const bc = makeStartedEco()
-
-            ecoSetPayer(bc, adminSk, referentPk, 0, DATE2)
+            ecoSetPayer(bc, adminSk, referentPk, 2, DATE2)
+            const invests = buildInvestIndexes(DATE2, 2)
+            bc.lastblock.invests = invests
+            bc.receivePayerOrder(mySk, new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2))
             bc.closeLastBlock(mySk, DATE2)
-            bc.newBlock()
 
-            assert.isFalse(bc.isPayer(referentPk))
+            ecoSetAdmin(bc, adminSk, referentPk, DATE3)
+
+            assert.equal(bc.getPayers().get(referentPk), 0)
+            assert.doesNotThrow(() => new EcosystemBlockchain(bc.export()).assertIsValid())
         })
     })
 

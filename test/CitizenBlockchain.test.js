@@ -1534,6 +1534,29 @@ describe('CitizenBlockchain', () => {
 			assert.doesNotThrow(() => reloaded(bc).assertIsValid())
 		})
 
+		it('Should not throw for a running engagement carried into a new block.', () => {
+			const bc = startedCitizen()
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
+			bc.engageInvests(mySk, targetPk, 1, 3, new Date('2025-01-03'))
+			bc.closeLastBlock(mySk, new Date('2025-01-03'))
+
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-04'))
+
+			assert.doesNotThrow(() => reloaded(bc).assertIsValid())
+		})
+
+		it('Should throw for a finished engagement copied into a new block.', () => {
+			const bc = startedCitizen()
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
+			const engageTx = bc.engageInvests(mySk, targetPk, 1, 1, new Date('2025-01-03'))
+			bc.closeLastBlock(mySk, new Date('2025-01-03'))
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-04'))
+
+			bc.lastblock.add(engageTx)
+
+			assert.throws(() => reloaded(bc).assertIsValid(), InvalidBlockchainError, /duplicated across blocks/)
+		})
+
 		it('Should throw if a CREATE mints invests of another day than its own.', () => {
 			const bc = startedCitizen()
 			bc._addTransaction(new CreateTransaction(mySk, [20250103000, 20250104000], [202501039000], new Date('2025-01-04')))

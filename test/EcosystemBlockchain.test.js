@@ -1308,6 +1308,17 @@ describe('EcosystemBlockchain', () => {
             assert.doesNotThrow(() => bc.assertIsValid())
         })
 
+        it('Should not throw for a running invests engagement carried into a new block.', () => {
+            const bc = makeStartedEco()
+            const invests = [...buildInvestIndexes(DATE2, 1), ...buildInvestIndexes(DATE3, 1)]
+            bc.receiveInvests(new EngageTransaction(referentSk, bc.getMyPublicKey(), invests, [], DATE2))
+            bc.closeLastBlock(mySk, DATE2)
+
+            ecoSetActor(bc, adminSk, referentPk, 1, DATE3)
+
+            assert.doesNotThrow(() => new EcosystemBlockchain(bc.export()).assertIsValid())
+        })
+
         it('Should throw a specific message if there are no admins.', () => {
             const bc = makeStartedEco()
             bc.lastblock.transactions = bc.lastblock.transactions.filter(tx => tx.type !== TXTYPE.SETADMIN)

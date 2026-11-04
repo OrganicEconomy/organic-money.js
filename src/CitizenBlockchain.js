@@ -136,19 +136,25 @@ export class CitizenBlockchain extends Blockchain {
 	 */
 	engageMoney(myPrivateKey, targetPublicKey, dailyAmount, days, date = new Date()) {
 		this._assertOwner(myPrivateKey)
-		const myPublicKey = this.getMyPublicKey()
-		if (dailyAmount > this.getAffordableMoneyAmount(date)) {
+		const firstEngagedDay = this.#dayAfter(date)
+		if (dailyAmount > this.getAffordableMoneyAmount(firstEngagedDay)) {
 			throw new InvalidTransactionError('Unsufficient funds.')
 		}
-		const money = this.#buildEngageIndexes(days, date, dailyAmount, buildMoneyIndexes, this.getEngagedMoney)
+		const money = this.#buildEngageIndexes(days, firstEngagedDay, dailyAmount, buildMoneyIndexes, this.getEngagedMoney)
 		const tx = new EngageTransaction(myPrivateKey, targetPublicKey, [], money, date)
 		this._addTransaction(tx)
 		return tx
 	}
 
-	#buildEngageIndexes(days, date, dailyAmount, buildFn, getEngagedFn) {
+	#dayAfter(date) {
+		const day = new Date(date)
+		addOneDayTo(day)
+		return day
+	}
+
+	#buildEngageIndexes(days, firstDay, dailyAmount, buildFn, getEngagedFn) {
 		let indexes = []
-		const dateIndex = new Date(date)
+		const dateIndex = new Date(firstDay)
 		for (let d = 0; d < days; d++) {
 			const tmp = buildFn(dateIndex, this.getLevel())
 			const filtered = tmp.filter(x => !getEngagedFn.call(this, dateIndex).includes(x))
@@ -429,6 +435,7 @@ export class CitizenBlockchain extends Blockchain {
 					this.#assertMintedIdsAreValid(tx.invests, level, engagedInvestsSoFar, buildInvestIndexes, 'invests')
 				}
 				if (tx.type === TXTYPE.ENGAGE) {
+					this.#assertEngagedMoneyStartsAfterItsDay(tx)
 					for (const id of tx.getEngagedMoney()) engagedMoneySoFar.add(id)
 					for (const id of tx.getEngagedInvests()) engagedInvestsSoFar.add(id)
 				}
@@ -471,6 +478,11 @@ export class CitizenBlockchain extends Blockchain {
 		const createsValidUnits = createTx.invests.length > 0 || createTx.money.some(id => !isExpiredOn(id, createTx.date))
 		if (createsValidUnits && wallet.some(id => isExpiredOn(id, createTx.date)))
 			throw new InvalidBlockchainError(`CREATE transaction of ${dateToInt(createTx.date)} creates valid units before the expired money is cashed.`)
+	}
+
+	#assertEngagedMoneyStartsAfterItsDay(engageTx) {
+		if (engageTx.money.some(id => unitIdToDateInt(id) <= dateToInt(engageTx.date)))
+			throw new InvalidBlockchainError(`ENGAGE transaction of ${dateToInt(engageTx.date)} engages money of its own day or before.`)
 	}
 
 	#isSpendingByOwner(tx, ownerKey) {

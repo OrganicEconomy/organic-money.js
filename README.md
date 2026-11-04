@@ -333,7 +333,8 @@ ecoBlockchain.receiveInvests(engageTx)
 #### Engage money (recurring commitment)
 
 ```js
-// Commit 1 money/day for 7 days (e.g. for a subscription service)
+// Commit 1 money/day for 7 days, starting the day after (e.g. for a subscription service)
+// Today's money may already be in the wallet, so it can't be engaged without being spent twice
 const engageTx = blockchain.engageMoney(citizenSk, targetPk, 1, 7)
 ```
 

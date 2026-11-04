@@ -491,7 +491,7 @@ Un compte citoyen passe par trois états : <strong>vide</strong> → <strong>en 
   </tr>
   <tr>
     <td><span class="fn">engageMoney(myPrivateKey, targetPublicKey, dailyAmount, days, date)</span></td>
-    <td>Identique à <span class="fn">engageInvests</span> mais pour la money. Crée une <span class="tx-type">ENGAGE</span> avec des money IDs.</td>
+    <td>Identique à <span class="fn">engageInvests</span> mais pour la money, à partir du lendemain de <code>date</code> (la money du jour peut déjà être dans le wallet). Crée une <span class="tx-type">ENGAGE</span> avec des money IDs ; la validation refuse une money engagée datée du jour de l'ENGAGE ou d'avant.</td>
   </tr>
   <tr>
     <td><span class="fn">payerOrder(mySk, ecosystemPk, supplierPk, invests, date)</span></td>
@@ -788,7 +788,7 @@ Les parcours suivants décrivent les appels exacts, dans l'ordre, pour chaque fl
 <div class="flow-box">
   <div class="step"><span class="actor">Alice</span><span class="arrow">▶</span> <span class="fn">aliceBc.engageMoney(aliceSk, ecoPk, 1, 7, date)</span></div>
   <div class="step" style="margin-left:2rem; color:#666;">→ Vérifie qu'Alice peut engager 1 money/jour (<span class="fn">getAffordableMoneyAmount</span>).</div>
-  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">#buildEngageIndexes</span>] Calcule les 7 IDs money (un par jour).</div>
+  <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">#buildEngageIndexes</span>] Calcule les 7 IDs money (un par jour, à partir du lendemain).</div>
   <div class="step" style="margin-left:2rem; color:#666;">→ Crée et signe une <span class="tx-type">ENGAGE</span> avec les 7 IDs money.</div>
   <div class="step" style="margin-left:2rem; color:#666;">→ [<span class="fn">addTransaction</span>] Enregistre dans la blockchain d'Alice.</td></div>
   <div class="step" style="margin-top:0.5rem;"><span class="actor">Alice → Écosystème</span><span class="arrow">▶</span> Transmet la transaction ENGAGE</div>

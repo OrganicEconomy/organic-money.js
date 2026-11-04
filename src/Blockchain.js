@@ -1,5 +1,5 @@
 import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from './errors.js'
-import { intToDate, dateToInt, infinityDate, publicFromPrivate, packUnitIds, addOneDayTo } from './crypto.js'
+import { intToDate, dateToInt, infinityDate, publicFromPrivate, packUnitIds, dayAfter } from './crypto.js'
 
 import { TXTYPE } from './Transaction.js'
 import { Block, BlockMaker, BLOCKTYPE } from './Block.js'
@@ -244,13 +244,7 @@ export class Blockchain {
 
 	#isRunningEngagementCarriedFrom(olderBlock, tx) {
 		return olderBlock.transactions.some(olderTx => olderTx.signature === tx.signature)
-			&& tx.isEngagedForDate(this.#dayAfterClosing(olderBlock))
-	}
-
-	#dayAfterClosing(block) {
-		const day = new Date(block.closedate)
-		addOneDayTo(day)
-		return day
+			&& tx.isEngagedForDate(dayAfter(olderBlock.closedate))
 	}
 
 	/**
@@ -310,8 +304,7 @@ export class Blockchain {
 			x: []
 		})
 
-		const date = new Date(this.lastblock.closedate)
-		addOneDayTo(date)
+		const date = dayAfter(this.lastblock.closedate)
 		for (let tx of this.lastblock.transactions) {
 			if (tx.isEngagedForDate(date)) {
 				block.transactions.push(tx)

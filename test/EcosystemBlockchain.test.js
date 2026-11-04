@@ -932,6 +932,21 @@ describe('EcosystemBlockchain', () => {
             assert.throws(() => bc.order(mySk, myPk, invests, DATE2))
         })
 
+        it('Should record the order in a new block when the last one is signed.', () => {
+            const bc = makeStartedEco()
+            ecoSetPayer(bc, adminSk, referentPk, -1, DATE2)
+            const engageTx = makeEngageTx(referentSk, bc.getMyPublicKey(), DATE2)
+            bc.receiveInvests(engageTx)
+            bc.receivePayerOrder(mySk, new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2))
+            bc.closeLastBlock(mySk, DATE2)
+            const blocksCount = bc.blocks.length
+
+            bc.order(mySk, targetPk, engageTx.invests, DATE3)
+
+            assert.equal(bc.blocks.length, blocksCount + 1)
+            assert.doesNotThrow(() => new EcosystemBlockchain(bc.export()).assertIsValid())
+        })
+
         it('Should throw if order claims more occurrences of an id than actually available (duplicate id, insufficient count).', () => {
             const bc = makeStartedEco()
 

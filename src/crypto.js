@@ -45,6 +45,12 @@ export function addOneDayTo(date) {
     date.setUTCDate(date.getUTCDate() + 1)
 }
 
+export function dayAfter(date) {
+    const day = new Date(date)
+    addOneDayTo(day)
+    return day
+}
+
 export function intToIndex(dateint) {
     const datestr = '' + dateint
     return +datestr.slice(-3)

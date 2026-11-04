@@ -1,5 +1,5 @@
 import { InvalidTransactionError, UnauthorizedError, InvalidBlockchainError } from './errors.js'
-import { intToDate, dateToInt, infinityDate, publicFromPrivate, packUnitIds, addOneDayTo } from './crypto.js'
+import { intToDate, dateToInt, infinityDate, publicFromPrivate, packUnitIds, dayAfter } from './crypto.js'
 
 import { TXTYPE } from './Transaction.js'
 import { Block, BlockMaker, BLOCKTYPE } from './Block.js'
@@ -215,8 +215,8 @@ export class Blockchain {
 			if (block.signer && banList.has(block.signer) && block.closedate > banList.get(block.signer))
 				throw new InvalidBlockchainError(`Block signer ${block.signer} was banned before this block was closed.`)
 
-			if (i < blocksToCheck.length - 1) {
-				const olderBlock = blocksToCheck[i + 1]
+			const olderBlock = blocksToCheck[i + 1]
+			if (olderBlock) {
 				if (block.previousHash !== olderBlock.signature)
 					throw new InvalidBlockchainError(`Block at index ${i} previousHash does not match the previous block signature.`)
 				if (!(olderBlock.closedate <= block.closedate))
@@ -232,6 +232,7 @@ export class Blockchain {
 
 			for (const tx of block.transactions) {
 				if (carriedForwardTypes.has(tx.type)) continue
+				if (olderBlock && this.#isRunningEngagementCarriedFrom(olderBlock, tx)) continue
 				if (seenSignatures.has(tx.signature))
 					throw new InvalidBlockchainError(`Transaction ${tx.signature} is duplicated across blocks.`)
 				seenSignatures.add(tx.signature)
@@ -239,6 +240,11 @@ export class Blockchain {
 					throw new InvalidBlockchainError(`Transaction signer ${tx.signer} was banned before this transaction was created.`)
 			}
 		}
+	}
+
+	#isRunningEngagementCarriedFrom(olderBlock, tx) {
+		return olderBlock.transactions.some(olderTx => olderTx.signature === tx.signature)
+			&& tx.isEngagedForDate(dayAfter(olderBlock.closedate))
 	}
 
 	/**
@@ -298,8 +304,7 @@ export class Blockchain {
 			x: []
 		})
 
-		const date = new Date(this.lastblock.closedate)
-		addOneDayTo(date)
+		const date = dayAfter(this.lastblock.closedate)
 		for (let tx of this.lastblock.transactions) {
 			if (tx.isEngagedForDate(date)) {
 				block.transactions.push(tx)

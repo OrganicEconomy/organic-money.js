@@ -509,6 +509,14 @@ describe('CitizenBlockchain', () => {
 			assert.throws(fn, InvalidTransactionError, 'Unsufficient funds.')
 		})
 
+		it('Should engage money from the day after the engagement.', () => {
+			const bc = level3CitizenBlockchain()
+
+			const tx = bc.engageMoney(mySk, targetPk, 1, 3, new Date('2025-01-02'))
+
+			assert.deepEqual(tx.money, [20250103000, 20250104000, 20250105000])
+		})
+
 		it('Should engage one distinct day per day across the spring DST change.', () => {
 			inParisTimezone(() => {
 				const bc = new CitizenBlockchain()
@@ -516,7 +524,7 @@ describe('CitizenBlockchain', () => {
 
 				const tx = bc.engageMoney(mySk, targetPk, 1, 3, new Date('2026-03-28'))
 
-				assert.deepEqual(tx.money, [20260328000, 20260329000, 20260330000])
+				assert.deepEqual(tx.money, [20260329000, 20260330000, 20260331000])
 			})
 		})
 
@@ -531,9 +539,9 @@ describe('CitizenBlockchain', () => {
 				date: new Date("2025-01-02"),
 				target: targetPk,
 				money: [
-					20250102000, 20250102001, 20250102002, 20250102003,
 					20250103000, 20250103001, 20250103002, 20250103003,
 					20250104000, 20250104001, 20250104002, 20250104003,
+					20250105000, 20250105001, 20250105002, 20250105003,
 				],
 				invests: [],
 				type: TXTYPE.ENGAGE,
@@ -577,9 +585,9 @@ describe('CitizenBlockchain', () => {
 			bc.engageMoney(mySk, targetPk, 2, 3, new Date("2025-01-02"))
 
 			const expected = [
-				20250103002, 20250103003, // the 3rd, 2 firsts are already engaged
-				20250104002, 20250104003, // the 4th too
-				20250105000, 20250105001, // the 5th, nothing was engaged
+				20250104002, 20250104003, // the 4th, 2 firsts are already engaged
+				20250105002, 20250105003, // the 5th too
+				20250106000, 20250106001, // the 6th, nothing was engaged
 			]
 
 			const tx = bc.engageMoney(mySk, targetPk, 2, 3, new Date("2025-01-03"))
@@ -1532,6 +1540,37 @@ describe('CitizenBlockchain', () => {
 			}
 
 			assert.doesNotThrow(() => reloaded(bc).assertIsValid())
+		})
+
+		it('Should not throw for a running engagement carried into a new block.', () => {
+			const bc = startedCitizen()
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
+			bc.engageInvests(mySk, targetPk, 1, 3, new Date('2025-01-03'))
+			bc.closeLastBlock(mySk, new Date('2025-01-03'))
+
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-04'))
+
+			assert.doesNotThrow(() => reloaded(bc).assertIsValid())
+		})
+
+		it('Should throw for a finished engagement copied into a new block.', () => {
+			const bc = startedCitizen()
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
+			const engageTx = bc.engageInvests(mySk, targetPk, 1, 1, new Date('2025-01-03'))
+			bc.closeLastBlock(mySk, new Date('2025-01-03'))
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-04'))
+
+			bc.lastblock.add(engageTx)
+
+			assert.throws(() => reloaded(bc).assertIsValid(), InvalidBlockchainError, /duplicated across blocks/)
+		})
+
+		it('Should throw if an ENGAGE engages money of its own day.', () => {
+			const bc = startedCitizen()
+			bc.createMoneyAndInvests(mySk, new Date('2025-01-03'))
+			bc._addTransaction(new EngageTransaction(mySk, targetPk, [], [20250103000, 20250104000], new Date('2025-01-03')))
+
+			assert.throws(() => reloaded(bc).assertIsValid(), InvalidBlockchainError, /engages money of its own day or before/)
 		})
 
 		it('Should throw if a CREATE mints invests of another day than its own.', () => {

@@ -4,7 +4,7 @@ import { hexToBytes } from 'ethereum-cryptography/utils.js';
 
 import {
     randomPrivateKey, aesDecrypt, aesEncrypt, dateToInt, intToDate, investIdToMoneyId,
-    packUnitIds, unpackUnitIds, isExpiredOn
+    packUnitIds, unpackUnitIds, isExpiredOn, dayAfter
 } from '../src/crypto.js'
 
 
@@ -91,6 +91,20 @@ describe('intToDate', () => {
         const result = intToDate(20210905)
 
         assert.equal(result.getTime(), date.getTime())
+    })
+})
+
+describe('dayAfter', () => {
+    it('Should return the next day.', () => {
+        assert.equal(dateToInt(dayAfter(new Date('2025-12-31'))), 20260101)
+    })
+
+    it('Should not change the given date.', () => {
+        const date = new Date('2025-01-02')
+
+        dayAfter(date)
+
+        assert.equal(dateToInt(date), 20250102)
     })
 })
 

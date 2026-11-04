@@ -464,14 +464,18 @@ describe('EcosystemBlockchain', () => {
             assert.equal(bc.getPayers().get(referentPk), 100)
         })
 
-        it('Should not carry forward payers with cap=0 (exhausted).', () => {
+        it('Should keep a payer whose cap was exhausted, with a cap of 0.', () => {
             const bc = makeStartedEco()
-
-            ecoSetPayer(bc, adminSk, referentPk, 0, DATE2)
+            ecoSetPayer(bc, adminSk, referentPk, 2, DATE2)
+            const invests = buildInvestIndexes(DATE2, 2)
+            bc.lastblock.invests = invests
+            bc.receivePayerOrder(mySk, new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2))
             bc.closeLastBlock(mySk, DATE2)
-            bc.newBlock()
 
-            assert.isFalse(bc.isPayer(referentPk))
+            ecoSetAdmin(bc, adminSk, referentPk, DATE3)
+
+            assert.equal(bc.getPayers().get(referentPk), 0)
+            assert.doesNotThrow(() => new EcosystemBlockchain(bc.export()).assertIsValid())
         })
     })
 
@@ -928,6 +932,21 @@ describe('EcosystemBlockchain', () => {
             assert.throws(() => bc.order(mySk, myPk, invests, DATE2))
         })
 
+        it('Should record the order in a new block when the last one is signed.', () => {
+            const bc = makeStartedEco()
+            ecoSetPayer(bc, adminSk, referentPk, -1, DATE2)
+            const engageTx = makeEngageTx(referentSk, bc.getMyPublicKey(), DATE2)
+            bc.receiveInvests(engageTx)
+            bc.receivePayerOrder(mySk, new PayerOrderTransaction(referentSk, targetPk, engageTx.invests, myPk, DATE2))
+            bc.closeLastBlock(mySk, DATE2)
+            const blocksCount = bc.blocks.length
+
+            bc.order(mySk, targetPk, engageTx.invests, DATE3)
+
+            assert.equal(bc.blocks.length, blocksCount + 1)
+            assert.doesNotThrow(() => new EcosystemBlockchain(bc.export()).assertIsValid())
+        })
+
         it('Should throw if order claims more occurrences of an id than actually available (duplicate id, insufficient count).', () => {
             const bc = makeStartedEco()
 
@@ -1306,6 +1325,17 @@ describe('EcosystemBlockchain', () => {
             bc.receivePayerOrder(mySk, new PayerOrderTransaction(referentSk, targetPk, invests, myPk, DATE2))
 
             assert.doesNotThrow(() => bc.assertIsValid())
+        })
+
+        it('Should not throw for a running invests engagement carried into a new block.', () => {
+            const bc = makeStartedEco()
+            const invests = [...buildInvestIndexes(DATE2, 1), ...buildInvestIndexes(DATE3, 1)]
+            bc.receiveInvests(new EngageTransaction(referentSk, bc.getMyPublicKey(), invests, [], DATE2))
+            bc.closeLastBlock(mySk, DATE2)
+
+            ecoSetActor(bc, adminSk, referentPk, 1, DATE3)
+
+            assert.doesNotThrow(() => new EcosystemBlockchain(bc.export()).assertIsValid())
         })
 
         it('Should throw a specific message if there are no admins.', () => {

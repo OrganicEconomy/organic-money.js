@@ -187,7 +187,7 @@ export class EcosystemBlockchain extends Blockchain {
                 newBlock.transactions.push(tx)
                 copiedActors.add(tx.target)
             }
-            if (tx.type === TXTYPE.SETPAYER && activePayers.has(tx.target) && activePayers.get(tx.target) !== 0 && !copiedPayers.has(tx.target)) {
+            if (tx.type === TXTYPE.SETPAYER && activePayers.has(tx.target) && !copiedPayers.has(tx.target)) {
                 newBlock.transactions.push(tx)
                 copiedPayers.add(tx.target)
             }
@@ -362,9 +362,10 @@ export class EcosystemBlockchain extends Blockchain {
         if (!payerOrder)
             throw new InvalidTransactionError('No payer authorization for these invests.')
         const money = invests.map(investIdToMoneyId)
+        const tx = new EarnTransaction(ecoSk, targetPk, money, payerOrder.signature, date)
+        this._addTransaction(tx)
         this.removeInvests(invests)
-        this.lastblock.money = this.lastblock.money.concat(money)
-        return this.earn(ecoSk, targetPk, money, payerOrder.signature, date)
+        return tx
     }
 
     earn(heartSk, actorPk, money, payerOrderSig = null, date = new Date()) {
